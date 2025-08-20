@@ -1,0 +1,146 @@
+<!-- templates/users/login.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login - TaskPlatform{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white shadow-lg rounded-lg border border-red-200 overflow-hidden">
+        <!-- Header -->
+        <div class="bg-red-600 px-6 py-4">
+            <h2 class="text-white text-2xl font-bold text-center">Welcome Back</h2>
+            <p class="text-red-100 text-center mt-1">Sign in to your account</p>
+        </div>
+        
+        <!-- Form -->
+        <div class="px-6 py-6">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div>
+                    <label for="id_username" class="block text-red-600 font-medium mb-2">Email</label>
+                    <input type="email" name="username" id="id_username" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Enter your email">
+                </div>
+                
+                <div>
+                    <label for="id_password" class="block text-red-600 font-medium mb-2">Password</label>
+                    <input type="password" name="password" id="id_password" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Enter your password">
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="remember_me" class="text-red-600 focus:ring-red-500 border-red-300 rounded">
+                        <span class="ml-2 text-gray-600">Remember me</span>
+                    </label>
+                    <a href="#" class="text-red-600 hover:text-red-800 text-sm font-medium">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                    Sign In
+                </button>
+            </form>
+        </div>
+        
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-red-200">
+            <p class="text-center text-gray-600">
+                Don't have an account? 
+                <a href="{% url 'users:register' %}" class="text-red-600 hover:text-red-800 font-medium">Sign up</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- templates/users/register.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - TaskPlatform{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white shadow-lg rounded-lg border border-red-200 overflow-hidden">
+        <!-- Header -->
+        <div class="bg-red-600 px-6 py-4">
+            <h2 class="text-white text-2xl font-bold text-center">Join TaskPlatform</h2>
+            <p class="text-red-100 text-center mt-1">Create your account</p>
+        </div>
+        
+        <!-- Form -->
+        <div class="px-6 py-6">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div>
+                    <label for="id_username" class="block text-red-600 font-medium mb-2">Username</label>
+                    <input type="text" name="username" id="id_username" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Choose a username">
+                </div>
+                
+                <div>
+                    <label for="id_email" class="block text-red-600 font-medium mb-2">Email</label>
+                    <input type="email" name="email" id="id_email" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Enter your email">
+                </div>
+                
+                <div>
+                    <label for="id_phone" class="block text-red-600 font-medium mb-2">Phone (Optional)</label>
+                    <input type="tel" name="phone" id="id_phone"
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Enter your phone number">
+                </div>
+                
+                <div>
+                    <label for="id_referral_code" class="block text-red-600 font-medium mb-2">Referral Code (Optional)</label>
+                    <input type="text" name="referral_code" id="id_referral_code"
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Enter referral code">
+                </div>
+                
+                <div>
+                    <label for="id_password1" class="block text-red-600 font-medium mb-2">Password</label>
+                    <input type="password" name="password1" id="id_password1" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Create a password">
+                </div>
+                
+                <div>
+                    <label for="id_password2" class="block text-red-600 font-medium mb-2">Confirm Password</label>
+                    <input type="password" name="password2" id="id_password2" required
+                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                           placeholder="Confirm your password">
+                </div>
+                
+                <div class="flex items-start">
+                    <input type="checkbox" name="terms" id="id_terms" required class="mt-1 text-red-600 focus:ring-red-500 border-red-300 rounded">
+                    <label for="id_terms" class="ml-2 text-gray-600 text-sm">
+                        I agree to the <a href="#" class="text-red-600 hover:text-red-800">Terms of Service</a> 
+                        and <a href="#" class="text-red-600 hover:text-red-800">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                    Create Account
+                </button>
+            </form>
+        </div>
+        
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-red-200">
+            <p class="text-center text-gray-600">
+                Already have an account? 
+                <a href="{% url 'users:login' %}" class="text-red-600 hover:text-red-800 font-medium">Sign in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}</content>
+</invoke>
