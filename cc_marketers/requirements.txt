@@ -1,0 +1,40 @@
+# Core Django
+Django>=5.0,<6.0
+
+# REST API
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.4.0  # JWT auth
+
+# Environment variables & config
+django-environ>=0.11.2
+
+# Authentication & Users
+django-allauth>=0.63.3
+
+# File uploads & images
+Pillow>=10.0.0
+
+# CORS handling for APIs
+django-cors-headers>=4.3.1
+
+# Database helpers
+psycopg2-binary>=2.9.9   # For PostgreSQL (remove if not needed)
+
+# Payments / Commerce helpers
+stripe>=10.0.0           # Example if you’ll integrate Stripe
+paypalrestsdk>=1.13.1    # Example if you’ll integrate PayPal
+
+# Background tasks (for payouts, offerwall sync, etc.)
+celery>=5.3.6
+redis>=5.0.1
+
+# Debugging & Dev tools
+django-debug-toolbar>=4.3.0
+ipython>=8.18.1
+black>=24.0.0
+flake8>=7.0.0
+
+# Testing
+pytest>=8.0.0
+pytest-django>=4.8.0
+factory-boy>=3.3.0
