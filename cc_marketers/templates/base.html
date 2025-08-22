@@ -50,8 +50,11 @@
     </main>
     
     <!-- Footer -->
+    {% comment %} {% if request.user.is_authenticated %}
     {% include 'components/footer.html' %}
-    
+    {% endif %} {% endcomment %}
+
+    {% include 'components/footer.html' %}
     <!-- Custom JS -->
     <script src="{% load static %}{% static 'js/main.js' %}"></script>
 </body>

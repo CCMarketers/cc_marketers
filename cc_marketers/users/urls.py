@@ -1,0 +1,55 @@
+
+# apps/users/urls.py
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from . import views
+from django.urls import reverse_lazy
+app_name = 'users'
+
+urlpatterns = [
+    # Authentication
+    path('register/', views.UserRegistrationView.as_view(), name='register'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('logout/', views.UserLogoutView.as_view(), name='logout'),
+    
+    # Profile Management
+    path('profile/', views.UserProfileView.as_view(), name='profile'),
+    path('profile/setup/', views.ProfileSetupView.as_view(), name='profile_setup'),
+    path('dashboard/', views.UserDashboardView.as_view(), name='dashboard'),
+    path('profile/<str:username>/', views.PublicProfileView.as_view(), name='public_profile'),
+    
+    # Email Verification
+    path('verify-email/<str:token>/', views.EmailVerificationView.as_view(), name='verify_email'),
+    path('resend-verification/', views.ResendVerificationView.as_view(), name='resend_verification'),
+    
+    # Phone Verification
+    path('verify-phone/', views.PhoneVerificationView.as_view(), name='phone_verify'),
+    path('verify-phone/code/', views.PhoneVerificationCodeView.as_view(), name='phone_verify_code'),
+    
+    # Password Management
+    path('password/change/', views.PasswordChangeView.as_view(), name='password_change'), 
+    path('password/reset/', auth_views.PasswordResetView.as_view(
+        template_name='users/password_reset.html',
+        email_template_name='users/password_reset_email.html',
+        subject_template_name='users/password_reset_subject.txt',
+        success_url=reverse_lazy('users:password_reset_done'),
+    ), name='password_reset'),
+    path('password/reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='users/password_reset_done.html'
+    ), name='password_reset_done'),
+    path('password/reset/confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='users/password_reset_confirm.html'
+    ), name='password_reset_confirm'),
+    path('password/reset/complete/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='users/password_reset_complete.html'
+    ), name='password_reset_complete'),
+    
+    # Referral System
+    path('ref/<str:code>/', views.ReferralSignupView.as_view(), name='referral_signup'),
+    path('referrals/', views.ReferralDashboardView.as_view(), name='referral_dashboard'),
+    
+    # AJAX API endpoints
+    path('api/check-email/', views.CheckEmailAvailabilityView.as_view(), name='check_email'),
+    path('api/check-phone/', views.CheckPhoneAvailabilityView.as_view(), name='check_phone'),
+    path('api/validate-referral/', views.ValidateReferralCodeView.as_view(), name='validate_referral'),
+]

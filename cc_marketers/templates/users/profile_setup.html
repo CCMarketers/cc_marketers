@@ -1,0 +1,165 @@
+<!-- templates/users/profile_setup.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Complete Your Profile - TaskPlatform{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+        </div>
+        <h1 class="text-3xl font-bold text-red-600 mb-2">Complete Your Profile</h1>
+        <p class="text-gray-600">Let's get your profile set up so you can start earning!</p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+                <span class="ml-2 text-red-600 font-medium">Account</span>
+            </div>
+            <div class="w-8 h-px bg-red-600"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+                <span class="ml-2 text-red-600 font-medium">Profile</span>
+            </div>
+            <div class="w-8 h-px bg-red-200"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-red-200 text-red-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+                <span class="ml-2 text-gray-400 font-medium">Complete</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Setup Form -->
+    <div class="bg-white rounded-lg shadow-lg border border-red-200 p-6">
+        <form method="post" enctype="multipart/form-data" data-validate>
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Basic Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                        <input type="text" id="id_first_name" name="first_name" class="form-input" value="{{ user.first_name }}" required>
+                    </div>
+                    <div>
+                        <label for="id_last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                        <input type="text" id="id_last_name" name="last_name" class="form-input" value="{{ user.last_name }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Contact Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <input type="tel" id="id_phone" name="phone" class="form-input" value="{{ user.phone }}" required>
+                    </div>
+                    <div>
+                        <label for="id_location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                        <input type="text" id="id_location" name="location" class="form-input" placeholder="City, State" value="{{ extended_profile.location }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Professional Information -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Professional Information</h3>
+                <div class="mb-4">
+                    <label for="id_bio" class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                    <textarea id="id_bio" name="bio" rows="4" class="form-input" placeholder="Tell us about yourself...">{{ user.bio }}</textarea>
+                </div>
+                <div>
+                    <label for="id_skills" class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
+                    <input type="text" id="id_skills" name="skills" class="form-input" placeholder="e.g., Writing, Design, Programming" value="{{ extended_profile.skills }}">
+                    <p class="text-sm text-gray-500 mt-1">Separate skills with commas</p>
+                </div>
+            </div>
+
+            <!-- Profile Picture -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Profile Picture</h3>
+                <div class="flex items-center space-x-4">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center overflow-hidden">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" class="w-16 h-16 rounded-full object-cover">
+                        {% else %}
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <input type="file" id="id_avatar" name="avatar" class="hidden" accept="image/*">
+                        <label for="id_avatar" class="btn-secondary cursor-pointer">Choose Photo</label>
+                        <p class="text-sm text-gray-500 mt-1">JPG, PNG or GIF (max 5MB)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Preferences</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="receive_email_notifications" class="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500" {% if user.receive_email_notifications %}checked{% endif %}>
+                        <span class="ml-2 text-gray-700">Email notifications for new tasks</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="receive_sms_notifications" class="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500" {% if user.receive_sms_notifications %}checked{% endif %}>
+                        <span class="ml-2 text-gray-700">SMS notifications for urgent updates</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-between items-center pt-6 border-t border-red-200">
+                <a href="/" class="btn-ghost">Skip for now</a>
+                <button type="submit" class="btn-primary">
+                    Complete Setup
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Text -->
+    <div class="mt-6 text-center">
+        <p class="text-sm text-gray-500">
+            Need help? <a href="#" class="text-red-600 hover:text-red-800">Contact our support team</a>
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('id_avatar');
+    const previewContainer = fileInput.closest('.flex').querySelector('.w-16.h-16');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewContainer.innerHTML = `<img src="${e.target.result}" class="w-16 h-16 rounded-full object-cover">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

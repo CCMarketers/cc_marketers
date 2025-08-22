@@ -1,0 +1,341 @@
+<!-- templates/users/referral_signup.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Join via Referral - TaskPlatform{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-red-light py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Referral Welcome Section -->
+        <div class="text-center">
+            <div class="flex justify-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-3xl font-bold text-red-600 mb-2">You've Been Invited!</h2>
+            <p class="text-gray-600">Join TaskPlatform with exclusive benefits</p>
+        </div>
+        
+        <!-- Referral Benefits Banner -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-xl p-6">
+            <div class="text-center">
+                <div class="flex justify-center mb-3">
+                    <div class="bg-green-600 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-green-800 mb-2">🎉 Special Referral Bonus!</h3>
+                <div class="space-y-1 text-sm">
+                    <p class="text-green-700">✅ <strong>₦1,000 Welcome Bonus</strong> after verification</p>
+                    <p class="text-green-700">✅ <strong>₦500 First Task Bonus</strong> on completion</p>
+                    <p class="text-green-700">✅ <strong>Priority Support</strong> for 30 days</p>
+                    {% if referrer %}
+                    <p class="text-blue-700 mt-2">
+                        💫 Referred by: <strong>{{ referrer.get_full_name|default:referrer.username }}</strong>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-8 border border-red-100">
+            <!-- Referral Code Display -->
+            {% if referral_code %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-center">
+                    <div class="text-center">
+                        <p class="text-red-600 text-sm font-medium mb-1">Referral Code</p>
+                        <p class="text-red-800 font-mono font-bold text-lg">{{ referral_code }}</p>
+                        <p class="text-red-600 text-xs mt-1">This code will be automatically applied</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <form method="post" data-validate class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Hidden referral code field -->
+                {% if referral_code %}
+                <input type="hidden" name="referral_code" value="{{ referral_code }}">
+                {% endif %}
+                
+                <!-- Username -->
+                <div>
+                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                        Username
+                    </label>
+                    <input type="text" 
+                           name="{{ form.username.name }}" 
+                           id="{{ form.username.id_for_label }}"
+                           value="{{ form.username.value|default:'' }}"
+                           class="form-input {% if form.username.errors %}border-red-500 ring-red-500{% endif %}"
+                           placeholder="Choose a unique username"
+                           required>
+                    {% if form.username.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Email -->
+                <div>
+                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                        Email Address
+                    </label>
+                    <input type="email" 
+                           name="{{ form.email.name }}" 
+                           id="{{ form.email.id_for_label }}"
+                           value="{{ form.email.value|default:'' }}"
+                           class="form-input {% if form.email.errors %}border-red-500 ring-red-500{% endif %}"
+                           placeholder="your.email@example.com"
+                           required>
+                    {% if form.email.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Name Fields Row -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- First Name -->
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                            First Name
+                        </label>
+                        <input type="text" 
+                               name="{{ form.first_name.name }}" 
+                               id="{{ form.first_name.id_for_label }}"
+                               value="{{ form.first_name.value|default:'' }}"
+                               class="form-input {% if form.first_name.errors %}border-red-500 ring-red-500{% endif %}"
+                               placeholder="First name"
+                               required>
+                        {% if form.first_name.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Last Name -->
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                            Last Name
+                        </label>
+                        <input type="text" 
+                               name="{{ form.last_name.name }}" 
+                               id="{{ form.last_name.id_for_label }}"
+                               value="{{ form.last_name.value|default:'' }}"
+                               class="form-input {% if form.last_name.errors %}border-red-500 ring-red-500{% endif %}"
+                               placeholder="Last name"
+                               required>
+                        {% if form.last_name.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Password -->
+                <div>
+                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                        Password
+                    </label>
+                    <input type="password" 
+                           name="{{ form.password1.name }}" 
+                           id="{{ form.password1.id_for_label }}"
+                           class="form-input {% if form.password1.errors %}border-red-500 ring-red-500{% endif %}"
+                           placeholder="Create a strong password"
+                           required>
+                    {% if form.password1.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ form.password1.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-gray-600 text-xs mt-1">Must be at least 8 characters long</p>
+                </div>
+                
+                <!-- Confirm Password -->
+                <div>
+                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-red-600 mb-2">
+                        Confirm Password
+                    </label>
+                    <input type="password" 
+                           name="{{ form.password2.name }}" 
+                           id="{{ form.password2.id_for_label }}"
+                           class="form-input {% if form.password2.errors %}border-red-500 ring-red-500{% endif %}"
+                           placeholder="Confirm your password"
+                           required>
+                    {% if form.password2.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ form.password2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Terms Agreement with Referral Notice -->
+                <div class="space-y-3">
+                    <div class="flex items-start">
+                        <input type="checkbox" 
+                               id="agree_terms" 
+                               class="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-red-300 rounded"
+                               required>
+                        <label for="agree_terms" class="ml-2 text-sm text-gray-600">
+                            I agree to the <a href="#" class="text-red-600 hover:text-red-800 underline">Terms of Service</a> 
+                            and <a href="#" class="text-red-600 hover:text-red-800 underline">Privacy Policy</a>
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-start">
+                        <input type="checkbox" 
+                               id="agree_referral" 
+                               class="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-green-300 rounded"
+                               required>
+                        <label for="agree_referral" class="ml-2 text-sm text-gray-600">
+                            I understand that by signing up with this referral code, both my referrer and I will receive bonuses as described above.
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-6 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl">
+                    🚀 Create Account & Claim Bonus
+                </button>
+                
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        {% for error in form.non_field_errors %}
+                            <p class="text-red-800 text-sm">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+        
+        <!-- Additional Info -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="font-medium text-blue-800 mb-2">💡 What happens next?</h4>
+            <div class="space-y-1 text-sm text-blue-700">
+                <p>1. ✉️ Verify your email address</p>
+                <p>2. 📱 Add your phone number (optional)</p>
+                <p>3. 💰 Receive your ₦1,000 welcome bonus</p>
+                <p>4. 🎯 Complete your first task for extra ₦500</p>
+                <p>5. 🌟 Start earning money on TaskPlatform!</p>
+            </div>
+        </div>
+        
+        <!-- Login Link -->
+        <div class="text-center">
+            <p class="text-gray-600">
+                Already have an account? 
+                <a href="{% url 'users:login' %}" class="text-red-600 hover:text-red-800 font-medium underline">
+                    Sign in here
+                </a>
+            </p>
+        </div>
+        
+        <!-- Regular Signup Link -->
+        <div class="text-center">
+            <p class="text-gray-500 text-sm">
+                Want to sign up without referral? 
+                <a href="{% url 'users:register' %}" class="text-gray-700 hover:text-gray-900 underline">
+                    Regular signup
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Celebration animation for successful signup -->
+<style>
+@keyframes confetti-slow {
+    0% { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0); }
+    100% { transform: translate3d(25px, 105vh, 0) rotateX(180deg) rotateY(180deg); }
+}
+
+@keyframes confetti-medium {
+    0% { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0); }
+    100% { transform: translate3d(100px, 105vh, 0) rotateX(100deg) rotateY(180deg); }
+}
+
+@keyframes confetti-fast {
+    0% { transform: translate3d(0, 0, 0) rotateX(0) rotateY(0); }
+    100% { transform: translate3d(-50px, 105vh, 0) rotateX(90deg) rotateY(180deg); }
+}
+
+.confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: #f0f;
+    animation: confetti-slow 2.25s infinite;
+    z-index: 1000;
+}
+
+.confetti--animation-slow { animation: confetti-slow 2.25s infinite; }
+.confetti--animation-medium { animation: confetti-medium 1.75s infinite; }
+.confetti--animation-fast { animation: confetti-fast 1.25s infinite; }
+
+.confetti--color-red { background: #ef4444; }
+.confetti--color-green { background: #10b981; }
+.confetti--color-blue { background: #3b82f6; }
+.confetti--color-yellow { background: #f59e0b; }
+.confetti--color-purple { background: #8b5cf6; }
+</style>
+
+<script>
+// Confetti celebration on successful form submission
+function createConfetti() {
+    const colors = ['red', 'green', 'blue', 'yellow', 'purple'];
+    const animations = ['slow', 'medium', 'fast'];
+    
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.classList.add('confetti--color-' + colors[Math.floor(Math.random() * colors.length)]);
+        confetti.classList.add('confetti--animation-' + animations[Math.floor(Math.random() * animations.length)]);
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.animationDelay = Math.random() * 3 + 's';
+        confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        document.body.appendChild(confetti);
+        
+        // Remove confetti after animation
+        setTimeout(() => {
+            confetti.remove();
+        }, 5000);
+    }
+}
+
+// Enhanced form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[data-validate]');
+    
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            
+            // Show loading state
+            submitButton.innerHTML = '⏳ Creating Account...';
+            submitButton.disabled = true;
+            
+            // If validation passes, show confetti (for demo purposes)
+            // In real implementation, confetti would show on successful response
+            setTimeout(() => {
+                if (Math.random() > 0.7) { // Simulate some successful submissions
+                    createConfetti();
+                }
+            }, 1000);
+        });
+    }
+    
+    // Add sparkle effect to referral code
+    const referralCode = document.querySelector('.font-mono');
+    if (referralCode) {
+        setInterval(() => {
+            referralCode.style.textShadow = '0 0 10px rgba(220, 38, 38, 0.5)';
+            setTimeout(() => {
+                referralCode.style.textShadow = 'none';
+            }, 200);
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
