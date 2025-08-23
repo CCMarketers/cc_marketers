@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}File Dispute{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white rounded-xl shadow p-6 fade-in-up">
+    <h4 class="text-xl font-semibold text-gray-800 mb-2">File Dispute</h4>
+    <p class="text-gray-600">Task: <strong>{{ submission.task.title }}</strong></p>
+
+    <!-- Rejection Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+      <h6 class="font-semibold text-blue-800">Your submission was rejected</h6>
+      <p class="text-sm text-gray-700"><strong>Reason:</strong> {{ submission.rejection_reason }}</p>
+      <p class="text-sm text-gray-700"><strong>Reviewed by:</strong> {{ submission.reviewed_by.username }}</p>
+      <p class="text-sm text-gray-700"><strong>Reviewed on:</strong> {{ submission.reviewed_at|date:"M d, Y H:i" }}</p>
+    </div>
+
+    <!-- Dispute Form -->
+    <form method="post" class="mt-6 space-y-5">
+      {% csrf_token %}
+      <div>
+        <label for="{{ form.reason.id_for_label }}" class="block text-sm font-medium text-gray-700">
+          Dispute Reason *
+        </label>
+        {{ form.reason }}
+        <p class="text-xs text-gray-500 mt-1">
+          Explain why you believe the rejection was unfair or incorrect.  
+          Be specific and provide any additional evidence or clarification.
+        </p>
+        {% if form.reason.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.reason.errors }}</p>
+        {% endif %}
+      </div>
+
+      <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4">
+        <strong class="block mb-1">Note:</strong>
+        Once you file a dispute, it will be reviewed by an administrator.  
+        The decision will be final and may take 3–5 business days to resolve.
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button type="submit" class="btn-warning w-full sm:w-auto">
+          <i class="fas fa-exclamation-triangle mr-1"></i> File Dispute
+        </button>
+        <a href="{% url 'tasks:my_submissions' %}" class="btn-secondary w-full sm:w-auto">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Original Submission -->
+  <div class="bg-white rounded-xl shadow p-6 mt-6 fade-in-up">
+    <h6 class="text-lg font-semibold text-gray-800 mb-3">Your Original Submission</h6>
+    <div class="space-y-3 text-gray-700">
+      {% if submission.proof_text %}
+      <p><strong>Proof Text:</strong><br>{{ submission.proof_text }}</p>
+      {% endif %}
+      {% if submission.proof_file %}
+      <p><strong>File:</strong> 
+        <a href="{{ submission.proof_file.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
+      </p>
+      {% endif %}
+      {% if submission.screenshot %}
+      <p>
+        <strong>Screenshot:</strong><br>
+        <img src="{{ submission.screenshot.url }}" class="rounded-lg border max-w-sm">
+      </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

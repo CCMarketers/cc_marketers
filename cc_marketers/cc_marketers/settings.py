@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     # Third party
     'crispy_forms',
     'crispy_tailwind',
+    "widget_tweaks",
 
     # Local apps
     'users', 

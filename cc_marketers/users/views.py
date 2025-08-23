@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
-
+from tasks.models import Task, Submission
 
 from .models import User, UserProfile, EmailVerificationToken, PhoneVerificationToken
 from .forms import (
@@ -75,12 +75,16 @@ class CustomLoginView(LoginView):
         return {
             User.ADMIN: reverse_lazy('admin:index'),
             User.ADVERTISER: reverse_lazy('tasks:my_tasks'),
-        }.get(role, reverse_lazy('tasks:browse'))
+            User.MEMBER: reverse_lazy('tasks:task_list'),
+        }.get(role, reverse_lazy('tasks:task_list'))
 
     def form_valid(self, form):
         messages.success(self.request, f'Welcome back, {form.get_user().get_short_name()}!')
         return super().form_valid(form)
 
+    def form_invalid(self, form):
+        messages.error(self.request, "Invalid login credentials. Please try again.")
+        return super().form_invalid(form)
 
 class UserLogoutView(RedirectView):
     """Handle user logout"""
@@ -119,24 +123,58 @@ class ProfileSetupView(LoginRequiredMixin, UpdateView):
         return response
 
 
-
 class UserDashboardView(LoginRequiredMixin, TemplateView):
     """User dashboard"""
     template_name = 'users/dashboard.html'
 
     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         user = self.request.user
-        return {
-            **super().get_context_data(**kwargs),
-            'user_stats': {
-                'total_referrals': user.total_referrals,
-                'active_referrals': user.active_referrals,
-                'member_since': user.date_joined,
-                'email_verified': user.email_verified,
-                'phone_verified': user.phone_verified,
-            },
-            'recent_referrals': user.referrals.all()[:5]
+
+        # User stats
+        user_stats = {
+            "total_referrals": getattr(user, "total_referrals", 0),
+            "active_referrals": getattr(user, "active_referrals", 0),
+            "member_since": getattr(user, "date_joined", None),
+            "email_verified": getattr(user, "email_verified", False),
+            "phone_verified": getattr(user, "phone_verified", False),
         }
+
+        # Recent referrals
+        recent_referrals = getattr(user, "referrals", None)
+        if recent_referrals:
+            recent_referrals = recent_referrals.all()[:5]
+        else:
+            recent_referrals = []
+
+        # Recent tasks created (advertiser view)
+        # Recent submissions by the user
+        recent_tasks = (
+            Submission.objects.filter(member=user)
+            .select_related("task")
+            .order_by("-submitted_at")[:5]
+        )
+
+
+        # Completed tasks (approved submissions by this user)
+        completed_tasks_count = Submission.objects.filter(
+            member=user, status="approved"
+        ).count()
+
+        # Active tasks: if advertiser → their active tasks, else → user's pending submissions
+        if Task.objects.filter(advertiser=user).exists():  # advertiser
+            active_tasks_count = Task.objects.filter(advertiser=user, status="active").count()
+        else:  # member
+            active_tasks_count = Submission.objects.filter(member=user, status="pending").count()
+
+        context.update({
+            "user_stats": user_stats,
+            "recent_referrals": recent_referrals,
+            "recent_tasks": recent_tasks,
+            "completed_tasks_count": completed_tasks_count,
+            "active_tasks_count": active_tasks_count,
+        })
+        return context
 
 
 class EmailVerificationView(TemplateView):

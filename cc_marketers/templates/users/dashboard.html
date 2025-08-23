@@ -42,7 +42,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">Tasks Completed</p>
-                    <p class="text-2xl font-bold text-red-600">{{ user.completed_tasks_count|default:"0" }}</p>
+                    <p class="text-2xl font-bold text-red-600">{{ completed_tasks_count|default:"0" }}</p>
                 </div>
                 <div class="bg-green-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,7 +57,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">Active Tasks</p>
-                    <p class="text-2xl font-bold text-red-600">{{ user.active_tasks_count|default:"0" }}</p>
+                    <p class="text-2xl font-bold text-red-600">{{ active_tasks_count|default:"0" }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,7 +89,7 @@
         <div class="bg-white rounded-lg border border-red-100 shadow-sm p-6">
             <h3 class="text-lg font-semibold text-red-600 mb-4">Quick Actions</h3>
             <div class="space-y-3">
-                <a href="{% comment %}{% url 'tasks:browse' %}{% endcomment %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
+                <a href="{% url 'tasks:task_list' %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
                     <div class="bg-red-600 p-2 rounded-lg mr-3">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -100,8 +100,32 @@
                         <p class="text-sm text-gray-600">Find tasks to complete</p>
                     </div>
                 </a>
-
-                <a href="{% comment %}{% url 'tasks:post' %}{% endcomment %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
+                {% if request.user.role == 'advertiser' or request.user.is_staff %}
+                <a href="{% url 'tasks:my_tasks' %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
+                    <div class="bg-red-600 p-2 rounded-lg mr-3">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">View Task Posted</p>
+                        <p class="text-sm text-gray-600">View the tasks you posted</p>
+                    </div>
+                </a>
+                {% endif %}
+                <a href="{% url 'tasks:my_submissions' %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
+                    <div class="bg-red-600 p-2 rounded-lg mr-3">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">View Task</p>
+                        <p class="text-sm text-gray-600">View tasks Submisions</p>
+                    </div>
+                </a>
+                {% if request.user.role == 'advertiser' or request.user.is_staff %}
+                <a href="{% url 'tasks:create_task' %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
                     <div class="bg-red-600 p-2 rounded-lg mr-3">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -112,7 +136,7 @@
                         <p class="text-sm text-gray-600">Get your work done</p>
                     </div>
                 </a>
-
+                {% endif %}
                 <a href="{% comment %}{% url 'wallets:dashboard' %}{% endcomment %}" class="flex items-center p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200">
                     <div class="bg-red-600 p-2 rounded-lg mr-3">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +163,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Your Referral Link</label>
                 <div class="flex">
                     <input type="text" 
-                           value="{{ request.build_absolute_uri }}register/{{ user.referral_code }}/" 
+                           value="{{ settings.BACKEND_URL }}register/{{ user.referral_code }}/" 
                            readonly
                            id="referral-link"
                            class="flex-1 px-3 py-2 border border-red-300 rounded-l-lg bg-gray-50 text-sm">
@@ -164,31 +188,48 @@
         <div class="bg-white rounded-lg border border-red-100 shadow-sm p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-red-600">Recent Tasks</h3>
-                <a href="{% comment %}{% url 'tasks:my_tasks' %}{% endcomment %}" class="text-sm text-red-600 hover:text-red-800">View All</a>
+                <a href="{% url 'tasks:task_list' %}" class="text-sm text-red-600 hover:text-red-800">View All</a>
             </div>
             
             <div class="space-y-3">
                 {% for task in recent_tasks %}
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex-1">
-                        <h4 class="font-medium text-gray-900 line-clamp-1">{{ task.title }}</h4>
-                        <p class="text-sm text-gray-600">₦{{ task.payment|floatformat:2 }} • {{ task.created_at|timesince }} ago</p>
+                        <h4 class="font-medium text-gray-900 line-clamp-1">{{ task.task.title }}</h4>
+                        <p class="text-sm text-gray-600">
+                            ₦{{ task.task.payout_per_slot|floatformat:2 }} 
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            {{ task.get_status_display }} 
+                        </p>
                     </div>
-                    <span class="badge {% if task.status == 'completed' %}badge-green{% elif task.status == 'in_progress' %}badge-blue{% else %}badge-yellow{% endif %}">
+                    <span class="badge
+                        {% if task.status == 'completed' %}
+                            badge-green
+                        {% elif task.status == 'active' %}
+                            badge-blue
+                        {% elif task.status == 'paused' %}
+                            badge-yellow
+                        {% elif task.status == 'cancelled' %}
+                            badge-red
+                        {% endif %}
+                    ">
                         {{ task.get_status_display }}
                     </span>
                 </div>
                 {% empty %}
                 <div class="text-center py-8">
                     <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     <p class="text-gray-600">No recent tasks</p>
-                    <a href="{% comment %}{% url 'tasks:browse' %}{% endcomment %}" class="text-red-600 hover:text-red-800 text-sm">Browse available tasks</a>
+                    <a href="{% url 'tasks:task_list' %}" class="text-red-600 hover:text-red-800 text-sm">Browse available tasks</a>
                 </div>
                 {% endfor %}
             </div>
         </div>
+
 
         <!-- Recent Transactions -->
         <div class="bg-white rounded-lg border border-red-100 shadow-sm p-6">

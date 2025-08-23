@@ -63,6 +63,14 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'user__first_name', 'user__last_name', 'occupation', 'company')
     readonly_fields = ('tasks_completed', 'tasks_posted', 'success_rate', 'average_rating', 'total_reviews')
 
+    def tasks_completed(self, obj):
+        return obj.tasks_completed
+    tasks_completed.short_description = "Tasks Completed"
+
+    def tasks_posted(self, obj):
+        return obj.tasks_posted
+    tasks_posted.short_description = "Tasks Posted"
+
 @admin.register(EmailVerificationToken)
 class EmailVerificationTokenAdmin(admin.ModelAdmin):
     list_display = ('user', 'token', 'created_at', 'expires_at', 'used')

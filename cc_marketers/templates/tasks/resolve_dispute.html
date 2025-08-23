@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Resolve Dispute #{{ dispute.id }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Left Column -->
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
+      <h4 class="text-xl font-semibold text-gray-800 mb-2">Resolve Dispute #{{ dispute.id }}</h4>
+      <p class="text-gray-600">Task: <strong>{{ dispute.submission.task.title }}</strong></p>
+
+      <!-- Dispute vs Rejection -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div>
+          <h6 class="font-semibold text-gray-800 mb-2">Member’s Dispute</h6>
+          <p class="text-sm text-gray-600 mb-2"><strong>Filed by:</strong> {{ dispute.raised_by.username }}</p>
+          <div class="border rounded-lg p-3 bg-gray-50 text-sm text-gray-700">
+            {{ dispute.reason|linebreaks }}
+          </div>
+        </div>
+        <div>
+          <h6 class="font-semibold text-gray-800 mb-2">Original Rejection</h6>
+          <p class="text-sm text-gray-600 mb-2"><strong>Rejected by:</strong> {{ dispute.submission.reviewed_by.username }}</p>
+          <div class="border rounded-lg p-3 bg-gray-50 text-sm text-gray-700">
+            {{ dispute.submission.rejection_reason|linebreaks }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Submission Evidence -->
+      <div class="mt-6">
+        <h6 class="font-semibold text-gray-800 mb-3">Submission Evidence</h6>
+        {% if dispute.submission.proof_text %}
+        <p class="text-sm text-gray-700 mb-3"><strong>Proof Text:</strong><br>{{ dispute.submission.proof_text }}</p>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          {% if dispute.submission.proof_file %}
+          <div>
+            <strong>File:</strong><br>
+            <a href="{{ dispute.submission.proof_file.url }}" target="_blank"
+              class="inline-flex items-center px-3 py-1 mt-1 rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
+              <i class="fas fa-file mr-1"></i> View File
+            </a>
+          </div>
+          {% endif %}
+          {% if dispute.submission.screenshot %}
+          <div>
+            <strong>Screenshot:</strong><br>
+            <img src="{{ dispute.submission.screenshot.url }}" class="rounded border max-h-[200px] object-contain">
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="space-y-6">
+    <!-- Task Requirements -->
+    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
+      <h6 class="font-semibold text-gray-800 mb-3">Task Requirements</h6>
+      <p class="text-sm text-gray-700"><strong>Description:</strong><br>{{ dispute.submission.task.description }}</p>
+      <p class="text-sm text-gray-700 mt-2"><strong>Proof Instructions:</strong><br>{{ dispute.submission.task.proof_instructions }}</p>
+      <p class="text-sm text-gray-700 mt-2"><strong>Payout:</strong> ${{ dispute.submission.task.payout_per_slot }}</p>
+    </div>
+
+    <!-- Resolve Dispute -->
+    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
+      <h6 class="font-semibold text-gray-800 mb-3">Resolve Dispute</h6>
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Resolution</label>
+          <div class="space-y-2">
+            <label class="flex items-start space-x-2">
+              <input type="radio" name="resolution" value="favor_member" id="favor_member"
+                class="mt-1 h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500">
+              <span>
+                <span class="font-semibold text-green-700">Favor Member</span><br>
+                <small class="text-gray-600">Approve submission & pay member</small>
+              </span>
+            </label>
+            <label class="flex items-start space-x-2">
+              <input type="radio" name="resolution" value="favor_advertiser" id="favor_advertiser"
+                class="mt-1 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500">
+              <span>
+                <span class="font-semibold text-red-700">Favor Advertiser</span><br>
+                <small class="text-gray-600">Uphold rejection decision</small>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label for="admin_notes" class="block text-sm font-medium text-gray-700">Admin Notes</label>
+          <textarea name="admin_notes" id="admin_notes" rows="4"
+            class="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            placeholder="Explain your decision..."></textarea>
+        </div>
+
+        <div class="flex flex-col space-y-2">
+          <button type="submit"
+            class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
+            <i class="fas fa-gavel mr-2"></i> Resolve Dispute
+          </button>
+          <a href="{% url 'tasks:admin_disputes' %}"
+            class="w-full inline-flex justify-center items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg shadow transition">
+            Back to Disputes
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -37,8 +37,8 @@
             <div>
                 <h3 class="text-red-600 font-semibold text-lg mb-4">Quick Links</h3>
                 <ul class="space-y-2">
-                    <li><a href="/" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Browse Tasks</a></li>
-                    <li><a href="{% comment %}{% url 'tasks:post' %}{% endcomment %}" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Post a Task</a></li>
+                    <li><a href="{% url 'tasks:task_list' %}" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Browse Tasks</a></li>
+                    <li><a href="{% url 'tasks:create_task' %}" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Post a Task</a></li>
                     <li><a href="{% comment %}{% url 'wallets:dashboard' %}{% endcomment %}" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Wallet</a></li>
                     <li><a href="{% comment %}{% url 'referrals:dashboard' %}{% endcomment %}" class="text-gray-600 hover:text-red-600 transition-colors duration-200">Referrals</a></li>
                 </ul>

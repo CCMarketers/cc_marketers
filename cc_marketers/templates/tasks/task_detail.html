@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+  <!-- Left: Task details -->
+  <div class="md:col-span-2">
+    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">{{ task.title }}</h2>
+        <span class="badge badge-green">₦{{ task.payout_per_slot }} per completion</span>
+      </div>
+      <p class="text-sm text-gray-500 mb-6">Posted by {{ task.advertiser.username }}</p>
+
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Description</h3>
+        <p class="text-gray-700 whitespace-pre-line">{{ task.description }}</p>
+      </div>
+
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Proof Instructions</h3>
+        <p class="text-gray-700 whitespace-pre-line">{{ task.proof_instructions }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <strong>Deadline:</strong><br>
+          <span class="text-gray-600">{{ task.deadline|date:"M d, Y H:i" }}</span>
+        </div>
+        <div>
+          <strong>Available Slots:</strong><br>
+          <span class="text-gray-600">{{ task.remaining_slots }}/{{ task.total_slots }}</span>
+        </div>
+        <div>
+          <strong>Total Payout:</strong><br>
+          <span class="text-gray-600">₦{{ task.total_payout }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: User submission / actions -->
+  <div>
+    {% if existing_submission %}
+    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Your Submission</h3>
+      <span class="badge 
+        {% if existing_submission.status == 'pending' %} badge-yellow
+        {% elif existing_submission.status == 'approved' %} badge-green
+        {% elif existing_submission.status == 'rejected' %} badge-red
+        {% endif %}">
+        {{ existing_submission.get_status_display }}
+      </span>
+
+      {% if existing_submission.status == 'rejected' %}
+      <div class="bg-red-50 border-l-4 border-red-600 text-red-700 p-3 rounded mt-4">
+        <strong>Rejection Reason:</strong><br>
+        {{ existing_submission.rejection_reason }}
+      </div>
+      {% if not existing_submission.dispute %}
+      <a href="{% url 'tasks:create_dispute' existing_submission.id %}" class="btn-secondary mt-4 inline-flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        </svg>
+        File Dispute
+      </a>
+      {% endif %}
+      {% endif %}
+
+      <div class="mt-4 text-sm text-gray-600 space-y-2">
+        <p><strong>Submitted:</strong> {{ existing_submission.submitted_at|date:"M d, Y H:i" }}</p>
+        {% if existing_submission.proof_text %}
+        <p><strong>Proof Text:</strong><br>{{ existing_submission.proof_text }}</p>
+        {% endif %}
+        {% if existing_submission.proof_file %}
+        <p><strong>File:</strong> <a href="{{ existing_submission.proof_file.url }}" target="_blank" class="text-red-600 hover:underline">View File</a></p>
+        {% endif %}
+        {% if existing_submission.screenshot %}
+        <div>
+          <strong>Screenshot:</strong><br>
+          <img src="{{ existing_submission.screenshot.url }}" class="rounded shadow mt-2 max-w-[200px]">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% elif task.is_expired %}
+    <div class="bg-white rounded-xl shadow card-hover p-6 text-center fade-in-up">
+      <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>
+      </svg>
+      <h5 class="text-lg font-semibold text-gray-700">Task Expired</h5>
+      <p class="text-gray-500">This task deadline has passed.</p>
+    </div>
+
+    {% elif task.is_full %}
+    <div class="bg-white rounded-xl shadow card-hover p-6 text-center fade-in-up">
+      <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5"></path>
+      </svg>
+      <h5 class="text-lg font-semibold text-gray-700">Task Full</h5>
+      <p class="text-gray-500">All slots have been filled.</p>
+    </div>
+
+    {% else %}
+    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Submit Your Work</h3>
+      <form method="post" enctype="multipart/form-data" data-validate class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="{{ form.proof_text.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Proof Description</label>
+          {{ form.proof_text|add_class:"form-input" }}
+        </div>
+        <div>
+          <label for="{{ form.proof_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Upload File (Optional)</label>
+          {{ form.proof_file|add_class:"form-input" }}
+        </div>
+        <div>
+          <label for="{{ form.screenshot.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Screenshot (Optional)</label>
+          {{ form.screenshot|add_class:"form-input" }}
+        </div>
+        <button type="submit" class="btn-primary w-full">
+          <svg class="w-4 h-4 mr-2 inline" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 4h12v12H4V4z" clip-rule="evenodd"></path>
+          </svg>
+          Submit Work
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

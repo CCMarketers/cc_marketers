@@ -202,8 +202,6 @@ class UserProfile(models.Model):
     facebook_url = models.URLField(blank=True)
     skills = models.TextField(blank=True)
     experience_years = models.PositiveIntegerField(null=True, blank=True)
-    tasks_completed = models.PositiveIntegerField(default=0)
-    tasks_posted = models.PositiveIntegerField(default=0)
     success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     total_reviews = models.PositiveIntegerField(default=0)
@@ -222,6 +220,17 @@ class UserProfile(models.Model):
             return [skill.strip() for skill in self.skills.split(',') if skill.strip()]
         return []
 
+
+    @property
+    def tasks_posted(self):
+        """Number of tasks this user has posted as advertiser"""
+        return self.user.posted_tasks.count()
+
+
+    @property
+    def tasks_completed(self):
+        """Number of submissions this user has successfully completed (approved)"""
+        return self.user.task_submissions.filter(status="approved").count()
 
 # ---------- VERIFICATION TOKENS ----------
 class EmailVerificationToken(models.Model):
