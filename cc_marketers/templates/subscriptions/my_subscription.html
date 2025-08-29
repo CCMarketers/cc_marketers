@@ -1,0 +1,239 @@
+
+<!-- subscriptions/templates/subscriptions/my_subscription.html -->
+{% extends 'base.html' %}
+
+{% block title %}My Subscription{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">My Subscription</h1>
+        <p class="text-xl text-gray-600">Manage your current subscription and view history</p>
+    </div>
+
+    <!-- Wallet Balance -->
+    <div class="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg text-center">
+        <h2 class="text-xl font-semibold text-red-800 mb-2">Wallet Balance</h2>
+        <p class="text-3xl font-bold text-red-600">${{ wallet_balance|floatformat:2 }}</p>
+    </div>
+
+    {% if active_subscription %}
+        <!-- Active Subscription -->
+        <div class="bg-white border-2 border-red-200 rounded-xl shadow-lg mb-8">
+            <div class="bg-red-600 text-white text-center py-4 rounded-t-xl">
+                <h2 class="text-2xl font-bold">Active Subscription</h2>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Plan Details -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-4">{{ active_subscription.plan.name }}</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Price:</span>
+                                <span class="text-lg font-semibold text-red-600">${{ active_subscription.plan.price }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Business Volume:</span>
+                                <span class="font-semibold">{{ active_subscription.plan.business_volume }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Referral Commission:</span>
+                                <span class="font-semibold">${{ active_subscription.plan.referral_commission }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Commission To Tree:</span>
+                                <span class="font-semibold">${{ active_subscription.plan.commission_to_tree }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="font-medium text-gray-600">Daily Ad Limit:</span>
+                                <span class="font-semibold">
+                                    {% if active_subscription.plan.daily_ad_limit == 0 %}
+                                        Unlimited
+                                    {% else %}
+                                        {{ active_subscription.plan.daily_ad_limit }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subscription Status -->
+                    <div>
+                        <h4 class="text-xl font-semibold text-gray-900 mb-4">Subscription Status</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Status:</span>
+                                <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Start Date:</span>
+                                <span class="font-semibold">{{ active_subscription.start_date|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Expires:</span>
+                                <span class="font-semibold text-red-600">{{ active_subscription.expiry_date|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="font-medium text-gray-600">Days Remaining:</span>
+                                <span class="font-semibold text-red-600">{{ active_subscription.days_remaining }} days</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2">
+                                <span class="font-medium text-gray-600">Auto-Renewal:</span>
+                                <span class="font-semibold {% if active_subscription.auto_renewal %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {% if active_subscription.auto_renewal %}Enabled{% else %}Disabled{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="mt-8 flex flex-wrap gap-4 justify-center">
+                    <form method="post" action="{% url 'subscriptions:toggle_auto_renewal' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200">
+                            {% if active_subscription.auto_renewal %}
+                                Disable Auto-Renewal
+                            {% else %}
+                                Enable Auto-Renewal
+                            {% endif %}
+                        </button>
+                    </form>
+                    
+                    <form method="post" action="{% url 'subscriptions:cancel_subscription' %}" onsubmit="return confirm('Are you sure you want to cancel your subscription?');">
+                        {% csrf_token %}
+                        <button type="submit" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors duration-200">
+                            Cancel Subscription
+                        </button>
+                    </form>
+                    
+                    <a href="{% url 'subscriptions:plans' %}" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors duration-200">
+                        View All Plans
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- No Active Subscription -->
+        <div class="text-center py-12 bg-red-50 rounded-xl border-2 border-red-200 mb-8">
+            <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">No Active Subscription</h2>
+            <p class="text-gray-600 mb-6">You don't have an active subscription. Choose a plan to get started!</p>
+            <a href="{% url 'subscriptions:plans' %}" class="inline-block px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-lg transition-colors duration-200">
+                Browse Plans
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Subscription History -->
+    {% if subscription_history %}
+        <div class="bg-white border border-gray-200 rounded-xl shadow-lg">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-xl">
+                <h2 class="text-2xl font-bold text-gray-900">Subscription History</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-red-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auto-Renewal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for subscription in subscription_history %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="font-medium text-gray-900">{{ subscription.plan.name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-gray-900">${{ subscription.plan.price }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-gray-900">{{ subscription.start_date|date:"M d, Y" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-gray-900">{{ subscription.expiry_date|date:"M d, Y" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium
+                                        {% if subscription.status == 'active' %}bg-green-100 text-green-800{% endif %}
+                                        {% if subscription.status == 'expired' %}bg-yellow-100 text-yellow-800{% endif %}
+                                        {% if subscription.status == 'cancelled' %}bg-red-100 text-red-800{% endif %}">
+                                        {{ subscription.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm {% if subscription.auto_renewal %}text-green-600{% else %}text-red-600{% endif %}">
+                                        {% if subscription.auto_renewal %}Yes{% else %}No{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Helpful Information -->
+    <div class="mt-12 bg-red-50 rounded-xl p-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Subscription Information</h2>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">How Auto-Renewal Works</h3>
+                <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        Auto-renewal charges your wallet balance automatically
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        Renewal happens on your expiry date if you have sufficient balance
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        You can disable auto-renewal at any time
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        If renewal fails due to insufficient funds, your subscription expires
+                    </li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Cancellation Policy</h3>
+                <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        You can cancel your subscription at any time
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        Cancellation takes effect immediately
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        No refunds for partial months
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-red-600 mr-2">•</span>
+                        You can resubscribe at any time
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

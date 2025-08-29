@@ -1,7 +1,6 @@
 from pathlib import Path
 from decouple import config
 import os
-import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,6 +18,7 @@ DEBUG = True
 #DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 
+BACKEND_URL = "http://127.0.0.1:8000/"
 
 # Application definition
 
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'core', 
     'commerce', 
     'offerwalls',
+    'subscriptions',
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'subscriptions.middleware.SubscriptionMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'cc_marketers.urls'
@@ -67,6 +70,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'subscriptions.context_processors.subscription_context',
             ],
         },
     },
@@ -84,6 +88,22 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.environ.get('DB_NAME'),
+#         'USER': os.environ.get('DB_USER'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),
+#         'HOST': os.environ.get('DB_HOST'),
+#         'PORT': os.environ.get('DB_PORT', '5432'),
+#         'OPTIONS': {
+#             'sslmode': os.environ.get('DB_SSLMODE', 'require')
+#         },
+#     }
+# }
+
+
 # Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
@@ -124,6 +144,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+COMPANY_SYSTEM_USERNAME = "considerateclub"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -149,26 +170,70 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Email Configuration
-# EMAIL_BACKEND = config('EMAIL_BACKEND')
-# EMAIL_HOST = config('EMAIL_HOST')
-# EMAIL_PORT = config('EMAIL_PORT', cast=int)
-# EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-# EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-# DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
-# ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "m0hb0hlahji@gmail.com")#Considerateclub@gmail.com
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST') 
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "considerateclub@gmail.com")
 
 
 
-# Initialise environment variables
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# Email
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'wallet_system.log',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'wallets': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'tasks': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+# Payment Gateway Settings
+PAYSTACK_PUBLIC_KEY = 'pk_test_your_paystack_public_key'
+PAYSTACK_SECRET_KEY = 'sk_test_your_paystack_secret_key'
+
+FLUTTERWAVE_PUBLIC_KEY = 'FLWPUBK_TEST-your_flutterwave_public_key'
+FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-your_flutterwave_secret_key'
+
+# Wallet System Settings
+WALLET_SETTINGS = {
+    'MIN_WITHDRAWAL_AMOUNT': 1.00,
+    'MAX_WITHDRAWAL_AMOUNT': 10000.00,
+    'DEFAULT_REFERRAL_BONUS': 10.00,
+    'CURRENCY': 'USD',
+    'CURRENCY_SYMBOL': '$',
+}
+
+# Celery settings (for background task processing)
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+
+
+

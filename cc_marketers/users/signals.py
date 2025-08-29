@@ -4,6 +4,7 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out
 from .models import User, UserProfile
 
 
+
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     """
@@ -30,9 +31,5 @@ def user_logged_out_handler(sender, request, user, **kwargs):
     pass
 
 
-# Example (Optional): Auto-create wallet for new users
-# @receiver(post_save, sender=User)
-# def create_user_wallet(sender, instance, created, **kwargs):
-#     if created:
-#         from wallets.models import Wallet
-#         Wallet.objects.create(user=instance)
+
+

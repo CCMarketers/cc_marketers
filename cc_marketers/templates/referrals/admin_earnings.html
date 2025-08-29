@@ -1,0 +1,318 @@
+<!-- templates/referrals/admin_earnings.html -->
+<div class="min-h-screen bg-white">
+    <!-- Header -->
+    <div class="bg-red-600 text-white py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Earnings Management</h1>
+                    <p class="text-red-100 mt-2">Review and manage referral earnings</p>
+                </div>
+                <a href="{% url 'referrals:admin_dashboard' %}" 
+                   class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Filter Earnings</h2>
+            <form method="get" class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" id="status" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <option value="">All Statuses</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="flex-shrink-0">
+                    <button type="submit" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors mt-6">
+                        Apply Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if earnings %}
+            <!-- Earnings Table -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <h2 class="text-lg font-semibold text-gray-900">Referral Earnings</h2>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Referrer
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Type
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    From User
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for earning in earnings %}
+                                <tr class="hover:bg-gray-50" id="earning-{{ earning.id }}">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="checkbox" name="earning_ids" value="{{ earning.id }}" 
+                                               class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                                                    <span class="text-sm font-medium text-red-800">
+                                                        {{ earning.referrer.first_name|first|default:earning.referrer.username|first }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {% if earning.referrer.first_name %}
+                                                        {{ earning.referrer.first_name }} {{ earning.referrer.last_name }}
+                                                    {% else %}
+                                                        {{ earning.referrer.username }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-sm text-gray-500">{{ earning.referrer.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">${{ earning.amount|floatformat:2 }}</div>
+                                        <div class="text-sm text-gray-500">{{ earning.commission_rate }}% commission</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ earning.get_earning_type_display }}</div>
+                                        <div class="text-sm text-gray-500">Level {{ earning.referral.level }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {% if earning.referred_user.first_name %}
+                                                {{ earning.referred_user.first_name }} {{ earning.referred_user.last_name }}
+                                            {% else %}
+                                                {{ earning.referred_user.username }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                            {% if earning.status == 'paid' %}bg-green-100 text-green-800
+                                            {% elif earning.status == 'approved' %}bg-blue-100 text-blue-800
+                                            {% elif earning.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                            {{ earning.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div>{{ earning.created_at|date:"M d, Y" }}</div>
+                                        <div class="text-xs">{{ earning.created_at|time:"g:i A" }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            {% if earning.status == 'pending' %}
+                                                <button onclick="updateEarningStatus({{ earning.id }}, 'approved')" 
+                                                        class="text-green-600 hover:text-green-900 transition-colors">
+                                                    Approve
+                                                </button>
+                                                <button onclick="updateEarningStatus({{ earning.id }}, 'cancelled')" 
+                                                        class="text-red-600 hover:text-red-900 transition-colors">
+                                                    Reject
+                                                </button>
+                                            {% elif earning.status == 'approved' %}
+                                                <button onclick="updateEarningStatus({{ earning.id }}, 'paid')" 
+                                                        class="text-blue-600 hover:text-blue-900 transition-colors">
+                                                    Mark Paid
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bg-white rounded-lg shadow-lg p-4 mt-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm font-medium text-gray-700">Bulk Actions:</span>
+                        <button onclick="bulkAction('approve')" 
+                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                            Approve Selected
+                        </button>
+                        <button onclick="bulkAction('paid')" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                            Mark as Paid
+                        </button>
+                        <button onclick="bulkAction('cancelled')" 
+                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors">
+                            Cancel Selected
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        <span id="selectedCount">0</span> items selected
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                               class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                               class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing <span class="font-medium">{{ page_obj.start_index }}</span>
+                                to <span class="font-medium">{{ page_obj.end_index }}</span>
+                                of <span class="font-medium">{{ page_obj.paginator.count }}</span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <span class="sr-only">Previous</span>
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </a>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-red-50 text-sm font-medium text-red-600">
+                                            {{ num }}
+                                        </span>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                           class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                            {{ num }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <span class="sr-only">Next</span>
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No earnings found</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    {% if status_filter %}
+                        No earnings with {{ status_filter }} status.
+                    {% else %}
+                        No referral earnings have been generated yet.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Handle select all checkbox
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('input[name="earning_ids"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateSelectedCount();
+});
+
+// Update selected count
+function updateSelectedCount() {
+    const selectedCheckboxes = document.querySelectorAll('input[name="earning_ids"]:checked');
+    document.getElementById('selectedCount').textContent = selectedCheckboxes.length;
+}
+
+// Add event listeners to individual checkboxes
+document.querySelectorAll('input[name="earning_ids"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+});
+
+// Update earning status
+function updateEarningStatus(earningId, status) {
+    if (confirm(`Are you sure you want to mark this earning as ${status}?`)) {
+        // In a real app, this would make an AJAX call to update the status
+        console.log(`Updating earning ${earningId} to ${status}`);
+        // For demo purposes, we'll just update the UI
+        location.reload();
+    }
+}
+
+// Bulk actions
+function bulkAction(action) {
+    const selectedCheckboxes = document.querySelectorAll('input[name="earning_ids"]:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one earning to perform bulk action.');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to ${action} ${selectedCheckboxes.length} earnings?`)) {
+        // In a real app, this would make an AJAX call to perform bulk action
+        console.log(`Bulk ${action} for earnings:`, Array.from(selectedCheckboxes).map(cb => cb.value));
+        location.reload();
+    }
+}
+</script>

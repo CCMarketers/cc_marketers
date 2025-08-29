@@ -48,13 +48,36 @@
     background: #b91c1c;
 }
 
-/* Enhanced form inputs */
+/* Enhanced form inputs with red hover outline */
 .form-input {
     @apply w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200;
 }
 
+.form-input:hover {
+    border-color: #dc2626;
+    outline: 2px solid rgba(220, 38, 38, 0.3);
+    outline-offset: 1px;
+}
+
 .form-input:focus {
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    outline: 2px solid #dc2626;
+    outline-offset: 1px;
+}
+
+/* Additional input variants with hover effects */
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="password"]:hover,
+input[type="number"]:hover,
+input[type="tel"]:hover,
+input[type="url"]:hover,
+textarea:hover,
+select:hover {
+    border-color: #dc2626 !important;
+    outline: 2px solid rgba(220, 38, 38, 0.3);
+    outline-offset: 1px;
+    transition: all 0.2s ease-in-out;
 }
 
 /* Button variants */
@@ -232,6 +255,19 @@
     * {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    /* Maintain hover effects even with reduced motion */
+    .form-input:hover,
+    input[type="text"]:hover,
+    input[type="email"]:hover,
+    input[type="password"]:hover,
+    input[type="number"]:hover,
+    input[type="tel"]:hover,
+    input[type="url"]:hover,
+    textarea:hover,
+    select:hover {
         transition-duration: 0.01ms !important;
     }
 }

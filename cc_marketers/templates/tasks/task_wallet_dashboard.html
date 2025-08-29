@@ -1,0 +1,125 @@
+<!-- tasks/task_wallet/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Task Wallet Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-red-800 mb-2">Task Wallet Dashboard</h1>
+        <p class="text-gray-600">Manage your task posting funds</p>
+    </div>
+
+    <!-- Wallet Balance Card -->
+    <div class="bg-white rounded-lg shadow-lg border border-red-200 p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-semibold text-red-700 mb-2">Available Balance</h2>
+                <p class="text-4xl font-bold text-red-800">${{ task_wallet.balance|floatformat:2 }}</p>
+            </div>
+            <div class="text-right">
+                <a href="{% url 'tasks:task_wallet_topup' %}" 
+                   class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 inline-block">
+                    Top Up Wallet
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow border border-red-100 p-6 text-center">
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-red-700 mb-2">Post New Task</h3>
+            <p class="text-gray-600 text-sm mb-4">Create a new task for your business</p>
+            <a href="{% url 'tasks:create_task' %}" class="text-red-600 hover:text-red-700 font-medium">Get Started →</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-red-100 p-6 text-center">
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-red-700 mb-2">View All Transactions</h3>
+            <p class="text-gray-600 text-sm mb-4">See your complete transaction history</p>
+            <a href="{% url 'tasks:task_wallet_transactions' %}" class="text-red-600 hover:text-red-700 font-medium">View History →</a>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-red-100 p-6 text-center">
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 0h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V11a2 2 0 00-2-2H9a2 2 0 00-2 2v0"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-red-700 mb-2">Manage Tasks</h3>
+            <p class="text-gray-600 text-sm mb-4">View and manage your posted tasks</p>
+            <a href="{% url 'tasks:my_tasks' %}" class="text-red-600 hover:text-red-700 font-medium">Manage →</a>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="bg-white rounded-lg shadow-lg border border-red-200">
+        <div class="px-6 py-4 border-b border-red-100">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-red-700">Recent Transactions</h2>
+                <a href="{% url 'tasks:task_wallet_transactions' %}" 
+                   class="text-red-600 hover:text-red-700 font-medium text-sm">View All →</a>
+            </div>
+        </div>
+        
+        {% if transactions %}
+            <div class="divide-y divide-red-50">
+                {% for transaction in transactions %}
+                <div class="px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-4
+                                    {% if transaction.transaction_type == 'credit' %}bg-green-100{% else %}bg-red-100{% endif %}">
+                            {% if transaction.transaction_type == 'credit' %}
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>
+                                </svg>
+                            {% else %}
+                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                                </svg>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">{{ transaction.get_category_display }}</p>
+                            <p class="text-sm text-gray-500">{{ transaction.created_at|date:"M d, Y H:i" }}</p>
+                            {% if transaction.description %}
+                                <p class="text-sm text-gray-600 mt-1">{{ transaction.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-semibold 
+                                 {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
+                            {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                        </p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if transaction.status == 'success' %}bg-green-100 text-green-800{% elif transaction.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ transaction.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="px-6 py-12 text-center">
+                <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 4v6m4-6v6m-8-4H5m4 0h4"></path>
+                </svg>
+                <p class="text-gray-500 font-medium">No transactions yet</p>
+                <p class="text-gray-400 text-sm mt-1">Your transaction history will appear here</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

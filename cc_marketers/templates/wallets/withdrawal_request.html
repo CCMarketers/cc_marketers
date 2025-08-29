@@ -1,0 +1,160 @@
+<!-- wallets/templates/wallets/withdrawal_request.html -->
+{% extends 'base.html' %}
+
+{% block title %}Request Withdrawal{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-red-800">Request Withdrawal</h1>
+        <p class="text-red-600 mt-2">Withdraw your earnings to your bank account</p>
+    </div>
+
+    <!-- Balance Info -->
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-medium text-red-800">Available Balance</h3>
+                <p class="text-3xl font-bold text-red-600">${{ available_balance|floatformat:2 }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-red-600">Total Balance: ${{ wallet.balance|floatformat:2 }}</p>
+                <p class="text-xs text-red-500">Available = Total - Escrowed funds</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawal Form -->
+    <div class="bg-white shadow-md rounded-lg max-w-2xl mx-auto">
+        <div class="px-6 py-4 border-b border-red-200">
+            <h2 class="text-xl font-semibold text-red-800">Withdrawal Details</h2>
+        </div>
+        
+        <form method="post" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Amount -->
+            <div class="mb-6">
+                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                    Withdrawal Amount <span class="text-red-500">*</span>
+                </label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.amount.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-sm text-red-500">Minimum: $1.00 | Maximum: $10,000.00</p>
+            </div>
+
+            <!-- Withdrawal Method -->
+            <div class="mb-6">
+                <label for="{{ form.withdrawal_method.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                    Withdrawal Method <span class="text-red-500">*</span>
+                </label>
+                {{ form.withdrawal_method }}
+                {% if form.withdrawal_method.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.withdrawal_method.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Bank Details -->
+            <div class="border-t border-red-200 pt-6">
+                <h3 class="text-lg font-medium text-red-800 mb-4">Bank Account Details</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Account Number -->
+                    <div>
+                        <label for="{{ form.account_number.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                            Account Number <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.account_number }}
+                        {% if form.account_number.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.account_number.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Account Name -->
+                    <div>
+                        <label for="{{ form.account_name.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                            Account Name <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.account_name }}
+                        {% if form.account_name.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.account_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bank Name -->
+                    <div>
+                        <label for="{{ form.bank_name.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                            Bank Name <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.bank_name }}
+                        {% if form.bank_name.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.bank_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bank Code -->
+                    <div>
+                        <label for="{{ form.bank_code.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                            Bank Code
+                        </label>
+                        {{ form.bank_code }}
+                        {% if form.bank_code.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.bank_code.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-red-500">Optional - for faster processing</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Important Notes -->
+            <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mt-1"></i>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Important Notes:</h3>
+                        <ul class="mt-2 text-sm text-yellow-700 list-disc list-inside space-y-1">
+                            <li>Withdrawal requests are processed manually by our team</li>
+                            <li>Processing time: 1-3 business days</li>
+                            <li>Make sure your bank details are correct to avoid delays</li>
+                            <li>Once submitted, withdrawal requests cannot be cancelled</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-between">
+                <a href="{% url 'wallets:dashboard' %}" class="bg-red-200 hover:bg-red-300 text-red-800 font-bold py-3 px-6 rounded-lg transition duration-300">
+                    <i class="fas fa-arrow-left mr-2"></i>Cancel
+                </a>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                    <i class="fas fa-paper-plane mr-2"></i>Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Auto-calculate fees or validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountInput = document.getElementById('{{ form.amount.id_for_label }}');
+        const availableBalance = {{ available_balance }};
+        
+        amountInput.addEventListener('input', function() {
+            const amount = parseFloat(this.value) || 0;
+            
+            if (amount > availableBalance) {
+                this.classList.add('border-red-500');
+                this.classList.remove('border-red-300');
+            } else {
+                this.classList.remove('border-red-500');
+                this.classList.add('border-red-300');
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,171 @@
+<!-- templates/referrals/commission_tiers.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Commission Rates - TriLinkers{% endblock %}
+
+{% block content %}
+<div class="bg-white">
+    <!-- Header -->
+    <div class="bg-red-600 text-white py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Commission Rates</h1>
+                    <p class="text-red-100 mt-2">Earn more with our multi-tier referral system</p>
+                </div>
+                <a href="{% url 'referrals:dashboard' %}" 
+                   class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <!-- How It Works Section -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-10">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6">How Multi-Tier Referrals Work</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-red-600">1</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Direct Referrals (Level 1)</h3>
+                    <p class="text-gray-600">Users who sign up directly with your referral link. You earn the highest commission from their activities.</p>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-orange-600">2</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Indirect Referrals (Level 2)</h3>
+                    <p class="text-gray-600">Users referred by your direct referrals. You earn a smaller but still significant commission.</p>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl font-bold text-yellow-600">3</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Third Level</h3>
+                    <p class="text-gray-600">Users referred by your Level 2 referrals. Build a network and earn passive income.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commission Tiers Table -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-xl font-semibold text-gray-900">Commission Structure</h2>
+                <p class="text-sm text-gray-600 mt-1">Earn commissions based on different user activities</p>
+            </div>
+            
+            {% if commission_tiers %}
+                {% regroup commission_tiers by earning_type as grouped_tiers %}
+                
+                {% for tier_group in grouped_tiers %}
+                    <div class="border-b border-gray-200 last:border-b-0">
+                        <div class="px-6 py-4 bg-gray-50">
+                            <h3 class="text-lg font-medium text-gray-900 capitalize">
+                                {{ tier_group.grouper|cut:"_" }}
+
+                            </h3>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission Rate</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example Earning</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for tier in tier_group.list %}
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                                    {% if tier.level == 1 %}bg-red-100 text-red-800
+                                                    {% elif tier.level == 2 %}bg-orange-100 text-orange-800
+                                                    {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                                    Level {{ tier.level }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {% if tier.level == 1 %} Direct Referral
+                                                    {% elif tier.level == 2 %} Indirect Referral
+                                                    {% else %} Third Level Referral {% endif %}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    {% if tier.level == 1 %} Users who sign up with your link
+                                                    {% elif tier.level == 2 %} Users referred by your direct referrals
+                                                    {% else %} Users referred by level 2 referrals {% endif %}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-lg font-semibold text-gray-900">{{ tier.rate }}%</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {{ tier.display_rate }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="px-6 py-8 text-center">
+                    <p class="text-gray-500">No commission tiers configured yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tips and Best Practices -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mt-10">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Tips for Maximizing Earnings</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Share Strategically</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Share on social media platforms</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Email to friends and family</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Create blog posts or content</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Join relevant online communities</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Build Your Network</h3>
+                    <ul class="space-y-2 text-sm text-gray-600">
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Help your referrals succeed</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Provide ongoing support</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Encourage them to refer others</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Focus on quality over quantity</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="bg-red-50 rounded-lg p-6 mt-10">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">Ready to Start Earning?</h3>
+                    <p class="text-sm text-gray-600 mt-1">Share your referral link and start building your network today.</p>
+                </div>
+                <a href="{% url 'referrals:dashboard' %}" 
+                   class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors">
+                    Get Your Link
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

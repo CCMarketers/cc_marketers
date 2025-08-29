@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Withdrawal Request #{{ withdrawal.id }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'wallets:admin_withdrawal_list' %}" class="text-red-600 hover:text-red-800">← Back to Withdrawals</a>
+            <h1 class="text-3xl font-bold text-gray-900">Withdrawal Request #{{ withdrawal.id }}</h1>
+        </div>
+        <div class="text-sm text-gray-600">
+            {{ withdrawal.created_at|date:"M d, Y H:i" }}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Details -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Request Details</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">User</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.user.username }}</div>
+                        <div class="text-sm text-gray-500">{{ withdrawal.user.email }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Amount</label>
+                        <div class="text-2xl font-bold text-red-600">${{ withdrawal.amount }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Status</label>
+                        <div class="mt-1">
+                            {% if withdrawal.status == 'pending' %}
+                                <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                            {% elif withdrawal.status == 'approved' %}
+                                <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">Approved</span>
+                            {% elif withdrawal.status == 'rejected' %}
+                                <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>
+                            {% elif withdrawal.status == 'processing' %}
+                                <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">Processing</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Withdrawal Method</label>
+                        <div class="text-lg text-gray-900 capitalize">{{ withdrawal.withdrawal_method }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Details -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Account Details</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Account Name</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.account_details.account_name }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Account Number</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.account_details.account_number }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Bank Name</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.account_details.bank_name }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Bank Code</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.account_details.bank_code }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            {% if withdrawal.transaction %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Associated Transaction</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Transaction ID</label>
+                        <div class="text-lg text-gray-900">#{{ withdrawal.transaction.id }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Reference</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.transaction.reference|default:"-" }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Status</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.transaction.get_status_display }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Action Panel -->
+        <div class="lg:col-span-1">
+            <!-- Status & Actions -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Actions</h2>
+                
+                {% if withdrawal.status == 'pending' %}
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        
+                        <div>
+                            <button type="submit" name="action" value="approve" 
+                                    class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                                Approve Withdrawal
+                            </button>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gateway Reference (Optional)</label>
+                            <input type="text" name="gateway_reference" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                   placeholder="Payment gateway reference">
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</label>
+                            <textarea name="reason" rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                      placeholder="Reason for rejection..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <button type="submit" name="action" value="reject" 
+                                    class="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
+                                Reject Withdrawal
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="text-center text-gray-500">
+                        <p>This withdrawal has already been {{ withdrawal.status }}.</p>
+                        {% if withdrawal.status == 'approved' and withdrawal.gateway_reference %}
+                            <p class="mt-2 text-sm">Gateway Ref: {{ withdrawal.gateway_reference }}</p>
+                        {% endif %}
+                        {% if withdrawal.status == 'rejected' and withdrawal.admin_notes %}
+                            <p class="mt-2 text-sm">Reason: {{ withdrawal.admin_notes }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- User Information -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">User Information</h2>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Wallet Balance</label>
+                        <div class="text-lg text-gray-900">${{ withdrawal.user.wallet.balance }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Available Balance</label>
+                        <div class="text-lg text-gray-900">${{ withdrawal.user.wallet.get_available_balance }}</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Total Withdrawals</label>
+                        <div class="text-lg text-gray-900">0</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Join Date</label>
+                        <div class="text-lg text-gray-900">{{ withdrawal.user.date_joined|date:"M d, Y" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Timeline</h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">Request Created</div>
+                            <div class="text-sm text-gray-500">{{ withdrawal.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                    </div>
+                    
+                    {% if withdrawal.processed_at %}
+                    <div class="flex items-start space-x-3">
+                        <div class="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">Processed</div>
+                            <div class="text-sm text-gray-500">{{ withdrawal.processed_at|date:"M d, Y H:i" }}</div>
+                            {% if withdrawal.processed_by %}
+                                <div class="text-sm text-gray-500">By: {{ withdrawal.processed_by.username }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

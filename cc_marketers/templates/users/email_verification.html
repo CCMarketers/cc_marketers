@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Email Verification - TaskPlatform{% endblock %}
+{% block title %}Email Verification - TriLinkers{% endblock %}
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gradient-red-light py-12 px-4 sm:px-6 lg:px-8">
@@ -69,12 +69,12 @@
                             Resend Verification Email
                         </a>
                         
-                        <div class="text-center">
+                        {% comment %} <div class="text-center">
                             <p class="text-gray-600 text-sm mb-2">Wrong email address?</p>
                             <a href="{% url 'users:change_email' %}" class="text-red-600 hover:text-red-800 text-sm underline">
                                 Update Email Address
                             </a>
-                        </div>
+                        </div> {% endcomment %}
                     </div>
                 </div>
             {% endif %}
@@ -92,7 +92,7 @@
                         <li>• Secure your account with two-factor authentication</li>
                         <li>• Receive important notifications about your tasks</li>
                         <li>• Enable password recovery options</li>
-                        <li>• Access all TaskPlatform features</li>
+                        <li>• Access all TriLinkers features</li>
                     </ul>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 # tasks/forms.py
 from django import forms
 from .models import Task, Submission, Dispute
+from decimal import Decimal
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -31,11 +32,11 @@ class TaskFilterForm(forms.Form):
     }))
     min_payout = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={
         "class": "form-input",
-        "placeholder": "Min ₦"
+        "placeholder": "Min $"
     }))
     max_payout = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={
         "class": "form-input",
-        "placeholder": "Max ₦"
+        "placeholder": "Max $"
     }))
 
 
@@ -57,4 +58,15 @@ class ReviewSubmissionForm(forms.Form):
     rejection_reason = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Reason for rejection (required if rejecting)...'})
+    )
+
+
+
+
+class TaskWalletTopupForm(forms.Form):
+    amount = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal('1.00'),
+        label="Amount to Transfer from Main Wallet"
     )

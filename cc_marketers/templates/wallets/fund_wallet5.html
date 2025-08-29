@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Fund Wallet{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="flex items-center space-x-4 mb-6">
+        <a href="{% url 'wallets:dashboard' %}" class="text-red-600 hover:text-red-800">← Back to Dashboard</a>
+        <h1 class="text-3xl font-bold text-gray-900">Fund Wallet</h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">Add Funds to Your Wallet</h2>
+            <p class="text-gray-600">This is a testing/admin feature to add funds to your wallet for development purposes.</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Amount ($)
+                </label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                    <div class="mt-1 text-sm text-red-600">
+                        {% for error in form.amount.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description (Optional)
+                </label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="mt-1 text-sm text-red-600">
+                        {% for error in form.description.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Current Wallet Info -->
+            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Current Wallet Status</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Current Balance</label>
+                        <div class="text-xl font-bold text-green-600">${{ request.user.wallet.balance|default:"0.00" }}</div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Available Balance</label>
+                        <div class="text-xl font-bold text-blue-600">${{ request.user.wallet.get_available_balance|default:"0.00" }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Notice -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Testing Feature</h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <p>This funding feature is intended for testing and administrative purposes only. In production, users would fund their wallets through payment gateways or other approved methods.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'wallets:dashboard' %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                    Fund Wallet
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Funding History -->
+    <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Recent Funding History</h2>
+        
+        <div class="space-y-3">
+            {% comment %}
+            <!-- Example entries - replace with actual data from transactions -->
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                <div>
+                    <div class="text-sm font-medium text-gray-900">Admin funding</div>
+                    <div class="text-xs text-gray-500">Jan 15, 2025 at 10:30 AM</div>
+                </div>
+                <div class="text-sm font-bold text-green-600">+$50.00</div>
+            </div>
+            {% endcomment %}
+            
+            <div class="text-center text-gray-500 py-8">
+                <p>No funding history available.</p>
+                <p class="text-sm mt-1">Your funding transactions will appear here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add form validation and formatting
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountInput = document.querySelector('input[name="amount"]');
+        
+        if (amountInput) {
+            // Add CSS classes for styling
+            amountInput.className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500';
+            amountInput.placeholder = '0.00';
+            amountInput.step = '0.01';
+            amountInput.min = '0.01';
+            
+            // Format amount input
+            amountInput.addEventListener('input', function() {
+                let value = this.value;
+                // Remove any non-digit or decimal characters
+                value = value.replace(/[^0-9.]/g, '');
+                // Ensure only one decimal point
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                // Limit to 2 decimal places
+                if (parts[1] && parts[1].length > 2) {
+                    value = parts[0] + '.' + parts[1].substring(0, 2);
+                }
+                this.value = value;
+            });
+        }
+        
+        const descriptionInput = document.querySelector('textarea[name="description"]');
+        if (descriptionInput) {
+            descriptionInput.className = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500';
+            descriptionInput.placeholder = 'Optional description for this funding...';
+            descriptionInput.rows = 3;
+        }
+    });
+</script>
+{% endblock %}

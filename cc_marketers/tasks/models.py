@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
-
+import uuid
 
 class Task(models.Model):
     TASK_STATUS_CHOICES = [
@@ -146,3 +146,61 @@ class Dispute(models.Model):
     
     def __str__(self):
         return f"Dispute #{self.id} - {self.submission.task.title}"
+
+
+class TaskWallet(models.Model):
+    """Wallet for posting tasks (business members only)."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    
+    def __str__(self):
+        return f"Task Wallet - {self.user.username}: ${self.balance}"
+
+    def get_available_balance(self):
+        return self.balance
+
+
+class TaskWalletTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('credit', 'Credit'),
+        ('debit', 'Debit'),
+    ]
+
+    CATEGORIES = [
+        ('subscription_bonus', 'Subscription Bonus'),  # fixed $10 from subscription
+        ('task_posting', 'Task Posting'),
+        ('topup_from_main', 'Top-up from Main Wallet'),
+        ('admin_adjustment', 'Admin Adjustment'),
+    ]
+
+    STATUS = [
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    category = models.CharField(max_length=30, choices=CATEGORIES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2,
+                                 validators=[MinValueValidator(Decimal('0.01'))])
+    balance_before = models.DecimalField(max_digits=12, decimal_places=2)
+    balance_after = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS, default='success')
+    description = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # 👇 Add this
+    reference = models.CharField(max_length=100, blank=True, null=True, unique=True)
+
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.transaction_type} ${self.amount} ({self.category})"

@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Referral Dashboard - TaskPlatform{% endblock %}
+{% block title %}Referral Dashboard - TriLinkers{% endblock %}
 
 {% block content %}
 <div class="fade-in-up">
@@ -11,7 +11,7 @@
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-3xl font-bold mb-2">💰 Referral Dashboard</h1>
-                <p class="text-purple-100">Earn money by inviting friends to TaskPlatform</p>
+                <p class="text-purple-100">Earn money by inviting friends to TriLinkers</p>
             </div>
             <div class="text-right">
                 <p class="text-purple-100 text-sm">Your referral code</p>
@@ -57,7 +57,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">Total Earnings</p>
-                    <p class="text-2xl font-bold text-red-600">₦{{ stats.total_earnings|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-2xl font-bold text-red-600">${{ stats.total_earnings|floatformat:2|default:"0.00" }}</p>
                 </div>
                 <div class="bg-red-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +72,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">This Month</p>
-                    <p class="text-2xl font-bold text-blue-600">₦{{ stats.monthly_earnings|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-2xl font-bold text-blue-600">${{ stats.monthly_earnings|floatformat:2|default:"0.00" }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +148,7 @@
                 <textarea id="custom-message" 
                           rows="3" 
                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                          placeholder="Add a personal message to invite your friends...">🚀 Join me on TaskPlatform and earn money by completing tasks! Use my referral link to get started with a bonus. It's legit and I'm already earning!</textarea>
+                          placeholder="Add a personal message to invite your friends...">🚀 Join me on TriLinkers and earn money by completing tasks! Use my referral link to get started with a bonus. It's legit and I'm already earning!</textarea>
             </div>
         </div>
         
@@ -194,20 +194,20 @@
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-green-700">Registration Bonus:</span>
-                        <span class="font-semibold text-green-800">₦500</span>
+                        <span class="font-semibold text-green-800">$500</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-green-700">First Task Completed:</span>
-                        <span class="font-semibold text-green-800">₦300</span>
+                        <span class="font-semibold text-green-800">$300</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-green-700">Monthly Active Bonus:</span>
-                        <span class="font-semibold text-green-800">₦100</span>
+                        <span class="font-semibold text-green-800">$100</span>
                     </div>
                     <div class="border-t border-green-300 pt-2 mt-2">
                         <div class="flex justify-between">
                             <span class="text-green-700 font-medium">Per Referral Potential:</span>
-                            <span class="font-bold text-green-800">₦900+</span>
+                            <span class="font-bold text-green-800">$900+</span>
                         </div>
                     </div>
                 </div>
@@ -240,7 +240,7 @@
                         <span class="badge {% if referral.is_verified %}badge-green{% else %}badge-yellow{% endif %}">
                             {% if referral.is_verified %}Verified{% else %}Pending{% endif %}
                         </span>
-                        <p class="text-sm text-gray-600 mt-1">₦{{ referral.earned_amount|floatformat:0|default:"0" }}</p>
+                        <p class="text-sm text-gray-600 mt-1">${{ referral.earned_amount|floatformat:0|default:"0" }}</p>
                     </div>
                 </div>
                 {% empty %}
@@ -267,7 +267,7 @@
                         <p class="text-sm text-gray-600">{{ month.referrals_count }} referral{{ month.referrals_count|pluralize }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="font-semibold text-red-600">₦{{ month.earnings|floatformat:0 }}</p>
+                        <p class="font-semibold text-red-600">${{ month.earnings|floatformat:0 }}</p>
                         <div class="w-24 bg-gray-200 rounded-full h-2 mt-1">
                             <div class="bg-red-600 h-2 rounded-full" style="width: {{ month.percentage }}%"></div>
                         </div>
@@ -311,7 +311,7 @@
 <!-- Share functionality scripts -->
 <script>
 const referralLink = "{{ request.build_absolute_uri }}/register/{{ user.referral_code }}/";
-const customMessage = () => document.getElementById('custom-message').value || "🚀 Join me on TaskPlatform and earn money by completing tasks! Use my referral link to get started with a bonus.";
+const customMessage = () => document.getElementById('custom-message').value || "🚀 Join me on TriLinkers and earn money by completing tasks! Use my referral link to get started with a bonus.";
 
 function shareWhatsApp() {
     const message = encodeURIComponent(`${customMessage()}\n\n${referralLink}`);
@@ -319,7 +319,7 @@ function shareWhatsApp() {
 }
 
 function shareTwitter() {
-    const message = encodeURIComponent(`${customMessage()} ${referralLink} #TaskPlatform #EarnMoney`);
+    const message = encodeURIComponent(`${customMessage()} ${referralLink} #TriLinkers #EarnMoney`);
     window.open(`https://twitter.com/intent/tweet?text=${message}`, '_blank');
 }
 
@@ -329,7 +329,7 @@ function shareFacebook() {
 }
 
 function shareEmail() {
-    const subject = encodeURIComponent('Join TaskPlatform and Earn Money!');
+    const subject = encodeURIComponent('Join TriLinkers and Earn Money!');
     const body = encodeURIComponent(`Hi!\n\n${customMessage()}\n\nClick here to join: ${referralLink}\n\nBest regards!`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
 }
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statsCounters = document.querySelectorAll('.text-2xl.font-bold');
     statsCounters.forEach((counter, index) => {
         const finalValue = parseInt(counter.textContent.replace(/[^\d]/g, '')) || 0;
-        const currency = counter.textContent.includes('₦');
+        const currency = counter.textContent.includes('$');
         
         let current = 0;
         const increment = finalValue / 30;
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (currency) {
-                counter.textContent = `₦${Math.floor(current).toLocaleString()}.00`;
+                counter.textContent = `$${Math.floor(current).toLocaleString()}.00`;
             } else {
                 counter.textContent = Math.floor(current).toString();
             }
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageTextarea = document.getElementById('custom-message');
     
     if (totalReferrals > 0 && totalEarnings > 0 && messageTextarea) {
-        const successMessage = `🔥 I've earned ₦${totalEarnings.toLocaleString()} on TaskPlatform already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
+        const successMessage = `🔥 I've earned $${totalEarnings.toLocaleString()} on TriLinkers already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
         messageTextarea.placeholder = successMessage;
     }
 });
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}">
                     <span class="text-blue-600 mr-2">💬</span>
-                    <p class="text-blue-800">Share personal success stories about earning on TaskPlatform</p>
+                    <p class="text-blue-800">Share personal success stories about earning on TriLinkers</p>
                 </div>
                 <div class="flex items-start">
                     <span class="text-blue-600 mr-2">📱</span>

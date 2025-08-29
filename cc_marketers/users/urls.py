@@ -19,7 +19,7 @@ urlpatterns = [
     path('profile/<str:username>/', views.PublicProfileView.as_view(), name='public_profile'),
     
     # Email Verification
-    path('verify-email/<str:token>/', views.EmailVerificationView.as_view(), name='verify_email'),
+    path('verify-email/<uidb64>/<token>/', views.EmailVerificationView.as_view(), name='verify_email'),
     path('resend-verification/', views.ResendVerificationView.as_view(), name='resend_verification'),
     
     # Phone Verification
@@ -28,12 +28,17 @@ urlpatterns = [
     
     # Password Management
     path('password/change/', views.PasswordChangeView.as_view(), name='password_change'), 
-    path('password/reset/', auth_views.PasswordResetView.as_view(
+    path(
+    'password/reset/',
+    views.CustomPasswordResetView.as_view(
         template_name='users/password_reset.html',
-        email_template_name='users/password_reset_email.html',
+        email_template_name='users/password_reset_email.txt',
+        html_email_template_name='users/password_reset_email.html',
         subject_template_name='users/password_reset_subject.txt',
         success_url=reverse_lazy('users:password_reset_done'),
-    ), name='password_reset'),
+    ),
+    name='password_reset'),
+
     path('password/reset/done/', auth_views.PasswordResetDoneView.as_view(
         template_name='users/password_reset_done.html'
     ), name='password_reset_done'),
@@ -44,9 +49,7 @@ urlpatterns = [
         template_name='users/password_reset_complete.html'
     ), name='password_reset_complete'),
     
-    # Referral System
-    path('ref/<str:code>/', views.ReferralSignupView.as_view(), name='referral_signup'),
-    path('referrals/', views.ReferralDashboardView.as_view(), name='referral_dashboard'),
+   
     
     # AJAX API endpoints
     path('api/check-email/', views.CheckEmailAvailabilityView.as_view(), name='check_email'),

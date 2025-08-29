@@ -1,0 +1,72 @@
+
+<!-- wallets/templates/wallets/fund_wallet.html -->
+{% extends 'wallets/base.html' %}
+
+{% block title %}Fund Wallet{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-red-800">Fund Wallet</h1>
+            <p class="text-red-600 mt-2">Add funds to your wallet for testing purposes</p>
+        </div>
+
+        <!-- Form -->
+        <div class="bg-white shadow-md rounded-lg">
+            <div class="px-6 py-4 border-b border-red-200">
+                <h2 class="text-xl font-semibold text-red-800">Add Funds</h2>
+            </div>
+            
+            <form method="post" class="p-6">
+                {% csrf_token %}
+                
+                <div class="mb-6">
+                    <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                        Amount ($) <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="mb-6">
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                        Description (Optional)
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Warning -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 mt-1"></i>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800">Development/Testing Only</h3>
+                            <p class="mt-2 text-sm text-yellow-700">
+                                This feature is for development and testing purposes only. 
+                                In production, users would fund their wallets through payment gateways.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between">
+                    <a href="{% url 'wallets:dashboard' %}" class="bg-red-200 hover:bg-red-300 text-red-800 font-bold py-3 px-6 rounded-lg transition duration-300">
+                        <i class="fas fa-arrow-left mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300">
+                        <i class="fas fa-plus mr-2"></i>Add Funds
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from .models import User, UserProfile
+from referrals.models import ReferralCode  # adjust import path
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(
@@ -79,12 +80,10 @@ class CustomUserCreationForm(UserCreationForm):
     def clean_referral_code(self):
         referral_code = self.cleaned_data.get('referral_code')
         if referral_code:
-            try:
-                User.objects.get(referral_code=referral_code)
-            except User.DoesNotExist:
+            if not ReferralCode.objects.filter(code=referral_code).exists():
                 raise ValidationError('Invalid referral code.')
         return referral_code
-    
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
@@ -95,17 +94,6 @@ class CustomUserCreationForm(UserCreationForm):
         
         if commit:
             user.save()
-            
-            # Handle referral
-            referral_code = self.cleaned_data.get('referral_code')
-            if referral_code:
-                try:
-                    referrer = User.objects.get(referral_code=referral_code)
-                    user.referred_by = referrer
-                    user.save()
-                except User.DoesNotExist:
-                    pass
-        
         return user
 
 class CustomAuthenticationForm(AuthenticationForm):

@@ -2,14 +2,15 @@
 # apps/users/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.html import format_html
 from .models import User, UserProfile, EmailVerificationToken, PhoneVerificationToken
+
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ('email', 'get_full_name', 'role', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
     list_filter = ('role', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
-    search_fields = ('email', 'first_name', 'last_name', 'phone', 'referral_code')
+    search_fields = ('email', 'first_name', 'last_name', 'phone')  # removed referral_code
     ordering = ('-date_joined',)
     
     fieldsets = (
@@ -26,9 +27,6 @@ class UserAdmin(BaseUserAdmin):
         ('Verification', {
             'fields': ('email_verified', 'phone_verified')
         }),
-        ('Referral System', {
-            'fields': ('referral_code', 'referred_by', 'referral_link')
-        }),
         ('Preferences', {
             'fields': ('receive_email_notifications', 'receive_sms_notifications')
         }),
@@ -44,17 +42,8 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
     
-    readonly_fields = ('date_joined', 'last_login', 'referral_link')
-    
-    def referral_link(self, obj):
-        if obj.referral_code:
-            return format_html(
-                '<a href="{}" target="_blank">{}</a>',
-                obj.referral_url,
-                obj.referral_url
-            )
-        return '-'
-    referral_link.short_description = 'Referral Link'
+    readonly_fields = ('date_joined', 'last_login')  # removed referral_link
+
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

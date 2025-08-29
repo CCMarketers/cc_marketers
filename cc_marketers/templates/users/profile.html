@@ -2,20 +2,21 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}My Profile - TaskPlatform{% endblock %}
+{% block title %}My Profile - TriLinkers{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
-            <h1 class="text-3xl font-bold text-red-600 mb-2">My Profile</h1>
-            <p class="text-gray-600">Manage your account settings and preferences</p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
+            <p class="text-gray-500">Manage your account settings and preferences</p>
         </div>
-        <a href="{% url 'users:public_profile' user.username %}" class="btn-secondary mt-4 md:mt-0 flex items-center">
+        <a href="{% url 'users:public_profile' user.username %}" 
+           class="inline-flex items-center px-4 py-2 rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 transition mt-4 md:mt-0">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
             </svg>
             View Public Profile
         </a>
@@ -24,10 +25,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Profile Summary Card -->
         <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow hover:shadow-md transition border border-red-200 p-6 mb-6">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
                 <div class="text-center">
+                    <!-- Avatar -->
                     <div class="w-24 h-24 mx-auto mb-4 relative">
-                        {% if user.avatar %} 
+                        {% if user.avatar %}
                             <img src="{{ user.avatar.url }}" alt="{{ user.get_full_name }}" class="w-24 h-24 rounded-full object-cover border-4 border-red-200">
                         {% else %}
                             <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center border-4 border-red-200">
@@ -38,18 +40,20 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 mb-1">{{ user.get_full_name|default:user.username }}</h3>
                     <p class="text-red-600 font-medium mb-2">@{{ user.username }}</p>
+
                     {% if user.city or user.state or user.country %}
                         <p class="text-gray-600 text-sm flex items-center justify-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
                             {{ user.city }} {{ user.state }} {{ user.country }}
                         </p>
                     {% endif %}
                 </div>
 
-                <div class="mt-6 border-t border-red-200 pt-6">
+                <!-- Stats -->
+                <div class="mt-6 border-t border-gray-200 pt-6">
                     <div class="grid grid-cols-2 gap-4 text-center">
                         <div>
                             <div class="text-2xl font-bold text-red-600">{{ extended_profile.tasks_completed }}</div>
@@ -64,7 +68,7 @@
 
                 <!-- Referral Stats -->
                 {% if referral_stats %}
-                <div class="mt-6 border-t border-red-200 pt-6">
+                <div class="mt-6 border-t border-gray-200 pt-6">
                     <h4 class="font-semibold text-gray-900 mb-3">Referrals</h4>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between">
@@ -82,7 +86,7 @@
                             <input type="text" value="{{ referral_stats.referral_url }}" id="referral-link" class="text-xs bg-gray-50 border border-gray-300 rounded px-2 py-1 flex-1" readonly>
                             <button data-copy="#referral-link" class="text-red-600 hover:text-red-800 text-xs">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                 </svg>
                             </button>
                         </div>
@@ -95,65 +99,81 @@
 
         <!-- Profile Form -->
         <div class="lg:col-span-2">
-            <div class="bg-white rounded-lg shadow hover:shadow-md transition border border-red-200 p-6">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-red-600 mb-2">Profile Information</h2>
-                    <p class="text-gray-600">Update your profile information and settings</p>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Profile Information</h2>
+                    <p class="text-gray-500">Update your profile information and settings</p>
                 </div>
 
                 <form method="post" enctype="multipart/form-data" data-validate>
                     {% csrf_token %}
-                    
-                    <!-- Basic Information -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-red-200">Basic Information</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                                <input type="text" name="first_name" value="{{ user.first_name }}" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                                <input type="text" name="last_name" value="{{ user.last_name }}" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                <input type="email" name="email" value="{{ user.email }}" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                                <input type="text" name="username" value="{{ user.username }}" class="form-input">
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Contact & Professional Info -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-red-200">Contact & Professional Info</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                                <input type="tel" name="phone" value="{{ user.phone }}" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                                <input type="text" name="location" value="{{ extended_profile.location }}" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
-                                <input type="text" name="skills" value="{{ extended_profile.skills }}" class="form-input" placeholder="Separate skills with commas">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                            <textarea name="bio" rows="4" class="form-input">{{ user.bio }}</textarea>
-                        </div>
-                    </div>
+<!-- Basic Information -->
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-gray-200">Basic Information</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+            <input type="text" name="first_name" value="{{ user.first_name }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+            <input type="text" name="last_name" value="{{ user.last_name }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input type="email" name="email" value="{{ user.email }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <input type="text" name="username" value="{{ user.username }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+    </div>
+</div>
+
+<!-- Contact & Professional Info -->
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-gray-200">Contact & Professional Info</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+            <input type="tel" name="phone" value="{{ user.phone }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <input type="text" name="location" value="{{ extended_profile.location }}" 
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
+            <input type="text" name="skills" value="{{ extended_profile.skills }}" 
+                   placeholder="Separate skills with commas"
+                   class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                          focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200">
+        </div>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+        <textarea name="bio" rows="4" 
+                  class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm 
+                         focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200 resize-none min-h-[120px]">{{ user.bio }}</textarea>
+    </div>
+</div>
 
                     <!-- Profile Picture -->
-                    <!-- Profile Picture -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-red-200">Profile Picture</h3>
+                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-gray-200">Profile Picture</h3>
                         <div class="flex items-center space-x-4">
                             <div class="w-20 h-20 rounded-full overflow-hidden border-4 border-red-200">
                                 {% if user.avatar and user.avatar.url %}
@@ -168,7 +188,9 @@
                             </div>
                             <div>
                                 <input type="file" id="id_avatar" name="avatar" class="hidden" accept="image/*">
-                                <label for="id_avatar" class="btn-secondary cursor-pointer">Upload / Change Photo</label>
+                                <label for="id_avatar" class="inline-flex items-center px-4 py-2 rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 cursor-pointer transition">
+                                    Upload / Change Photo
+                                </label>
                                 <p class="text-sm text-gray-500 mt-1">JPG, PNG or GIF (max 5MB)</p>
                             </div>
                         </div>
@@ -176,7 +198,7 @@
 
                     <!-- Notification Preferences -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-red-200">Notification Preferences</h3>
+                        <h3 class="text-lg font-semibold text-red-600 mb-4 pb-2 border-b border-gray-200">Notification Preferences</h3>
                         <div class="space-y-4">
                             <label class="flex items-center">
                                 <input type="checkbox" name="receive_email_notifications" {% if user.receive_email_notifications %}checked{% endif %} class="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500">
@@ -196,16 +218,16 @@
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="flex justify-between items-center pt-6 border-t border-red-200">
+                    <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                         <a href="{% url 'users:password_change' %}" class="text-red-600 hover:text-red-800 font-medium flex items-center">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-4a1 1 0 011-1h3l2.257-2.257A6 6 0 0121 9z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v-2H7v-2H4a1 1 0 01-1-1v-4a1 1 0 011-1h3l2.257-2.257A6 6 0 0121 9z"/>
                             </svg>
                             Change Password
                         </a>
-                        <button type="submit" class="btn-primary flex items-center">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
                             Save Changes
                         </button>

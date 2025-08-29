@@ -1,0 +1,27 @@
+
+<!-- subscriptions/templates/subscriptions/subscription_expired.html -->
+{% extends 'base.html' %}
+
+{% block title %}Subscription Expired{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center">
+    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-8">
+        <svg class="w-20 h-20 text-red-400 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">Subscription Expired</h1>
+        <p class="text-xl text-gray-600 mb-8">Your subscription has expired. Renew now to continue enjoying our services!</p>
+        
+        <div class="space-y-4">
+            <a href="{% url 'subscriptions:plans' %}" class="inline-block w-full px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-lg transition-colors duration-200">
+                Browse Plans
+            </a>
+            <a href="{% url 'subscriptions:my_subscription' %}" class="inline-block w-full px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold text-lg transition-colors duration-200">
+                View Subscription History
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

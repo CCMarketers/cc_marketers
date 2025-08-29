@@ -4,38 +4,44 @@
 {% block title %}{{ task.title }}{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+  
   <!-- Left: Task details -->
-  <div class="md:col-span-2">
-    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold text-gray-800">{{ task.title }}</h2>
-        <span class="badge badge-green">₦{{ task.payout_per_slot }} per completion</span>
+  <div class="md:col-span-2 space-y-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-md p-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">{{ task.title }}</h2>
+        <span class="inline-flex px-4 py-1.5 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+          ${{ task.payout_per_slot }} per completion
+        </span>
       </div>
-      <p class="text-sm text-gray-500 mb-6">Posted by {{ task.advertiser.username }}</p>
+      <p class="text-sm text-gray-500 mb-6">Posted by <span class="font-medium">{{ task.advertiser.username }}</span></p>
 
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">Description</h3>
-        <p class="text-gray-700 whitespace-pre-line">{{ task.description }}</p>
-      </div>
-
-      <div class="mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-2">Proof Instructions</h3>
-        <p class="text-gray-700 whitespace-pre-line">{{ task.proof_instructions }}</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div class="space-y-6">
         <div>
-          <strong>Deadline:</strong><br>
-          <span class="text-gray-600">{{ task.deadline|date:"M d, Y H:i" }}</span>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+          <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ task.description }}</p>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Proof Instructions</h3>
+          <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ task.proof_instructions }}</p>
+        </div>
+      </div>
+
+      <!-- Meta Info -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm mt-8 pt-6 border-t border-gray-100">
+        <div>
+          <p class="font-semibold text-gray-800">Deadline</p>
+          <p class="text-gray-600">{{ task.deadline|date:"M d, Y H:i" }}</p>
         </div>
         <div>
-          <strong>Available Slots:</strong><br>
-          <span class="text-gray-600">{{ task.remaining_slots }}/{{ task.total_slots }}</span>
+          <p class="font-semibold text-gray-800">Available Slots</p>
+          <p class="text-gray-600">{{ task.remaining_slots }}/{{ task.total_slots }}</p>
         </div>
         <div>
-          <strong>Total Payout:</strong><br>
-          <span class="text-gray-600">₦{{ task.total_payout }}</span>
+          <p class="font-semibold text-gray-800">Total Payout</p>
+          <p class="text-gray-600">${{ task.total_payout }}</p>
         </div>
       </div>
     </div>
@@ -44,23 +50,24 @@
   <!-- Right: User submission / actions -->
   <div>
     {% if existing_submission %}
-    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Your Submission</h3>
-      <span class="badge 
-        {% if existing_submission.status == 'pending' %} badge-yellow
-        {% elif existing_submission.status == 'approved' %} badge-green
-        {% elif existing_submission.status == 'rejected' %} badge-red
+    <div class="bg-white rounded-xl border border-gray-200 shadow-md p-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Submission</h3>
+      <span class="inline-flex px-4 py-1.5 rounded-full text-sm font-medium
+        {% if existing_submission.status == 'pending' %} bg-yellow-100 text-yellow-800
+        {% elif existing_submission.status == 'approved' %} bg-green-100 text-green-800
+        {% elif existing_submission.status == 'rejected' %} bg-red-100 text-red-800
         {% endif %}">
         {{ existing_submission.get_status_display }}
       </span>
 
       {% if existing_submission.status == 'rejected' %}
-      <div class="bg-red-50 border-l-4 border-red-600 text-red-700 p-3 rounded mt-4">
+      <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mt-4 text-sm">
         <strong>Rejection Reason:</strong><br>
         {{ existing_submission.rejection_reason }}
       </div>
       {% if not existing_submission.dispute %}
-      <a href="{% url 'tasks:create_dispute' existing_submission.id %}" class="btn-secondary mt-4 inline-flex items-center">
+      <a href="{% url 'tasks:create_dispute' existing_submission.id %}" 
+         class="mt-4 inline-flex items-center px-4 py-2 rounded-md border border-red-200 bg-white hover:bg-red-50 text-red-600 text-sm font-medium transition">
         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
           <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
         </svg>
@@ -69,60 +76,62 @@
       {% endif %}
       {% endif %}
 
-      <div class="mt-4 text-sm text-gray-600 space-y-2">
+      <div class="mt-6 text-sm text-gray-600 space-y-3">
         <p><strong>Submitted:</strong> {{ existing_submission.submitted_at|date:"M d, Y H:i" }}</p>
         {% if existing_submission.proof_text %}
         <p><strong>Proof Text:</strong><br>{{ existing_submission.proof_text }}</p>
         {% endif %}
         {% if existing_submission.proof_file %}
-        <p><strong>File:</strong> <a href="{{ existing_submission.proof_file.url }}" target="_blank" class="text-red-600 hover:underline">View File</a></p>
+        <p><strong>File:</strong> 
+          <a href="{{ existing_submission.proof_file.url }}" target="_blank" class="text-red-600 hover:underline">View File</a>
+        </p>
         {% endif %}
         {% if existing_submission.screenshot %}
         <div>
           <strong>Screenshot:</strong><br>
-          <img src="{{ existing_submission.screenshot.url }}" class="rounded shadow mt-2 max-w-[200px]">
+          <img src="{{ existing_submission.screenshot.url }}" class="rounded-lg border mt-2 max-w-[220px] shadow-sm">
         </div>
         {% endif %}
       </div>
     </div>
 
     {% elif task.is_expired %}
-    <div class="bg-white rounded-xl shadow card-hover p-6 text-center fade-in-up">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-md p-8 text-center">
       <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>
       </svg>
-      <h5 class="text-lg font-semibold text-gray-700">Task Expired</h5>
-      <p class="text-gray-500">This task deadline has passed.</p>
+      <h5 class="text-lg font-semibold text-gray-800">Task Expired</h5>
+      <p class="text-gray-500 mt-1">This task deadline has passed.</p>
     </div>
 
     {% elif task.is_full %}
-    <div class="bg-white rounded-xl shadow card-hover p-6 text-center fade-in-up">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-md p-8 text-center">
       <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5"></path>
       </svg>
-      <h5 class="text-lg font-semibold text-gray-700">Task Full</h5>
-      <p class="text-gray-500">All slots have been filled.</p>
+      <h5 class="text-lg font-semibold text-gray-800">Task Full</h5>
+      <p class="text-gray-500 mt-1">All slots have been filled.</p>
     </div>
 
     {% else %}
-    <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Submit Your Work</h3>
-      <form method="post" enctype="multipart/form-data" data-validate class="space-y-4">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-md p-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-6">Submit Your Work</h3>
+      <form method="post" enctype="multipart/form-data" data-validate class="space-y-5">
         {% csrf_token %}
         <div>
           <label for="{{ form.proof_text.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Proof Description</label>
-          {{ form.proof_text|add_class:"form-input" }}
+          {{ form.proof_text|add_class:"w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring focus:ring-red-200 sm:text-sm" }}
         </div>
         <div>
           <label for="{{ form.proof_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Upload File (Optional)</label>
-          {{ form.proof_file|add_class:"form-input" }}
+          {{ form.proof_file|add_class:"w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring focus:ring-red-200 sm:text-sm" }}
         </div>
         <div>
           <label for="{{ form.screenshot.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Screenshot (Optional)</label>
-          {{ form.screenshot|add_class:"form-input" }}
+          {{ form.screenshot|add_class:"w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring focus:ring-red-200 sm:text-sm" }}
         </div>
-        <button type="submit" class="btn-primary w-full">
-          <svg class="w-4 h-4 mr-2 inline" fill="currentColor" viewBox="0 0 20 20">
+        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow transition">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M4 4h12v12H4V4z" clip-rule="evenodd"></path>
           </svg>
           Submit Work

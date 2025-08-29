@@ -1,0 +1,160 @@
+
+<!-- subscriptions/templates/subscriptions/plans.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+    <p class="text-xl text-gray-600">Select the perfect plan for your business needs</p>
+    
+    {% if user.is_authenticated %}
+        <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg inline-block">
+            <p class="text-red-800">
+                <span class="font-semibold">Wallet Balance:</span> ${{ user_wallet_balance }}
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Active Subscription Alert -->
+{% if active_subscription %}
+    <div class="mb-8 p-6 bg-red-100 border border-red-300 rounded-lg">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-lg font-medium text-red-800">
+                    Active Subscription: {{ active_subscription.plan.name }}
+                </h3>
+                <p class="text-red-700">
+                    Expires on {{ active_subscription.expiry_date|date:"F d, Y" }} 
+                    ({{ active_subscription.days_remaining }} days remaining)
+                </p>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Subscription Plans -->
+<div class="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
+    {% for plan in plans %}
+        <div class="bg-white border-2 border-red-200 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+            <!-- Plan Header -->
+            <div class="bg-red-600 text-white text-center py-6">
+                <h2 class="text-2xl font-bold">{{ plan.name }}</h2>
+                <div class="mt-2">
+                    <span class="text-4xl font-bold">${{ plan.price }}</span>
+                    <span class="text-red-200">/month</span>
+                </div>
+            </div>
+            
+            <!-- Plan Features -->
+            <div class="p-6">
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center">
+                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span><strong>Business Volume (BV):</strong> {{ plan.business_volume }}</span>
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span><strong>Referral Commission:</strong> ${{ plan.referral_commission }} USD</span>
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span><strong>Commission To Tree:</strong> ${{ plan.commission_to_tree }} USD</span>
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        <span><strong>Daily Ad Limit:</strong> 
+                            {% if plan.daily_ad_limit == 0 %}
+                                Unlimited
+                            {% else %}
+                                {{ plan.daily_ad_limit }}
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+                
+                <!-- Subscribe Button -->
+                {% if user.is_authenticated %}
+                    {% if active_subscription and active_subscription.plan.id == plan.id %}
+                        <button class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold" disabled>
+                            Current Plan
+                        </button>
+                    {% else %}
+                        {% if user_wallet_balance >= plan.price %}
+                            <form method="post" action="{% url 'subscriptions:subscribe' plan.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200">
+                                    Subscribe Now
+                                </button>
+                            </form>
+                        {% else %}
+                            <button class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed" disabled>
+                                Insufficient Balance
+                            </button>
+                            <p class="text-red-600 text-sm mt-2 text-center">
+                                Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }})
+                            </p>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <a href="/login/" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold text-center transition-colors duration-200">
+                        Login to Subscribe
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-span-full text-center py-12">
+            <p class="text-xl text-gray-600">No subscription plans available at the moment.</p>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Features Comparison -->
+<div class="mt-16 bg-red-50 rounded-xl p-8">
+    <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">Why Choose Our Plans?</h2>
+    <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center">
+            <div class="bg-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Instant Activation</h3>
+            <p class="text-gray-600">Your plan activates immediately after payment from your wallet.</p>
+        </div>
+        <div class="text-center">
+            <div class="bg-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm8-2a2 2 0 100 4 2 2 0 000-4z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Flexible Payments</h3>
+            <p class="text-gray-600">Pay using your wallet balance with auto-renewal options.</p>
+        </div>
+        <div class="text-center">
+            <div class="bg-red-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">24/7 Support</h3>
+            <p class="text-gray-600">Get help whenever you need it with our dedicated support team.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

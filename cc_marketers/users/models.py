@@ -2,10 +2,10 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from django.db import models
 from django.utils import timezone
 from django.core.validators import RegexValidator
-from django.conf import settings
+# from django.conf import settings
 import uuid
 import secrets
-import string
+# import string
 
 
 # ---------- CONSTANTS ----------
@@ -77,19 +77,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=MEMBER)
 
-    referral_code = models.CharField(max_length=10, unique=True, blank=True, db_index=True)
-    referred_by = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='referrals'
-    )
+
 
     # Status & verification
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    email_verified = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False) 
     phone_verified = models.BooleanField(default=False)
 
     # Timestamps
@@ -121,11 +114,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         indexes = [
             models.Index(fields=['email']),
             models.Index(fields=['phone']),
-            models.Index(fields=['referral_code']),
             models.Index(fields=['role']),
         ]
 
     def save(self, *args, **kwargs):
+        # Ensure admin role always has staff access
+        if self.role == self.ADMIN:
+            self.is_staff = True
+
         # Generate unique username if missing
         if not self.username:
             base_username = self.email.split('@')[0]
@@ -136,19 +132,8 @@ class User(AbstractBaseUser, PermissionsMixin):
                 counter += 1
             self.username = username
 
-        # Auto-generate referral code
-        if not self.referral_code:
-            self.referral_code = self.generate_referral_code()
-
         super().save(*args, **kwargs)
 
-    def generate_referral_code(self):
-        """Generate unique referral code (8 alphanumeric chars)"""
-        chars = string.ascii_uppercase + string.digits
-        while True:
-            code = ''.join(secrets.choice(chars) for _ in range(8))
-            if not User.objects.filter(referral_code=code).exists():
-                return code
 
     # ----- Display helpers -----
     def get_full_name(self):
@@ -160,20 +145,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_display_name(self):
         return self.get_full_name() or self.username or self.email
-
-    # ----- Referrals -----
-    @property
-    def referral_url(self):
-        base_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
-        return f"{base_url}/users/ref/{self.referral_code}/"
-
-    @property
-    def total_referrals(self):
-        return self.referrals.count()
-
-    @property
-    def active_referrals(self):
-        return self.referrals.filter(is_active=True).count()
 
     # ----- Permissions -----
     def can_post_tasks(self):

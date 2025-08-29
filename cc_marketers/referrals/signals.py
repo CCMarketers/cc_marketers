@@ -1,0 +1,143 @@
+# apps/referrals/signals.py
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.conf import settings
+from django.apps import apps
+from django.utils import timezone
+from .models import ReferralCode, Referral, ReferralEarning, CommissionTier
+
+User = apps.get_model(settings.AUTH_USER_MODEL)
+
+
+# ---------------------------
+# 1. Create ReferralCode for every new user
+# ---------------------------
+@receiver(post_save, sender=User)
+def create_referral_code(sender, instance, created, **kwargs):
+    """Automatically create a referral code when a new user is created"""
+    if created:
+        ReferralCode.objects.create(user=instance)
+
+
+# ---------------------------
+# 2. Handle Direct + Indirect Referrals
+# ---------------------------
+@receiver(post_save, sender=User)
+def handle_user_signup(sender, instance, created, **kwargs):
+    """
+    When a new user signs up with a referral code:
+    - Create Level 1 referral
+    - Propagate Level 2 & Level 3 referrals automatically
+    - Do NOT credit earnings here (only after subscription)
+    """
+    if not created:
+        return
+
+    referral_code_id = getattr(instance, "used_referral_code_id", None)
+    if not referral_code_id:
+        return
+
+    try:
+        referral_code = ReferralCode.objects.get(id=referral_code_id, is_active=True)
+        referrer = referral_code.user
+
+        # Create Level 1 referral (Direct)
+        Referral.objects.create(
+            referrer=referrer,
+            referred=instance,
+            level=1,
+            referral_code=referral_code
+        )
+
+        # Create Level 2 & 3 referral chains for tracking only (no earnings yet)
+        parent_referral = Referral.objects.filter(referred=referrer, level=1).first()
+        if parent_referral:
+            Referral.objects.create(
+                referrer=parent_referral.referrer,
+                referred=instance,
+                level=2,
+                referral_code=parent_referral.referral_code
+            )
+
+            grandparent_referral = Referral.objects.filter(referred=parent_referral.referrer, level=1).first()
+            if grandparent_referral:
+                Referral.objects.create(
+                    referrer=grandparent_referral.referrer,
+                    referred=instance,
+                    level=3,
+                    referral_code=grandparent_referral.referral_code
+                )
+
+    except ReferralCode.DoesNotExist:
+        pass
+
+
+# ---------------------------
+# 3. Helper for creating signup earnings
+# ---------------------------
+def _create_signup_earning(referral):
+    """
+    Create earning for signup event.
+    - Direct referrer (Level 1) always gets flat $5
+    - Levels 2 and 3 can still use CommissionTier if configured
+    """
+    if referral.level == 1:
+        # Flat $5 for direct referrer
+        ReferralEarning.objects.create(
+            referrer=referral.referrer,
+            referred_user=referral.referred,
+            referral=referral,
+            amount=5.00,
+            earning_type="signup",
+            commission_rate=0,  # Not percentage, just flat reward
+            status="approved",
+            approved_at=timezone.now()
+        )
+    else:
+        # Levels 2 and 3 still rely on commission tiers
+        commission = CommissionTier.objects.filter(
+            level=referral.level,
+            earning_type="signup",
+            is_active=True
+        ).first()
+
+        if commission:
+            ReferralEarning.objects.create(
+                referrer=referral.referrer,
+                referred_user=referral.referred,
+                referral=referral,
+                amount=commission.rate,  # treat rate as flat amount for signup
+                earning_type="signup",
+                commission_rate=commission.rate,
+                status="approved",
+                approved_at=timezone.now()
+            )
+
+# ---------------------------
+# 4. Generic earning function for tasks/funding/subscription
+# ---------------------------
+def create_referral_earning(user, earning_type, base_amount):
+    """
+    Call this whenever a user performs an action (task, funding, subscription).
+    It creates earnings for ALL their referrers up to Level 3.
+    """
+    referrals = Referral.objects.filter(referred=user, is_active=True)
+
+    for referral in referrals:
+        commission = CommissionTier.objects.filter(
+            level=referral.level,
+            earning_type=earning_type,
+            is_active=True
+        ).first()
+
+        if commission:
+            earning_amount = (commission.rate / 100) * base_amount
+            ReferralEarning.objects.create(
+                referrer=referral.referrer,
+                referred_user=user,
+                referral=referral,
+                amount=earning_amount,
+                earning_type=earning_type,
+                commission_rate=commission.rate,
+                status="pending"
+            )

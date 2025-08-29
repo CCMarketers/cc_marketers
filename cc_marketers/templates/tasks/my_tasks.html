@@ -3,101 +3,148 @@
 {% block title %}My Posted Tasks{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-  <h1 class="text-2xl font-bold text-gray-800">My Posted Tasks</h1>
-  <a href="{% url 'tasks:create_task' %}" class="btn-primary inline-flex items-center">
-    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-      <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">My Posted Tasks</h1>
+    <a href="{% url 'tasks:create_task' %}" 
+       class="inline-flex items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
+      <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+      </svg>
+      Post New Task
+    </a>
+  </div>
+
+  {% for task in tasks %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Left: title + desc -->
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">{{ task.title }}</h2>
+        <p class="text-gray-600 mt-1 line-clamp-2">{{ task.description }}</p>
+      </div>
+
+      <!-- Middle: stats -->
+      <div>
+        <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
+          {% if task.status == 'active' %} bg-green-100 text-green-800
+          {% elif task.status == 'paused' %} bg-yellow-100 text-yellow-800
+          {% elif task.status == 'completed' %} bg-blue-100 text-blue-800
+          {% else %} bg-red-100 text-red-800 {% endif %}">
+          {{ task.get_status_display }}
+        </span>
+        <p class="text-sm mt-2"><strong>Payout:</strong> ${{ task.payout_per_slot }}</p>
+        <p class="text-sm"><strong>Slots:</strong> {{ task.filled_slots }}/{{ task.total_slots }}</p>
+        <p class="text-sm"><strong>Deadline:</strong> {{ task.deadline|date:"M d, Y" }}</p>
+      </div>
+
+      <!-- Right: actions -->
+      <div class="flex flex-col items-end gap-2">
+        <a href="{% url 'tasks:review_submissions' task.id %}"
+           class="px-3 py-1 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-sm text-gray-700">
+          Review ({{ task.pending_count }})
+        </a>
+        <a href="{% url 'tasks:edit_task' task.id %}"
+           class="px-3 py-1 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-sm text-gray-700">
+          Edit Task
+        </a>
+        <!-- Delete Button (opens modal) -->
+<button type="button" 
+        class="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+        onclick="document.getElementById('deleteModal-{{ task.id }}').classList.remove('hidden')">
+  Delete
+</button>
+
+<!-- Modal -->
+<div id="deleteModal-{{ task.id }}" 
+     class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl shadow-lg w-full max-w-md p-6">
+    <h2 class="text-lg font-semibold text-gray-900">Delete Task</h2>
+    <p class="mt-2 text-gray-600">
+      Are you sure you want to delete <span class="font-medium">"{{ task.title }}"</span>? 
+      This action cannot be undone.
+    </p>
+
+    <div class="mt-6 flex justify-end space-x-3">
+      <button type="button"
+              class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+              onclick="document.getElementById('deleteModal-{{ task.id }}').classList.add('hidden')">
+        Cancel
+      </button>
+      
+      <form method="post" action="{% url 'tasks:delete_task' task.id %}">
+        {% csrf_token %}
+        <button type="submit" 
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+          Yes, delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="mt-4">
+      <div class="w-full h-2 bg-gray-200 rounded-full flex overflow-hidden">
+        <div class="h-2 bg-green-500" style="width: {% widthratio task.approved_count task.total_slots 100 %}%"></div>
+        <div class="h-2 bg-yellow-500" style="width: {% widthratio task.pending_count task.total_slots 100 %}%"></div>
+        <div class="h-2 bg-red-500" style="width: {% widthratio task.rejected_count task.total_slots 100 %}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-600 mt-1">
+        <span>Approved: {{ task.approved_count }}</span>
+        <span>Pending: {{ task.pending_count }}</span>
+        <span>Rejected: {{ task.rejected_count }}</span>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center py-12">
+    <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-9-8h12M5 6h14M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6"></path>
     </svg>
-    Post New Task
-  </a>
-</div>
-
-{% for task in tasks %}
-<div class="bg-white rounded-xl shadow card-hover p-6 mb-6 fade-in-up">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <!-- Left: title + desc -->
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">{{ task.title }}</h2>
-      <p class="text-gray-600 mt-1 line-clamp-2">{{ task.description }}</p>
-    </div>
-
-    <!-- Middle: stats -->
-    <div>
-      <span class="badge 
-        {% if task.status == 'active' %} badge-green
-        {% elif task.status == 'paused' %} badge-yellow
-        {% elif task.status == 'completed' %} badge-blue
-        {% else %} badge-red {% endif %}">
-        {{ task.get_status_display }}
-      </span>
-      <p class="text-sm mt-2"><strong>Payout:</strong> ₦{{ task.payout_per_slot }}</p>
-      <p class="text-sm"><strong>Slots:</strong> {{ task.filled_slots }}/{{ task.total_slots }}</p>
-      <p class="text-sm"><strong>Deadline:</strong> {{ task.deadline|date:"M d, Y" }}</p>
-    </div>
-
-    <!-- Right: actions -->
-    <div class="flex flex-col items-end gap-2">
-      <a href="{% url 'tasks:task_detail' task.id %}" class="btn-secondary text-sm px-3 py-1">View</a>
-      <a href="{% url 'tasks:review_submissions' task.id %}" class="btn-ghost text-sm px-3 py-1">
-        Review ({{ task.pending_count }})
-      </a>
-    </div>
+    <h4 class="text-lg font-semibold text-gray-700">No tasks posted yet</h4>
+    <p class="text-gray-500 mb-4">Create your first task to get started.</p>
+    <a href="{% url 'tasks:create_task' %}" 
+       class="inline-flex items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
+      Post Your First Task
+    </a>
   </div>
+  {% endfor %}
 
-  <!-- Progress bar -->
-  <div class="mt-4">
-    <div class="progress-bar">
-      <div class="progress-fill bg-green-600" data-progress="{% widthratio task.approved_count task.total_slots 100 %}"></div>
-      <div class="progress-fill bg-yellow-500" data-progress="{% widthratio task.pending_count task.total_slots 100 %}"></div>
-      <div class="progress-fill bg-red-500" data-progress="{% widthratio task.rejected_count task.total_slots 100 %}"></div>
-    </div>
-    <div class="flex justify-between text-xs text-gray-600 mt-1">
-      <span>Approved: {{ task.approved_count }}</span>
-      <span>Pending: {{ task.pending_count }}</span>
-      <span>Rejected: {{ task.rejected_count }}</span>
-    </div>
+  <!-- Pagination -->
+  {% if tasks.has_other_pages %}
+  <div class="flex justify-center mt-6">
+    <nav class="inline-flex rounded-lg shadow-sm overflow-hidden" aria-label="Pagination">
+      {% if tasks.has_previous %}
+        <a href="?page={{ tasks.previous_page_number }}" 
+           class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50">
+          Previous
+        </a>
+      {% endif %}
+
+      {% for num in tasks.paginator.page_range %}
+        <a href="?page={{ num }}" 
+           class="px-4 py-2 border border-red-200 
+           {% if num == tasks.number %}
+              bg-red-600 text-white
+           {% else %}
+              bg-white text-red-600 hover:bg-red-50
+           {% endif %}">
+           {{ num }}
+        </a>
+      {% endfor %}
+
+      {% if tasks.has_next %}
+        <a href="?page={{ tasks.next_page_number }}" 
+           class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50">
+          Next
+        </a>
+      {% endif %}
+    </nav>
   </div>
+  {% endif %}
 </div>
-{% empty %}
-<div class="text-center py-12">
-  <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-9-8h12M5 6h14M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6"></path>
-  </svg>
-  <h4 class="text-lg font-semibold text-gray-700">No tasks posted yet</h4>
-  <p class="text-gray-500 mb-4">Create your first task to get started.</p>
-  <a href="{% url 'tasks:create_task' %}" class="btn-primary">Post Your First Task</a>
-</div>
-{% endfor %}
-
-<!-- Pagination -->
-{% if tasks.has_other_pages %}
-<div class="flex justify-center mt-6">
-  <nav class="inline-flex rounded-lg shadow-sm overflow-hidden" aria-label="Pagination">
-    {% if tasks.has_previous %}
-      <a href="?page={{ tasks.previous_page_number }}" class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50">
-        Previous
-      </a>
-    {% endif %}
-
-    {% for num in tasks.paginator.page_range %}
-      <a href="?page={{ num }}"
-         class="px-4 py-2 border border-red-200 
-         {% if num == tasks.number %}
-            bg-red-600 text-white
-         {% else %}
-            bg-white text-red-600 hover:bg-red-50
-         {% endif %}">
-         {{ num }}
-      </a>
-    {% endfor %}
-
-    {% if tasks.has_next %}
-      <a href="?page={{ tasks.next_page_number }}" class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50">
-        Next
-      </a>
-    {% endif %}
-  </nav>
-</div>
-{% endif %}
 {% endblock %}

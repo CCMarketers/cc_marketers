@@ -1,0 +1,111 @@
+<!-- wallets/templates/wallets/withdrawal_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}My Withdrawals{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-red-800">My Withdrawals</h1>
+        <p class="text-red-600 mt-2">Track your withdrawal requests and their status</p>
+    </div>
+
+    <!-- Action Button -->
+    <div class="mb-6">
+        <a href="{% url 'wallets:withdrawal_request' %}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+            <i class="fas fa-plus mr-2"></i>New Withdrawal Request
+        </a>
+    </div>
+
+    <!-- Withdrawals Table -->
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        {% if withdrawals %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-red-200">
+                    <thead class="bg-red-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Bank Details</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Requested</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-500 uppercase tracking-wider">Processed</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-red-100">
+                        {% for withdrawal in withdrawals %}
+                            <tr class="hover:bg-red-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-lg font-bold text-red-800">${{ withdrawal.amount|floatformat:2 }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ withdrawal.get_withdrawal_method_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-900">
+                                    <div class="font-medium">{{ withdrawal.account_name }}</div>
+                                    <div class="text-red-600">{{ withdrawal.account_number }}</div>
+                                    <div class="text-red-500 text-xs">{{ withdrawal.bank_name }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if withdrawal.status == 'pending' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            <i class="fas fa-clock mr-1"></i>Pending
+                                        </span>
+                                    {% elif withdrawal.status == 'approved' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-check mr-1"></i>Approved
+                                        </span>
+                                    {% elif withdrawal.status == 'rejected' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            <i class="fas fa-times mr-1"></i>Rejected
+                                        </span>
+                                    {% elif withdrawal.status == 'completed' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <i class="fas fa-check-circle mr-1"></i>Completed
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-900">
+                                    {{ withdrawal.created_at|date:"M d, Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-900">
+                                    {% if withdrawal.processed_at %}
+                                        {{ withdrawal.processed_at|date:"M d, Y H:i" }}
+                                        {% if withdrawal.processed_by %}
+                                            <div class="text-xs text-red-500">by {{ withdrawal.processed_by.username }}</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-red-400">Not processed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if withdrawal.admin_notes %}
+                                <tr class="bg-red-25">
+                                    <td colspan="6" class="px-6 py-2">
+                                        <div class="text-sm text-red-600">
+                                            <strong>Note:</strong> {{ withdrawal.admin_notes }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-money-bill-wave text-red-300 text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium text-red-800 mb-2">No withdrawal requests yet</h3>
+                <p class="text-red-600 mb-4">You haven't made any withdrawal requests.</p>
+                <a href="{% url 'wallets:withdrawal_request' %}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+                    Make your first withdrawal
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

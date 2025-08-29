@@ -1,0 +1,203 @@
+<!-- tasks/task_wallet/transactions.html -->
+{% extends 'base.html' %}
+
+{% block title %}Task Wallet Transactions{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+            <a href="{% url 'tasks:task_wallet_dashboard' %}" class="hover:text-red-600">Task Wallet</a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+            <span class="text-red-600">Transactions</span>
+        </nav>
+        <h1 class="text-3xl font-bold text-red-800 mb-2">Transaction History</h1>
+        <p class="text-gray-600">Complete history of your task wallet transactions</p>
+    </div>
+
+    <!-- Filters (Optional - for future enhancement) -->
+    <div class="bg-white rounded-lg shadow border border-red-200 p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <h3 class="font-medium text-red-700">Filter by:</h3>
+                <select class="border border-red-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <option value="">All Categories</option>
+                    <option value="subscription_bonus">Subscription Bonus</option>
+                    <option value="task_posting">Task Posting</option>
+                    <option value="topup_from_main">Top-up from Main Wallet</option>
+                    <option value="admin_adjustment">Admin Adjustment</option>
+                </select>
+                <select class="border border-red-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <option value="">All Types</option>
+                    <option value="credit">Credits</option>
+                    <option value="debit">Debits</option>
+                </select>
+            </div>
+            <div class="text-sm text-gray-600">
+                Total: {{ transactions|length }} transaction{{ transactions|length|pluralize }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-lg shadow-lg border border-red-200 overflow-hidden">
+        {% if transactions %}
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-red-50 border-b border-red-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Date & Time</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Balance After</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-medium text-red-700 uppercase tracking-wider">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-red-50">
+                        {% for transaction in transactions %}
+                        <tr class="hover:bg-red-25">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ transaction.created_at|date:"M d, Y" }}</div>
+                                <div class="text-sm text-gray-500">{{ transaction.created_at|time:"H:i" }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3
+                                                {% if transaction.transaction_type == 'credit' %}bg-green-100{% else %}bg-red-100{% endif %}">
+                                        {% if transaction.transaction_type == 'credit' %}
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>
+                                            </svg>
+                                        {% else %}
+                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                                            </svg>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-900 capitalize">{{ transaction.get_transaction_type_display }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ transaction.get_category_display }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm font-semibold 
+                                           {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                ${{ transaction.balance_after|floatformat:2 }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {% if transaction.status == 'success' %}bg-green-100 text-green-800{% elif transaction.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                                {{ transaction.description|default:"-" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden">
+                {% for transaction in transactions %}
+                <div class="border-b border-red-100 p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3
+                                        {% if transaction.transaction_type == 'credit' %}bg-green-100{% else %}bg-red-100{% endif %}">
+                                {% if transaction.transaction_type == 'credit' %}
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                                    </svg>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">{{ transaction.get_category_display }}</p>
+                                <p class="text-sm text-gray-500">{{ transaction.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold 
+                                     {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
+                                {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                            </p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
+                                        {% if transaction.status == 'success' %}bg-green-100 text-green-800{% elif transaction.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <p><span class="font-medium">Balance after:</span> ${{ transaction.balance_after|floatformat:2 }}</p>
+                        {% if transaction.description %}
+                            <p class="mt-1"><span class="font-medium">Description:</span> {{ transaction.description }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="px-6 py-12 text-center">
+                <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 4v6m4-6v6m-8-4H5m4 0h4"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No transactions found</h3>
+                <p class="text-gray-500 mb-6">You haven't made any task wallet transactions yet.</p>
+                <a href="{% url 'tasks:task_wallet_topup' %}" 
+                   class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 inline-block">
+                    Add Funds to Get Started
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="mt-8 flex items-center justify-between">
+        <div class="text-sm text-gray-700">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} transactions
+        </div>
+        <div class="flex items-center space-x-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1" class="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50">
+                    First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50">
+                    Previous
+                </a>
+            {% endif %}
+            
+            <span class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg">
+                {{ page_obj.number }}
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50">
+                    Next
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50">
+                    Last
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

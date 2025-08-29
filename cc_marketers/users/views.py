@@ -9,11 +9,21 @@ from django.views.generic import (
 from django.contrib import messages
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse
-from django.core.mail import send_mail
-from django.conf import settings
-from django.db.models import Count
-from django.db.models.functions import TruncMonth
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from django.db.models import Sum
+from decimal import Decimal
+
+from django.contrib.auth.views import PasswordResetView
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
+
 from tasks.models import Task, Submission
+from referrals.models import ReferralCode, Referral  # adjust import path
+from core.services import send_verification_email
+from wallets.models import WithdrawalRequest, Transaction
+from wallets.services import WalletService
 
 from .models import User, UserProfile, EmailVerificationToken, PhoneVerificationToken
 from .forms import (
@@ -22,23 +32,6 @@ from .forms import (
     ExtendedProfileForm
 )
 
-# ---------- UTILS ----------
-def send_verification_email(request, user):
-    """Helper to send email verification"""
-    token = EmailVerificationToken.objects.create(user=user)
-    verification_url = request.build_absolute_uri(
-        reverse('users:verify_email', kwargs={'token': token.token})
-    )
-    send_mail(
-        subject='Verify your TaskPlatform account',
-        message=f'Click this link to verify your account: {verification_url}',
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=True
-    )
-
-
-# ---------- VIEWS ----------
 class UserRegistrationView(CreateView):
     """User registration with referral tracking"""
     model = User
@@ -54,10 +47,31 @@ class UserRegistrationView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        user = self.object
+        user = self.object  
+
+        # Handle referral
+        ref_code = self.request.GET.get("ref") or form.cleaned_data.get("referral_code")
+        if ref_code:
+            try:
+                referral_code_obj = ReferralCode.objects.get(code=ref_code)
+                referrer = referral_code_obj.user
+
+                Referral.objects.get_or_create(
+                    referrer=referrer,
+                    referred=user,
+                    defaults={
+                        "level": 1,
+                        "referral_code": referral_code_obj
+                    }
+                )
+            except ReferralCode.DoesNotExist:
+                pass  
+
+        # Log user in and send email
         login(self.request, user)
-        send_verification_email(self.request, user)
+        send_verification_email(user)
         messages.success(self.request, 'Welcome! Please verify your email.')
+
         return response
 
 
@@ -73,7 +87,7 @@ class CustomLoginView(LoginView):
             return next_url
         role = getattr(self.request.user, 'role', None)
         return {
-            User.ADMIN: reverse_lazy('admin:index'),
+            User.ADMIN: reverse_lazy('users:dashboard'),
             User.ADVERTISER: reverse_lazy('tasks:my_tasks'),
             User.MEMBER: reverse_lazy('tasks:task_list'),
         }.get(role, reverse_lazy('tasks:task_list'))
@@ -122,7 +136,6 @@ class ProfileSetupView(LoginRequiredMixin, UpdateView):
 
         return response
 
-
 class UserDashboardView(LoginRequiredMixin, TemplateView):
     """User dashboard"""
     template_name = 'users/dashboard.html'
@@ -147,7 +160,6 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
         else:
             recent_referrals = []
 
-        # Recent tasks created (advertiser view)
         # Recent submissions by the user
         recent_tasks = (
             Submission.objects.filter(member=user)
@@ -155,17 +167,45 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
             .order_by("-submitted_at")[:5]
         )
 
-
-        # Completed tasks (approved submissions by this user)
+        # Completed tasks
         completed_tasks_count = Submission.objects.filter(
             member=user, status="approved"
         ).count()
 
-        # Active tasks: if advertiser → their active tasks, else → user's pending submissions
+        # Active tasks
         if Task.objects.filter(advertiser=user).exists():  # advertiser
-            active_tasks_count = Task.objects.filter(advertiser=user, status="active").count()
+            active_tasks_count = Task.objects.filter(
+                advertiser=user, status="active"
+            ).count()
         else:  # member
-            active_tasks_count = Submission.objects.filter(member=user, status="pending").count()
+            active_tasks_count = Submission.objects.filter(
+                member=user, status="pending"
+            ).count()
+
+        # Referral link
+        referral_code, created = ReferralCode.objects.get_or_create(
+            user=user,
+            defaults={'is_active': True}
+        )
+        referral_link = self.request.build_absolute_uri(
+            reverse('users:register') + f'?ref={referral_code.code}'
+        )
+        wallet = WalletService.get_or_create_wallet(user)
+        pending_withdrawals = WithdrawalRequest.objects.filter(
+            user=user,
+            status='pending'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        # Available balance (balance - pending withdrawals - escrow)
+        context['available_balance'] = wallet.get_available_balance() - pending_withdrawals
+
+        # Recent transactions (last 10)
+        context['recent_transactions'] = Transaction.objects.filter(
+            user=user
+        )[:10]
+
+        # 🏦 Wallet balances
+        main_wallet_balance = getattr(getattr(user, "wallet", None), "balance", Decimal("0.00"))
+        task_wallet_balance = getattr(getattr(user, "taskwallet", None), "balance", Decimal("0.00"))
 
         context.update({
             "user_stats": user_stats,
@@ -173,30 +213,34 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
             "recent_tasks": recent_tasks,
             "completed_tasks_count": completed_tasks_count,
             "active_tasks_count": active_tasks_count,
+            "referral_code": referral_code,
+            "referral_link": referral_link,
+            "main_wallet_balance": main_wallet_balance,   # 👈 main wallet
+            "task_wallet_balance": task_wallet_balance,   # 👈 task wallet
+            "available_balance": wallet.get_available_balance() - pending_withdrawals,  # 👈 task wallet balance after pending withdrawals
         })
         return context
 
 
+
 class EmailVerificationView(TemplateView):
-    """Email verification"""
     template_name = 'users/email_verification.html'
 
-    def get(self, request, token):
+    def get(self, request, uidb64, token):
         try:
-            verification_token = EmailVerificationToken.objects.select_related("user").get(token=token)
-            if verification_token.is_valid():
-                user = verification_token.user
-                user.email_verified = True
-                user.save(update_fields=["email_verified"])
-                verification_token.used = True
-                verification_token.save(update_fields=["used"])
-                messages.success(request, 'Email verified successfully!')
-                return redirect('users:dashboard' if request.user.is_authenticated else 'users:login')
-            messages.error(request, 'Verification link expired or used.')
-        except EmailVerificationToken.DoesNotExist:
-            messages.error(request, 'Invalid verification link.')
-        return render(request, self.template_name)
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
 
+        if user is not None and default_token_generator.check_token(user, token):
+            user.email_verified = True
+            user.save(update_fields=["email_verified"])
+            messages.success(request, 'Email verified successfully!')
+            return redirect('users:dashboard' if request.user.is_authenticated else 'users:login')
+        
+        messages.error(request, 'Invalid or expired verification link.')
+        return render(request, self.template_name)
 
 class ResendVerificationView(LoginRequiredMixin, TemplateView):
     """Resend email verification"""
@@ -208,8 +252,11 @@ class ResendVerificationView(LoginRequiredMixin, TemplateView):
             messages.info(request, 'Your email is already verified.')
             return redirect('users:dashboard')
         EmailVerificationToken.objects.filter(user=user, used=False).delete()
-        send_verification_email(request, user)
-        messages.success(request, 'Verification email sent!')
+        success =  send_verification_email(user)
+        if success:
+            messages.success(request, 'Verification email sent!')
+        else:
+            messages.error(request, 'Failed to send verification email. Please try again later.')
         return redirect('users:dashboard')
 
 
@@ -272,50 +319,19 @@ class PasswordChangeView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-class ReferralSignupView(UserRegistrationView):
-    """Referral signup"""
-    template_name = 'users/referral_signup.html'
-
-    def get_initial(self):
-        initial = super().get_initial()
-        if code := self.kwargs.get('code'):
-            initial['referral_code'] = code
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        code = self.kwargs.get('code')
-        try:
-            context['referrer'] = User.objects.only("username").get(referral_code=code)
-        except User.DoesNotExist:
-            context['invalid_referral'] = True
-        return context
 
 
-class ReferralDashboardView(LoginRequiredMixin, TemplateView):
-    """Referral dashboard"""
-    template_name = 'users/referral_dashboard.html'
+class CustomPasswordResetView(PasswordResetView):
+    def send_mail(self, subject_template_name, email_template_name,
+                  context, from_email, to_email, html_email_template_name=None):
+        subject = render_to_string(subject_template_name, context).strip()
+        body = render_to_string(email_template_name, context)
 
-    def get_context_data(self, **kwargs):
-        user = self.request.user
-        referrals = user.referrals.all()
-        monthly_stats = (
-            referrals.annotate(month=TruncMonth('date_joined'))
-            .values('month').annotate(count=Count('id'))
-            .order_by('-month')[:12]
-        )
-        return {
-            **super().get_context_data(**kwargs),
-            'referral_stats': {
-                'total_referrals': referrals.count(),
-                'active_referrals': referrals.filter(is_active=True).count(),
-                'verified_referrals': referrals.filter(email_verified=True).count(),
-                'referral_code': user.referral_code,
-                'referral_url': user.referral_url,
-            },
-            'recent_referrals': referrals.order_by('-date_joined')[:10],
-            'monthly_stats': monthly_stats,
-        }
+        email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
+        if html_email_template_name:
+            html_email = render_to_string(html_email_template_name, context)
+            email_message.attach_alternative(html_email, "text/html")
+        email_message.send()
 
 
 # ---------- API VIEWS ----------

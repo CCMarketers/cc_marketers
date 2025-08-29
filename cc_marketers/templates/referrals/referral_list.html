@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}My Referrals{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="bg-red-600 text-white py-8 shadow-md">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold">My Referrals</h1>
+      <p class="text-red-100 mt-2">All users you’ve referred</p>
+    </div>
+    <a href="{% url 'referrals:dashboard' %}" 
+       class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md text-sm font-medium transition">
+      ← Back to Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  {% if referrals %}
+    <!-- Referrals Table -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Referral History</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Joined</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Earnings Generated</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for referral in referrals %}
+              <tr class="hover:bg-gray-50">
+                <!-- User -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="flex-shrink-0 h-10 w-10">
+                      <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <span class="text-sm font-medium text-red-800">
+                          {{ referral.referred.first_name|first|default:referral.referred.username|first }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-medium text-gray-900">
+                        {% if referral.referred.first_name %}
+                          {{ referral.referred.first_name }} {{ referral.referred.last_name }}
+                        {% else %}
+                          {{ referral.referred.username }}
+                        {% endif %}
+                      </div>
+                      <div class="text-sm text-gray-500">{{ referral.referred.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <!-- Level -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if referral.level == 1 %}bg-red-100 text-red-800
+                    {% elif referral.level == 2 %}bg-orange-100 text-orange-800
+                    {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                    Level {{ referral.level }}
+                  </span>
+                </td>
+                <!-- Date Joined -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ referral.created_at|date:"M d, Y" }}
+                </td>
+                <!-- Status -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if referral.is_active %}bg-green-100 text-green-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {% if referral.is_active %}Active{% else %}Inactive{% endif %}
+                  </span>
+                </td>
+                <!-- Earnings -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${{ referral.referralearning_set.all.aggregate.amount__sum|default:0|floatformat:2 }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+      <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+        <div class="flex-1 flex justify-between sm:hidden">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+               class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Previous
+            </a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+               class="ml-3 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Next
+            </a>
+          {% endif %}
+        </div>
+        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <p class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ page_obj.start_index }}</span>
+            to <span class="font-medium">{{ page_obj.end_index }}</span>
+            of <span class="font-medium">{{ page_obj.paginator.count }}</span> results
+          </p>
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            {% if page_obj.has_previous %}
+              <a href="?page={{ page_obj.previous_page_number }}"
+                 class="px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Previous</span>
+                ‹
+              </a>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <span class="px-4 py-2 border border-gray-300 bg-red-50 text-sm font-medium text-red-600">{{ num }}</span>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}"
+                   class="px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}"
+                 class="px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <span class="sr-only">Next</span>
+                ›
+              </a>
+            {% endif %}
+          </nav>
+        </div>
+      </div>
+    {% endif %}
+  {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <h3 class="mt-3 text-lg font-medium text-gray-900">No referrals yet</h3>
+      <p class="mt-1 text-sm text-gray-500">Get started by sharing your referral link with friends and family.</p>
+      <div class="mt-6">
+        <a href="{% url 'referrals:dashboard' %}"
+           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+          <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+          </svg>
+          Get Your Referral Link
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

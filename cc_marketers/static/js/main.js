@@ -349,7 +349,7 @@ function hideLoading(element) {
 }
 
 // Export functions for global use
-window.TaskPlatform = {
+window.TriLinkers = {
     showToast,
     showLoading,
     hideLoading,

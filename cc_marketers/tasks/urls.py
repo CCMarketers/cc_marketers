@@ -12,11 +12,19 @@ urlpatterns = [
     path('my-tasks/', views.my_tasks, name='my_tasks'),
     path('my-submissions/', views.my_submissions, name='my_submissions'),
     path('<int:task_id>/', views.task_detail, name='task_detail'),
+    path("task/<int:task_id>/edit/", views.edit_task, name="edit_task"),
+    path("task/<int:task_id>/delete/", views.delete_task, name="delete_task"),
+
     
     # Review URLs
     path('<int:task_id>/review/', views.review_submissions, name='review_submissions'),
     path('submission/<int:submission_id>/review/', views.review_submission, name='review_submission'),
     
+    # Task wallet
+    path("task-wallet/", views.TaskWalletDashboardView.as_view(), name="task_wallet_dashboard"),
+    path("task-wallet/transactions/", views.TaskWalletTransactionListView.as_view(), name="task_wallet_transactions"),
+    path("task-wallet/topup/", views.TaskWalletTopupView.as_view(), name="task_wallet_topup"),
+
     # Dispute URLs
     path('submission/<int:submission_id>/dispute/', views.create_dispute, name='create_dispute'),
     path('my-disputes/', views.my_disputes, name='my_disputes'),

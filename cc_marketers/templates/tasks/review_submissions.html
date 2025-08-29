@@ -3,79 +3,90 @@
 {% block title %}Review Submissions - {{ task.title }}{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-gray-800">Review Submissions</h1>
-  <p class="text-gray-500">{{ task.title }}</p>
-</div>
-
-<!-- Task Stats -->
-<div class="bg-white rounded-xl shadow card-hover p-6 mb-6 fade-in-up">
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-  <div>
-    <strong>Total Slots:</strong><br>
-    <span class="text-gray-600">{{ task.total_slots }}</span>
-  </div>
-  <div>
-    <strong>Pending Reviews:</strong><br>
-    <span class="text-gray-600">{{ submissions|length }}</span>
-  </div>
-  <div>
-    <strong>Approved:</strong><br>
-    <span class="text-green-600 font-semibold">{{ approved_count }}</span>
-  </div>
-  <div>
-    <strong>Rejected:</strong><br>
-    <span class="text-red-600 font-semibold">{{ rejected_count }}</span>
-  </div>
-</div>
-
-</div>
-
-<!-- Submissions -->
-{% for submission in submissions %}
-<div class="bg-white rounded-xl shadow card-hover mb-6 fade-in-up">
-  <div class="flex justify-between items-center border-b border-gray-200 p-4">
-    <div>
-      <h3 class="font-semibold text-gray-800">Submission by {{ submission.member.username }}</h3>
-      <p class="text-sm text-gray-500">Submitted {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
-    </div>
-    <a href="{% url 'tasks:review_submission' submission.id %}" class="btn-primary btn-sm">Review</a>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  
+  <!-- Page header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Review Submissions</h1>
+    <p class="text-gray-500">{{ task.title }}</p>
   </div>
 
-  <div class="p-4 space-y-4">
-    {% if submission.proof_text %}
-    <div>
-      <strong class="text-gray-700">Proof Description:</strong>
-      <p class="text-gray-600 mt-1">{{ submission.proof_text }}</p>
-    </div>
-    {% endif %}
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {% if submission.proof_file %}
+  <!-- Task Stats -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
       <div>
-        <strong class="text-gray-700">File:</strong><br>
-        <a href="{{ submission.proof_file.url }}" target="_blank" class="btn-secondary btn-sm inline-flex items-center mt-1">
-          <i class="fas fa-file mr-2"></i> View File
-        </a>
+        <strong>Total Slots:</strong><br>
+        <span class="text-gray-700">{{ task.total_slots }}</span>
+      </div>
+      <div>
+        <strong>Pending Reviews:</strong><br>
+        <span class="text-gray-700">{{ submissions|length }}</span>
+      </div>
+      <div>
+        <strong>Approved:</strong><br>
+        <span class="text-green-600 font-semibold">{{ approved_count }}</span>
+      </div>
+      <div>
+        <strong>Rejected:</strong><br>
+        <span class="text-red-600 font-semibold">{{ rejected_count }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submissions -->
+  {% for submission in submissions %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+    <div class="flex justify-between items-center border-b border-gray-200 p-4">
+      <div>
+        <h3 class="font-semibold text-gray-900">Submission by {{ submission.member.username }}</h3>
+        <p class="text-sm text-gray-500">Submitted {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
+      </div>
+      <a href="{% url 'tasks:review_submission' submission.id %}" 
+         class="inline-flex items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
+        Review
+      </a>
+    </div>
+
+    <div class="p-4 space-y-4">
+      {% if submission.proof_text %}
+      <div>
+        <strong class="text-gray-800">Proof Description:</strong>
+        <p class="text-gray-600 mt-1">{{ submission.proof_text }}</p>
       </div>
       {% endif %}
-      {% if submission.screenshot %}
-      <div>
-        <strong class="text-gray-700">Screenshot:</strong><br>
-        <a href="{{ submission.screenshot.url }}" target="_blank" class="btn-secondary btn-sm inline-flex items-center mt-1">
-          <i class="fas fa-image mr-2"></i> View Screenshot
-        </a>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% if submission.proof_file %}
+        <div>
+          <strong class="text-gray-800">File:</strong><br>
+          <a href="{{ submission.proof_file.url }}" target="_blank" 
+             class="inline-flex items-center px-3 py-2 mt-1 rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 text-sm font-medium transition">
+            <i class="fas fa-file mr-2"></i> View File
+          </a>
+        </div>
+        {% endif %}
+        {% if submission.screenshot %}
+        <div>
+          <strong class="text-gray-800">Screenshot:</strong><br>
+          <a href="{{ submission.screenshot.url }}" target="_blank" 
+             class="inline-flex items-center px-3 py-2 mt-1 rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 text-sm font-medium transition">
+            <i class="fas fa-image mr-2"></i> View Screenshot
+          </a>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
   </div>
+  {% empty %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-12">
+    <i class="fas fa-clipboard-check fa-3x text-gray-400 mb-3"></i>
+    <h4 class="text-lg font-semibold text-gray-700">No pending submissions</h4>
+    <p class="text-gray-500">All submissions have been reviewed.</p>
+    <a href="{% url 'tasks:my_tasks' %}" 
+       class="mt-4 inline-flex items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
+      Back to My Tasks
+    </a>
+  </div>
+  {% endfor %}
 </div>
-{% empty %}
-<div class="text-center py-12 fade-in-up">
-  <i class="fas fa-clipboard-check fa-3x text-gray-400 mb-3"></i>
-  <h4 class="text-lg font-semibold text-gray-700">No pending submissions</h4>
-  <p class="text-gray-500">All submissions have been reviewed.</p>
-  <a href="{% url 'tasks:my_tasks' %}" class="btn-primary mt-4">Back to My Tasks</a>
-</div>
-{% endfor %}
 {% endblock %}
