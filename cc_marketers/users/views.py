@@ -196,7 +196,7 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
             status='pending'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         # Available balance (balance - pending withdrawals - escrow)
-        context['available_balance'] = wallet.get_available_balance() - pending_withdrawals
+        context['available_balance'] = wallet.get_available_balance() - pending_withdrawals 
 
         # Recent transactions (last 10)
         context['recent_transactions'] = Transaction.objects.filter(

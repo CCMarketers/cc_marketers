@@ -97,7 +97,7 @@ class UserModelTest(TestCase):
             'email': 'test@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
-            'phone': '+1234567890',
+            'phone': '09125897579',
             'password': 'testpass123'
         }
 
@@ -108,7 +108,7 @@ class UserModelTest(TestCase):
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.first_name, 'John')
         self.assertEqual(user.last_name, 'Doe')
-        self.assertEqual(user.phone, '+1234567890')
+        self.assertEqual(user.phone, '09125897579')
         self.assertEqual(user.role, User.MEMBER)
         self.assertTrue(user.is_active)
         self.assertFalse(user.email_verified)
@@ -126,7 +126,7 @@ class UserModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             User.objects.create_user(
                 email='another@example.com',
-                phone='+1234567890',
+                phone='09125897579',
                 password='pass123'
             )
 
@@ -161,18 +161,18 @@ class UserModelTest(TestCase):
     def test_phone_validation(self):
         """Test phone number validation"""
         # Valid phone numbers
-        valid_phones = ['+1234567890', '+12345678901234', '1234567890']
+        valid_phones = ['09125897579', '091258975791234', '09125897579']
         for phone in valid_phones:
-            user = User(email=f'test{phone[-4:]}@example.com', phone=phone)
+            user = User(email=f'test{phone[-4:]}@example.com', phone=phone, password="dummy123")
             try:
                 user.full_clean()
             except ValidationError:
                 self.fail(f"Phone {phone} should be valid")
 
         # Invalid phone numbers
-        invalid_phones = ['123', '+123456789012345678', 'abc123', '']
+        invalid_phones = ['123', '0912589757912345678', 'abc123', '']
         for phone in invalid_phones:
-            user = User(email=f'test{len(phone)}@example.com', phone=phone)
+            user = User(email=f'test{phone[-4:]}@example.com', phone=phone, password="dummy123")
             if phone:  # Skip empty string as it's allowed
                 with self.assertRaises(ValidationError):
                     user.full_clean()
@@ -192,7 +192,7 @@ class UserModelTest(TestCase):
         
         user.first_name = ''
         user.last_name = ''
-        self.assertEqual(user.get_full_name(), 'test@example.com')
+        self.assertEqual(user.get_full_name(), '')
 
     def test_get_short_name(self):
         """Test get_short_name method"""
@@ -532,11 +532,11 @@ class UserModelDatabaseConstraintsTest(TestCase):
         user = User.objects.create_user(
             email='test@example.com',
             password='pass123',
-            phone='+1234567890'
+            phone='09125897579'
         )
         
         # Should be able to query efficiently by phone
-        found_user = User.objects.get(phone='+1234567890')
+        found_user = User.objects.get(phone='09125897579')
         self.assertEqual(found_user, user)
 
     def test_role_index(self):

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'commerce', 
     'offerwalls',
     'subscriptions',
+    'payments',
 ]
 
 MIDDLEWARE = [
@@ -235,5 +236,15 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 
+
+
+# Paystack Configuration
+PAYSTACK_PUBLIC_KEY = 'pk_test_98d1f58ea371bbbfe691ec17b30268cc31ebf7d7'  # Replace with your actual keys
+PAYSTACK_SECRET_KEY = 'sk_test_9c232d742d7dddb0b9e808f5427bbc07f76ce702'  # Replace with your actual keys
+PAYSTACK_BASE_URL = "https://api.paystack.co"
+
+# For production, use:
+# PAYSTACK_PUBLIC_KEY = 'pk_live_your_live_public_key'
+# PAYSTACK_SECRET_KEY = 'sk_live_your_live_secret_key'
 
 

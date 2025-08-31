@@ -1,6 +1,5 @@
-
 <!-- wallets/templates/wallets/fund_wallet.html -->
-{% extends 'wallets/base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}Fund Wallet{% endblock %}
 
@@ -19,12 +18,12 @@
                 <h2 class="text-xl font-semibold text-red-800">Add Funds</h2>
             </div>
             
-            <form method="post" class="p-6">
+            <form method="post" action="{% url 'payments:initiate_funding' %}" class="p-6">
                 {% csrf_token %}
                 
                 <div class="mb-6">
                     <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
-                        Amount ($) <span class="text-red-500">*</span>
+                        Amount (₦) <span class="text-red-500">*</span>
                     </label>
                     {{ form.amount }}
                     {% if form.amount.errors %}

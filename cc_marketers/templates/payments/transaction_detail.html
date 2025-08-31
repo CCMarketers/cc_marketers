@@ -1,0 +1,160 @@
+<!-- payments/templates/payments/transaction_detail.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white">
+    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-red-600">Transaction Details</h1>
+                <p class="mt-2 text-gray-600">Complete information about your transaction</p>
+            </div>
+
+            <!-- Transaction Card -->
+            <div class="bg-white border-2 border-red-100 rounded-lg shadow-lg p-6">
+                <!-- Status Banner -->
+                <div class="mb-6 p-4 rounded-lg {% if transaction.status == 'success' %}bg-green-50 border border-green-200{% elif transaction.status == 'pending' %}bg-yellow-50 border border-yellow-200{% elif transaction.status == 'failed' %}bg-red-50 border border-red-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+                    <div class="flex items-center">
+                        {% if transaction.status == 'success' %}
+                            <svg class="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="font-semibold text-green-700">Transaction Successful</span>
+                        {% elif transaction.status == 'pending' %}
+                            <svg class="h-5 w-5 text-yellow-500 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="font-semibold text-yellow-700">Transaction Pending</span>
+                        {% elif transaction.status == 'failed' %}
+                            <svg class="h-5 w-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span class="font-semibold text-red-700">Transaction Failed</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Transaction Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Basic Info -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-600 mb-4">Transaction Information</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Transaction ID</label>
+                                <p class="text-sm text-gray-900 font-mono">{{ transaction.internal_reference }}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Type</label>
+                                <p class="text-sm text-gray-900 capitalize">
+                                    {% if transaction.transaction_type == 'funding' %}
+                                        <span class="text-green-600">{{ transaction.get_transaction_type_display }}</span>
+                                    {% else %}
+                                        <span class="text-red-600">{{ transaction.get_transaction_type_display }}</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Amount</label>
+                                <p class="text-lg font-semibold text-gray-900">₦{{ transaction.amount|floatformat:2 }}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Gateway</label>
+                                <p class="text-sm text-gray-900 capitalize">{{ transaction.gateway.name }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timestamps -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-600 mb-4">Timeline</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Created</label>
+                                <p class="text-sm text-gray-900">{{ transaction.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                            {% if transaction.completed_at %}
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Completed</label>
+                                <p class="text-sm text-gray-900">{{ transaction.completed_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Last Updated</label>
+                                <p class="text-sm text-gray-900">{{ transaction.updated_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gateway Specific Details -->
+                {% if transaction.paystack_details %}
+                    <div class="mt-6 pt-6 border-t border-red-200">
+                        <h3 class="text-lg font-semibold text-red-600 mb-4">Paystack Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Paystack Reference</label>
+                                <p class="text-sm text-gray-900 font-mono">{{ transaction.paystack_details.paystack_reference }}</p>
+                            </div>
+                            {% if transaction.paystack_details.recipient_code %}
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Recipient Code</label>
+                                <p class="text-sm text-gray-900 font-mono">{{ transaction.paystack_details.recipient_code }}</p>
+                            </div>
+                            {% endif %}
+                            {% if transaction.paystack_details.account_name %}
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Account Name</label>
+                                <p class="text-sm text-gray-900">{{ transaction.paystack_details.account_name }}</p>
+                            </div>
+                            {% endif %}
+                            {% if transaction.paystack_details.account_number %}
+                            <div>
+                                <label class="text-sm font-medium text-gray-600">Account Number</label>
+                                <p class="text-sm text-gray-900 font-mono">{{ transaction.paystack_details.account_number }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Gateway Response (for debugging) -->
+                {% if transaction.gateway_response and user.is_staff %}
+                    <div class="mt-6 pt-6 border-t border-red-200">
+                        <h3 class="text-lg font-semibold text-red-600 mb-4">Gateway Response (Staff Only)</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre class="text-xs text-gray-700 overflow-auto">{{ transaction.gateway_response|pprint }}</pre>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{% url 'payments:transaction_history' %}" 
+                   class="inline-flex items-center justify-center px-6 py-3 border border-red-300 rounded-lg text-red-600 bg-white hover:bg-red-50 transition duration-200 font-medium">
+                    ← Back to History
+                </a>
+                
+                {% if transaction.status == 'failed' and transaction.transaction_type == 'funding' %}
+                    <a href="{% url 'wallets:fund_wallet' %}" 
+                       class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg text-white bg-red-600 hover:bg-red-700 transition duration-200 font-medium">
+                        Try Again
+                    </a>
+                {% elif transaction.status == 'success' and transaction.transaction_type == 'withdrawal' %}
+                    <span class="inline-flex items-center justify-center px-6 py-3 border border-green-300 rounded-lg text-green-600 bg-green-50 font-medium">
+                        ✓ Withdrawal Completed
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

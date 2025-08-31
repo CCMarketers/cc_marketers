@@ -10,6 +10,7 @@ urlpatterns = [
     path('wallets/', include('wallets.urls')),
     path('referrals/', include('referrals.urls')),
     path('subscriptions/', include('subscriptions.urls')),
+    path('payments/', include('payments.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

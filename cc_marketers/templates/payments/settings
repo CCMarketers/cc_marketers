@@ -1,0 +1,225 @@
+# Add to your Django settings.py
+
+
+# Database configuration for the new models
+# Make sure you run: python manage.py makemigrations payments
+# Then: python manage.py migrate
+
+# Django Payments App - Installation & Usage
+
+## 1. Installation Steps
+
+### Step 1: Create the App Structure
+```bash
+# Create the payments app directory structure
+mkdir -p payments/management/commands
+mkdir -p payments/templates/payments
+mkdir -p payments/migrations
+```
+
+### Step 2: Create Required Files
+Create the following files in your `payments/` directory:
+- `__init__.py`
+- `apps.py`
+- `models.py`
+- `views.py` 
+- `services.py`
+- `forms.py`
+- `admin.py`
+- `urls.py`
+- `management/__init__.py`
+- `management/commands/__init__.py`
+- `management/commands/setup_payment_gateways.py`
+
+### Step 3: Update Settings
+Add to your `settings.py`:
+```python
+# Add payments to INSTALLED_APPS
+INSTALLED_APPS = [
+    # ... your other apps
+    'payments',
+    # ... rest of your apps
+]
+
+# Paystack Configuration
+PAYSTACK_PUBLIC_KEY = 'pk_test_your_public_key_here'
+PAYSTACK_SECRET_KEY = 'sk_test_your_secret_key_here'
+```
+
+### Step 4: Update Main URLs
+Add to your main `urls.py`:
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    # ... your other URLs
+    
+    # ... rest of your URLs
+]
+```
+
+### Step 5: Run Migrations
+```bash
+python manage.py makemigrations payments
+python manage.py migrate
+python manage.py setup_payment_gateways
+```
+
+## 2. Integration with Wallet App
+
+### Update Your Wallet Templates
+Add funding button to your wallet template:
+```html
+<!-- In your wallets/fund_wallet.html template -->
+<form method="post" action="{% url 'payments:initiate_funding' %}">
+    {% csrf_token %}
+    <!-- Your existing amount input -->
+    <input type="number" name="amount" step="0.01" min="100" required 
+           class="w-full px-4 py-3 border border-red-300 rounded-lg">
+    
+    <button type="submit" class="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700">
+        Fund via Paystack
+    </button>
+</form>
+```
+
+### Add Withdrawal Link
+Add to your wallet dashboard:
+```html
+<a href="{% url 'payments:withdraw' %}" 
+   class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+    Withdraw Funds
+</a>
+
+<a href="{% url 'payments:transaction_history' %}" 
+   class="text-red-600 hover:text-red-800">
+    View Transaction History
+</a>
+```
+
+## 3. Required Wallet Service Methods
+
+Your `wallets/services.py` should have these methods:
+```python
+class WalletService:
+    @staticmethod
+    def get_balance(user):
+        """Return user's wallet balance as Decimal"""
+        pass
+    
+    @staticmethod
+    def credit_wallet(user, amount, description):
+        """Credit user's wallet with amount"""
+        pass
+    
+    @staticmethod
+    def debit_wallet(user, amount, description):
+        """Debit user's wallet. Return dict with 'success' key"""
+        pass
+```
+
+## 4. Webhook Configuration
+
+### Setup Webhook URL in Paystack Dashboard
+Add this URL to your Paystack dashboard:
+```
+https://yourdomain.com/payments/webhook/paystack/
+```
+
+### Events to Enable
+Enable these webhook events in Paystack:
+- `charge.success`
+- `transfer.success` 
+- `transfer.failed`
+
+## 5. Security Considerations
+
+### Environment Variables
+Store sensitive keys in environment variables:
+```python
+import os
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')
+PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY')
+```
+
+### Database Indexes
+Add these to improve performance:
+```python
+# In your models, add db_index=True to frequently queried fields
+gateway_reference = models.CharField(max_length=255, unique=True, db_index=True)
+```
+
+### Logging
+Add logging for transactions:
+```python
+import logging
+logger = logging.getLogger(__name__)
+
+# In your service methods
+logger.info(f"Payment initialized for user {user.id}, amount: {amount}")
+```
+
+## 6. Testing
+
+### Test Paystack Keys
+Use Paystack test keys for development:
+- Public: `pk_test_xxxxx`
+- Secret: `sk_test_xxxxx`
+
+### Test Cards
+Use Paystack test cards:
+- Success: `4084084084084081`
+- Decline: `4000000000000002`
+
+## 7. Future Gateway Integration
+
+The app is designed for easy extension. To add new gateways:
+
+1. Create new service class (e.g., `FlutterwaveService`)
+2. Add gateway-specific model (e.g., `FlutterwaveTransaction`)
+3. Add gateway to `PaymentGateway` model
+4. Update webhook handling
+
+## 8. Production Checklist
+
+- [ ] Replace test keys with live Paystack keys
+- [ ] Set up proper logging
+- [ ] Configure webhook URLs
+- [ ] Set up monitoring for failed transactions
+- [ ] Add rate limiting for API endpoints
+- [ ] Set up backup webhook endpoints
+- [ ] Test all flows thoroughly
+
+## 9. API Endpoints
+
+- `POST /payments/fund/initiate/` - Initialize funding
+- `GET /payments/callback/` - Payment callback
+- `GET|POST /payments/withdraw/` - Withdrawal page
+- `GET /payments/api/banks/` - Get bank list
+- `POST /payments/api/verify-account/` - Verify account
+- `POST /payments/webhook/paystack/` - Webhook endpoint
+- `GET /payments/transactions/` - Transaction history
+- `GET /payments/transactions/<id>/` - Transaction detail
+
+
+# payments/apps.py
+from django.apps import AppConfig
+
+
+class PaymentsConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'payments'
+    verbose_name = 'Payment Management'
+    
+    def ready(self):
+        # Import signals if you need them
+        pass
+
+
+# payments/__init__.py
+default_app_config = 'payments.apps.PaymentsConfig'
+
+
+
+# payments/management/commands/
+# Create the directory structure: payments/management/commands/

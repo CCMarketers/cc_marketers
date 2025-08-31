@@ -44,6 +44,7 @@ class WithdrawalRequestForm(forms.ModelForm):
         return amount
 
 class FundWalletForm(forms.Form):
+
     amount = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -62,3 +63,6 @@ class FundWalletForm(forms.Form):
             'rows': 3
         })
     )
+
+
+    

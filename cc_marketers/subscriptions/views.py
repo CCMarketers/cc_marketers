@@ -6,13 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import SubscriptionPlan, UserSubscription
 from .services import SubscriptionService
-from wallets.models import Wallet 
+from wallets.models import Wallet, WithdrawalRequest
 from django.utils import timezone
 from datetime import timedelta
 from wallets.services import WalletService  
 from referrals.services import credit_signup_bonus_on_subscription
 from tasks.services import TaskWalletService
 from decimal import Decimal
+from django.db.models import Sum
+
 
 
 
@@ -66,25 +68,29 @@ def subscribe(request, plan_id):
     
     return redirect('subscriptions:plans')
 
-
 @login_required
 def my_subscription(request):
     """Display user's current subscription"""
     active_subscription = SubscriptionService.get_user_active_subscription(request.user)
     subscription_history = UserSubscription.objects.filter(user=request.user)
-    
+
     try:
         wallet = Wallet.objects.get(user=request.user)
-        wallet_balance = wallet.balance
+        pending_withdrawals = WithdrawalRequest.objects.filter(
+            user=request.user,
+            status='pending'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        wallet_balance = wallet.balance - pending_withdrawals
     except Wallet.DoesNotExist:
-        wallet_balance = 0
-    
+        wallet_balance = Decimal('0.00')
+
     context = {
         'active_subscription': active_subscription,
         'subscription_history': subscription_history,
         'wallet_balance': wallet_balance,
     }
     return render(request, 'subscriptions/my_subscription.html', context)
+
 
 @login_required
 def toggle_auto_renewal(request):

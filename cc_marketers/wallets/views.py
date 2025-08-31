@@ -10,6 +10,11 @@ from .models import Wallet, Transaction, WithdrawalRequest, EscrowTransaction
 from .services import WalletService
 from .forms import WithdrawalRequestForm, FundWalletForm
 from subscriptions.decorators import subscription_required, plan_required
+from django.views.generic.edit import FormView
+
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+
 
 # Admin Views
 from django.contrib.admin.views.decorators import staff_member_required
@@ -134,9 +139,15 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
         wallet = WalletService.get_or_create_wallet(self.request.user)
+        pending_withdrawals = WithdrawalRequest.objects.filter(
+            user=user,
+            status='pending'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         context['wallet'] = wallet
-        context['available_balance'] = wallet.get_available_balance()
+
+        context['available_balance'] = wallet.get_available_balance() - pending_withdrawals 
         return context
 
 @method_decorator(subscription_required, name='dispatch')
@@ -152,30 +163,11 @@ class WithdrawalListView(LoginRequiredMixin, ListView):
         return WithdrawalRequest.objects.filter(user=self.request.user)
 
 
-class FundWalletView(LoginRequiredMixin, CreateView):
-    """Fund wallet (for testing/admin purposes)"""
+class FundWalletView(LoginRequiredMixin, FormView):
+    """Display wallet funding form"""
     template_name = 'wallets/fund_wallet.html'
     form_class = FundWalletForm
     success_url = reverse_lazy('wallets:dashboard')
-    
-    def form_valid(self, form):
-        try:
-            WalletService.credit_wallet(
-                user=self.request.user,
-                amount=form.cleaned_data['amount'],
-                category='admin_adjustment',
-                description=form.cleaned_data.get('description', 'Wallet funding'),
-                reference=f"FUND_{self.request.user.id}"
-            )
-            
-            messages.success(self.request, f"Wallet funded with ${form.cleaned_data['amount']}")
-            return redirect(self.success_url)
-            
-        except Exception as e:
-            messages.error(self.request, f"Error funding wallet: {str(e)}")
-            return self.form_invalid(form)
-
-
 
 @method_decorator(staff_member_required, name='dispatch')
 class AdminWithdrawalListView(ListView):
@@ -208,8 +200,8 @@ class AdminWithdrawalDetailView(DetailView):
         
         try:
             if action == 'approve':
-                gateway_ref = request.POST.get('gateway_reference', '')
-                WalletService.approve_withdrawal(withdrawal.id, request.user, gateway_ref)
+                # gateway_ref = request.POST.get('gateway_reference', '')
+                WalletService.approve_withdrawal(withdrawal.id, request.user)
                 messages.success(request, 'Withdrawal approved successfully!')
                 
             elif action == 'reject':
@@ -262,3 +254,17 @@ class AdminTransactionListView(ListView):
             )
         
         return queryset
+    
+
+
+
+
+@login_required
+def wallet_transaction_detail(request, transaction_id):
+    """Display detailed view of a wallet transaction"""
+    transaction = get_object_or_404(
+        Transaction,
+        id=transaction_id,
+        user=request.user
+    )
+    return render(request, 'wallets/transaction_detail.html', {'transaction': transaction})

@@ -37,18 +37,19 @@ class Transaction(models.Model):
         ('credit', 'Credit'),
         ('debit', 'Debit'),
     ]
-
     TRANSACTION_CATEGORIES = [
         ('task_payment', 'Task Payment'),
         ('task_earning', 'Task Earning'),
         ('referral_bonus', 'Referral Bonus'),
         ('withdrawal', 'Withdrawal'),
+        ('funding', 'Funding'),
         ('escrow', 'Escrow'),
         ('escrow_release', 'Escrow Release'),
         ('refund', 'Refund'),
         ('admin_adjustment', 'Admin Adjustment'),
-        ('company_cut', 'company_cut'),
+        ('company_cut', 'Company Cut'),
     ]
+
 
     TRANSACTION_STATUS = [
         ('pending', 'Pending'),
@@ -68,6 +69,14 @@ class Transaction(models.Model):
     status = models.CharField(max_length=10, choices=TRANSACTION_STATUS, default='pending')
     reference = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True)
+
+    payment_transaction = models.ForeignKey(
+        'payments.PaymentTransaction',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='wallet_transactions'
+    )
 
     # Related objects
     task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, blank=True, null=True)

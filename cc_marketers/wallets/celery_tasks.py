@@ -1,9 +1,7 @@
 # wallets/celery_tasks.py - Background tasks using Celery
 from celery import shared_task
 from django.core.mail import send_mail
-from django.contrib.auth.models import User
 from .models import WithdrawalRequest, Transaction
-from .services import WalletService
 import logging
 
 logger = logging.getLogger(__name__)
