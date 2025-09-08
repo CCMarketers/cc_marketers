@@ -2,19 +2,39 @@
 from django import forms
 from .models import Task, Submission, Dispute
 from decimal import Decimal
+from django.utils import timezone
+
 
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'payout_per_slot', 'total_slots', 'deadline', 'proof_instructions']
+        fields = [
+            'title',
+            'description',
+            'payout_per_slot',
+            'total_slots',
+            'deadline',
+            'proof_instructions',
+        ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'proof_instructions': forms.Textarea(attrs={'rows': 3}),
             'deadline': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'payout_per_slot': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
-            'total_slots': forms.NumberInput(attrs={'min': '1'}),
+            'total_slots': forms.NumberInput(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Force the min attribute to 1
+        self.fields['total_slots'].widget.attrs['min'] = '1'
+        
+    def clean_deadline(self):
+        deadline = self.cleaned_data.get("deadline")
+        if deadline and deadline <= timezone.now():
+            raise forms.ValidationError("Deadline must be in the future.")
+        return deadline
 
 class SubmissionForm(forms.ModelForm):
     class Meta:

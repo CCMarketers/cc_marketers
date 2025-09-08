@@ -12,9 +12,11 @@ from django.utils.encoding import force_bytes
 
 # Import models from related apps that the views touch
 from users.models import UserProfile, EmailVerificationToken, PhoneVerificationToken
-from referrals.models import ReferralCode, Referral
+from referrals.models import  Referral
 from tasks.models import Task, Submission
 from wallets.models import WithdrawalRequest, Transaction
+
+from django.core import mail # <-- Import mail
 
 User = get_user_model()
 
@@ -49,7 +51,9 @@ class BaseUsersViewTest(TestCase):
         )
 
         # A referral code for the admin
-        cls.ref_code = ReferralCode.objects.create(user=cls.admin, code="REFADMIN", is_active=True)
+        cls.ref_code = cls.admin.referral_code.code
+        
+        # self.referral_code = 
 
     @classmethod
     def _make_user(cls, email: str, role: str, first_name="", last_name="", is_staff=False):
@@ -87,36 +91,60 @@ class TestUserRegistrationView(BaseUsersViewTest):
         url = reverse('users:register')
         payload = {
             'email': 'newuser@example.com',
+            'first_name': 'New',         # <-- ADDED
+            'last_name': 'User',          # <-- ADDED
             'password1': 'StrongPass123!@#',
             'password2': 'StrongPass123!@#',
-            'referral_code': 'REFADMIN',
+            'role': User.MEMBER,
+            'referral_code': self.ref_code, # Use the valid code from setup
         }
         resp = self.client.post(url, data=payload, follow=True)
         self.assertEqual(resp.status_code, 200)
-        # User exists & is authenticated
+        
+        # Now this will pass
         new_user = User.objects.get(email='newuser@example.com')
         self.assertTrue(resp.context['user'].is_authenticated)
-        # Referral created
+        
         self.assertTrue(Referral.objects.filter(referrer=self.admin, referred=new_user, level=1).exists())
-        # Verification email sent and success message added
         mock_send.assert_called_once_with(new_user)
         msgs = list(messages.get_messages(resp.wsgi_request))
         self.assertTrue(any('verify your email' in m.message.lower() for m in msgs))
-
+    
+    # users/tests/test_views.py (Corrected)
     @patch('users.views.send_verification_email', return_value=True)
-    def test_post_with_invalid_referral_code_is_ignored(self, _):
+    def test_post_with_invalid_referral_code_fails_validation(self, mock_send_email):
+        """
+        Test that an invalid referral code causes a form validation error
+        and prevents user creation.
+        """
         url = reverse('users:register')
         payload = {
             'email': 'noref@example.com',
+            'first_name': 'No',
+            'last_name': 'Ref',
             'password1': 'StrongPass123!@#',
             'password2': 'StrongPass123!@#',
+            'role': User.MEMBER,
             'referral_code': 'NOTREAL',
         }
-        resp = self.client.post(url, data=payload, follow=True)
-        self.assertEqual(resp.status_code, 200)
-        u = User.objects.get(email='noref@example.com')
-        self.assertFalse(Referral.objects.filter(referred=u).exists())
+        
+        # Make the POST request but DO NOT follow redirects.
+        # An invalid form does not redirect.
+        resp = self.client.post(url, data=payload)
 
+        # 1. Assert the page was re-rendered successfully (status code 200)
+        self.assertEqual(resp.status_code, 200)
+
+        # 2. Assert that the form in the context has an error for the 'referral_code' field
+        self.assertIn('form', resp.context)
+        self.assertTrue(resp.context['form'].is_bound)
+        self.assertIn('referral_code', resp.context['form'].errors)
+
+        # 3. The most important check: assert that NO user was created.
+        self.assertFalse(User.objects.filter(email='noref@example.com').exists())
+        
+        # 4. Assert the mock email function was NOT called
+        mock_send_email.assert_not_called()
 
 class TestCustomLoginLogoutViews(BaseUsersViewTest):
     def test_login_redirects_by_role_member(self):
@@ -191,9 +219,28 @@ class TestUserDashboardView(BaseUsersViewTest):
     @patch('users.views.WalletService.get_or_create_wallet')
     def test_dashboard_context_and_balances(self, mock_wallet_svc):
         # Create submissions & tasks
-        t1 = Task.objects.create(title='Task 1', advertiser=self.advertiser, status='active')
+        from datetime import timedelta
+
+        t1 = Task.objects.create(
+            title='Task 1',
+            advertiser=self.advertiser,
+            status='active',
+            payout_per_slot=Decimal('5.00'),
+            total_slots=10,
+            deadline=timezone.now() + timedelta(days=7),  # 👈 add deadline
+        )
+        t2 = Task.objects.create(
+            title='Task 2',
+            advertiser=self.advertiser,
+            status='active',
+            payout_per_slot=Decimal('6.00'),
+            total_slots=11,
+            deadline=timezone.now() + timedelta(days=7),  # 👈 add deadline
+        )
+        
+
         Submission.objects.create(task=t1, member=self.member, status='approved', submitted_at=timezone.now())
-        Submission.objects.create(task=t1, member=self.member, status='pending', submitted_at=timezone.now())
+        Submission.objects.create(task=t2, member=self.member, status='pending', submitted_at=timezone.now())
 
         # Wallet mock
         wallet = MagicMock()
@@ -202,8 +249,13 @@ class TestUserDashboardView(BaseUsersViewTest):
 
         # Pending withdrawal and transactions
         WithdrawalRequest.objects.create(user=self.member, amount=Decimal('25.00'), status='pending')
-        Transaction.objects.create(user=self.member, amount=Decimal('10.00'), type='credit')
-
+        Transaction.objects.create(
+            user=self.member, 
+            amount=Decimal('10.00'), 
+            transaction_type='credit',
+            balance_before=Decimal('0.00'),
+            balance_after=Decimal('10.00')   # <-- FIX
+        )
         c = self.login(self.member)
         url = reverse('users:dashboard')
         resp = c.get(url)
@@ -220,30 +272,41 @@ class TestUserDashboardView(BaseUsersViewTest):
         self.assertEqual(ctx['available_balance'], Decimal('75.00'))
 
 
+# users/tests/test_views.py (Corrected)
+
 class TestEmailVerificationFlow(BaseUsersViewTest):
     def test_email_verification_valid_token_sets_flag_and_redirects(self):
-        uidb64 = urlsafe_base64_encode(force_bytes(self.member.pk))
-        token = self._make_valid_token(self.member)
-        url = reverse('users:email_verify', kwargs={'uidb64': uidb64, 'token': token})
+        # Ensure we have a fresh user instance from the DB before making the token
+        member_fresh = User.objects.get(pk=self.member.pk) # <-- RE-FETCH USER
+        uidb64 = urlsafe_base64_encode(force_bytes(member_fresh.pk))
+        token = self._make_valid_token(member_fresh)
+        url = reverse('users:verify_email', kwargs={'uidb64': uidb64, 'token': token})
 
         # when not authenticated → redirect to login
         resp = self.client.get(url, follow=True)
         self.member.refresh_from_db()
-        self.assertTrue(self.member.email_verified)
+        self.assertTrue(self.member.email_verified) # <-- This should now pass
         self.assertEqual(resp.redirect_chain[-1][0], reverse('users:login'))
 
         # when authenticated → redirect to dashboard
-        c = self.login(self.member)
+        c = self.login(self.member) # This login updates the `last_login` field
         self.member.email_verified = False
-        self.member.save(update_fields=["email_verified"])   # reset
+        self.member.save(update_fields=["email_verified"])
+        
+        # Re-fetch again after login to get the updated state
+        member_after_login = User.objects.get(pk=self.member.pk) # <-- RE-FETCH USER
+        token = self._make_valid_token(member_after_login)
+        url = reverse('users:verify_email', kwargs={'uidb64': uidb64, 'token': token})
         resp2 = c.get(url, follow=True)
         self.member.refresh_from_db()
         self.assertTrue(self.member.email_verified)
         self.assertEqual(resp2.redirect_chain[-1][0], reverse('users:dashboard'))
+    
+
 
     def test_email_verification_invalid_token_renders_error(self):
         uidb64 = urlsafe_base64_encode(force_bytes(self.member.pk))
-        url = reverse('users:email_verify', kwargs={'uidb64': uidb64, 'token': 'invalid'})
+        url = reverse('users:verify_email', kwargs={'uidb64': uidb64, 'token': 'invalid'})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         msgs = list(messages.get_messages(resp.wsgi_request))
@@ -332,7 +395,12 @@ class TestPasswordChangeView(BaseUsersViewTest):
         c = self.login(self.member)
         url = reverse('users:password_change')
         # The custom form in views expects new_password1; we'll submit matching fields
-        data = {'new_password1': 'N3w-Secret-123', 'new_password2': 'N3w-Secret-123'}
+        data = {
+            'current_password': self.password,   # old password
+            'new_password1': 'N3w-Secret-123',
+            'new_password2': 'N3w-Secret-123'
+        }
+
         resp = c.post(url, data=data, follow=True)
         self.assertEqual(resp.status_code, 200)
         # Verify that the new password works
@@ -343,23 +411,25 @@ class TestPasswordChangeView(BaseUsersViewTest):
         self.assertTrue(any('password changed' in m.message.lower() for m in msgs))
 
 
+
 class TestCustomPasswordResetView(BaseUsersViewTest):
-    @patch('users.views.EmailMultiAlternatives')
-    @patch('users.views.render_to_string')
-    def test_send_mail_renders_and_sends(self, mock_render, mock_email):
-        mock_render.side_effect = ["Subject Text", "Body Text", "<b>HTML</b>"]
-        instance = mock_email.return_value
+    def test_send_mail_renders_and_sends(self):
         url = reverse('users:password_reset')
-        # Call the view's send_mail via as_view lifecycle by posting minimal data
         resp = self.client.post(url, data={'email': self.member.email}, follow=True)
-        # Even if the password reset backend isn't fully wired, our overridden send_mail should be used
+        
+        # Check that the view redirected to the success page
         self.assertEqual(resp.status_code, 200)
-        # Ensure email built with subject/body/html
-        self.assertTrue(mock_email.called)
-        args, kwargs = mock_email.call_args
-        self.assertIn(self.member.email, args[3])
-        self.assertTrue(instance.attach_alternative.called)
-        self.assertTrue(instance.send.called)
+        self.assertRedirects(resp, reverse('users:password_reset_done'))
+
+        # Check that one email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        
+        # Check email details
+        self.assertEqual(email.to, [self.member.email])
+        self.assertIn("Password Reset", email.subject) # Or match your subject template
+        self.assertTrue(len(email.alternatives) > 0) # Check that HTML part exists
+        self.assertEqual(email.alternatives[0][1], 'text/html')
 
 
 class TestAPIUtilityViews(BaseUsersViewTest):
@@ -399,7 +469,7 @@ class TestAPIUtilityViews(BaseUsersViewTest):
         resp = self.client.get(url, {'code': 'NOPE'})
         self.assertJSONEqual(resp.content, {'valid': False, 'message': 'Invalid referral code'})
         # valid
-        resp = self.client.get(url, {'code': self.ref_code.code})
+        resp = self.client.get(url, {'code': self.ref_code})
         data = resp.json()
         self.assertTrue(data['valid'])
         self.assertIn('referrer', data)

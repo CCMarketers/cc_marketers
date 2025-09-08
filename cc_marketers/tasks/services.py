@@ -14,8 +14,19 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 def get_company_user():
-    return User.objects.get(username=settings.COMPANY_SYSTEM_USERNAME)
+    """Return or create the system/company user for escrow operations."""
+    return User.objects.get_or_create(
+        username=settings.COMPANY_SYSTEM_USERNAME,
+        defaults={
+            "email": f"{settings.COMPANY_SYSTEM_USERNAME}@gmail.com",
+            "role": User.ADMIN,
+            "is_staff": True,
+            "is_superuser": True,
+        },
+    )[0]
+
 
 
 class TaskWalletService:

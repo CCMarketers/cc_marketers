@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction
 from .forms import TaskForm, SubmissionForm, TaskFilterForm, DisputeForm, ReviewSubmissionForm
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, F, Sum
 from users.models import User
 from wallets.services import WalletService
 from django.views.generic import DetailView, ListView
@@ -61,38 +61,44 @@ def task_list(request):
 def task_detail(request, task_id):
     """View task details and submit"""
     task = get_object_or_404(Task, id=task_id)
-    
-    # ❌ Prevent advertisers from doing their own tasks
+
+    # Prevent advertisers from doing their own tasks
     if task.advertiser == request.user:
         messages.error(request, "You cannot submit to your own task.")
         return redirect("tasks:task_list")
-    
-    # Check if user already submitted
+
     existing_submission = Submission.objects.filter(task=task, member=request.user).first()
-    
-    if request.method == 'POST' and not existing_submission and not task.is_full and not task.is_expired:
-        form = SubmissionForm(request.POST, request.FILES)
-        if form.is_valid():
+
+    form = SubmissionForm(request.POST or None, request.FILES or None) # Initialize form once
+
+    if request.method == 'POST':
+        # Check submission conditions again inside the POST block
+        if existing_submission:
+            messages.error(request, "You have already submitted to this task.")
+        elif task.is_full:
+            messages.error(request, "This task is already full.")
+        elif task.is_expired:
+            messages.error(request, "This task has expired.")
+        elif form.is_valid():
             submission = form.save(commit=False)
             submission.task = task
             submission.member = request.user
             submission.save()
-            
-            # Reduce remaining slots
-            task.remaining_slots -= 1
+
+            # Use F() expression for a race-condition-safe update
+            task.remaining_slots = F('remaining_slots') - 1
             task.save()
-            
+
             messages.success(request, 'Your submission has been received!')
             return redirect('tasks:task_detail', task_id=task.id)
-    else:
-        form = SubmissionForm()
-    
+        # If form is invalid or conditions aren't met, the view will fall through
+        # to the final render() call, showing the form with errors.
+
     return render(request, 'tasks/task_detail.html', {
         'task': task,
         'form': form,
         'existing_submission': existing_submission,
     })
-
 
 @login_required
 @subscription_required
@@ -102,12 +108,13 @@ def create_task(request):
         return redirect("tasks:task_list")
     
     if request.method == 'POST':
-        form = TaskForm(request.POST)
+        form = TaskForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 with transaction.atomic():
                     task = form.save(commit=False)
                     task.advertiser = request.user
+                    task.remaining_slots = task.total_slots
                     task.save()
 
                     total_cost = task.payout_per_slot * task.total_slots
@@ -142,6 +149,7 @@ def my_tasks(request):
             rejected_count=Count('submissions', filter=Q(submissions__status='rejected')),
             submissions_count=Count('submissions')  # renamed from filled_slots
         )
+
     )
 
     paginator = Paginator(tasks, 10)
@@ -299,7 +307,7 @@ def create_dispute(request, submission_id):
 @subscription_required
 def my_disputes(request):
     """View user's disputes"""
-    disputes = Dispute.objects.filter(raised_by=request.user).order_by('-created_at')
+    disputes = Dispute.objects.filter(raised_by=request.user)
     return render(request, 'tasks/my_disputes.html', {'disputes': disputes})
 
 @login_required
@@ -331,8 +339,18 @@ def resolve_dispute(request, dispute_id):
         resolution = request.POST.get('resolution')
         admin_notes = request.POST.get('admin_notes', '')
 
-        escrow = EscrowTransaction.objects.get(task=dispute.task)
-        
+        escrow = EscrowTransaction.objects.filter(task=dispute.submission.task).first()
+
+        if not escrow:
+            # No escrow → just mark dispute resolved
+            dispute.status = "resolved"
+            dispute.resolution = resolution
+            dispute.admin_notes = admin_notes
+            dispute.save()
+            messages.warning(request, "No escrow found for this dispute. Resolved without payout/refund.")
+            return redirect("tasks:my_disputes")
+
+                
         if resolution == 'favor_member':
             dispute.status = 'resolved_favor_member'
             dispute.submission.status = 'approved'
@@ -370,7 +388,8 @@ class TaskWalletDashboardView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['transactions'] = TaskWalletTransaction.objects.filter(
             user=self.request.user
-        )[:10]
+        ).order_by('-created_at')[:10]
+
         return context
 
 
@@ -381,8 +400,7 @@ class TaskWalletTransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return TaskWalletTransaction.objects.filter(user=self.request.user)
-
+        return TaskWalletTransaction.objects.filter(user=self.request.user).order_by('-created_at')
 
 class TaskWalletTopupView(LoginRequiredMixin, FormView):
     """Move funds from main wallet into task wallet"""

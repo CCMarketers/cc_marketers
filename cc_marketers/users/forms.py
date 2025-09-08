@@ -6,6 +6,8 @@ from .models import User, UserProfile
 from referrals.models import ReferralCode  # adjust import path
 
 class CustomUserCreationForm(UserCreationForm):
+    phone = forms.CharField(required=False, max_length=15)
+    referral_code = forms.CharField(required=False, max_length=50)
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
@@ -66,9 +68,9 @@ class CustomUserCreationForm(UserCreationForm):
         })
     
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get("email")
         if User.objects.filter(email=email).exists():
-            raise ValidationError('A user with this email already exists.')
+            raise forms.ValidationError("A user with this email already exists.")
         return email
     
     def clean_phone(self):
@@ -78,11 +80,11 @@ class CustomUserCreationForm(UserCreationForm):
         return phone
     
     def clean_referral_code(self):
-        referral_code = self.cleaned_data.get('referral_code')
-        if referral_code:
-            if not ReferralCode.objects.filter(code=referral_code).exists():
-                raise ValidationError('Invalid referral code.')
-        return referral_code
+        code = self.cleaned_data.get("referral_code")
+        if code and not ReferralCode.objects.filter(code=code).exists():
+            raise forms.ValidationError("Invalid referral code.")
+        return code
+
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -109,33 +111,30 @@ class CustomAuthenticationForm(AuthenticationForm):
             'placeholder': 'Password'
         })
     )
-    
+
     def clean_username(self):
         username = self.cleaned_data.get('username')
-        
+
         # Try to find user by email or phone
         user = None
         if '@' in username:
-            try:
-                user = User.objects.get(email=username)
-            except User.DoesNotExist:
-                pass
+            user = User.objects.filter(email=username).first()
         else:
-            try:
-                user = User.objects.get(phone=username)
-            except User.DoesNotExist:
-                pass
-        
-        if user:
-            return user.email  # Always return email for authentication
-        return username
+            user = User.objects.filter(phone=username).first()
+
+        if not user:
+            raise forms.ValidationError("Invalid email or phone number.")
+
+        # Always return email for authentication
+        return user.email
+
 
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'bio', 'avatar',
-            'birth_date', 'country', 'state', 'city',
+            'birth_date', 'country', 'state', 'city', 
             'receive_email_notifications', 'receive_sms_notifications'
         ]
         widgets = {
@@ -155,12 +154,13 @@ class ExtendedProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = [
-            'occupation', 'company', 'website', 'twitter_url',
+            'occupation', 'company', 'website', 'twitter_url', 'location', 
             'linkedin_url', 'facebook_url', 'skills', 'experience_years'
         ]
         widgets = {
             'occupation': forms.TextInput(attrs={'class': 'form-input'}),
             'company': forms.TextInput(attrs={'class': 'form-input'}),
+            'location': forms.TextInput(attrs={'class': 'form-input'}),
             'website': forms.URLInput(attrs={'class': 'form-input'}),
             'twitter_url': forms.URLInput(attrs={'class': 'form-input'}),
             'linkedin_url': forms.URLInput(attrs={'class': 'form-input'}),

@@ -10,12 +10,12 @@
     <div class="bg-gradient-red rounded-xl p-8 text-white mb-8 shadow-lg">
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h1 class="text-3xl font-bold mb-2">Welcome back, {{ user.first_name }}!</h1>
+                <h1 class="text-3xl font-bold mb-2">Welcome back, {{ request.user.get_display_name }}!</h1>
                 <p class="text-red-100">Here's your TriLinkers overview</p>
             </div>
             <div class="text-right">
                 <p class="text-red-100 text-sm">Member since</p>
-                <p class="font-semibold">{{ user.date_joined|date:"F Y" }}</p>
+                <p class="font-semibold">{{ request.user.date_joined|date:"F Y" }}</p>
             </div>
         </div>
     </div>

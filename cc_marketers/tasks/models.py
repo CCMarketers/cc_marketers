@@ -204,3 +204,4 @@ class TaskWalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} ${self.amount} ({self.category})"
+

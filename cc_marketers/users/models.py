@@ -52,7 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         (MEMBER, 'Member'),
         (ADVERTISER, 'Advertiser'),
-        (ADMIN, 'Admin'),
+        (ADMIN, 'Admin'), 
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -157,6 +157,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.get_display_name()
 
+    
+    @property
+    def active_subscription(self):
+        """Return the user's current active subscription (if any)."""
+        return self.subscriptions.filter(
+            status='active',
+            expiry_date__gt=timezone.now()
+        ).order_by('-expiry_date').first()
+
+    @property
+    def is_subscribed(self):
+        """Check if the user has an active subscription."""
+        return self.active_subscription is not None
+
+    @property
+    def subscription_plan(self):
+        """Return the current active plan name (or None)."""
+        subscription = self.active_subscription
+        return subscription.plan if subscription else None
+
 
 # ---------- USER PROFILE ----------
 class UserProfile(models.Model):
@@ -243,3 +263,4 @@ class PhoneVerificationToken(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['user', 'token'])]
+

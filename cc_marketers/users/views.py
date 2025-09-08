@@ -13,6 +13,7 @@ from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Sum
 from decimal import Decimal
+import uuid
 
 from django.contrib.auth.views import PasswordResetView
 from django.core.mail import EmailMultiAlternatives
@@ -80,17 +81,24 @@ class CustomLoginView(LoginView):
     form_class = CustomAuthenticationForm
     template_name = 'users/login.html'
     redirect_authenticated_user = True
-
+    
     def get_success_url(self):
+        # 1. Honor ?next= param if present
         next_url = self.request.GET.get('next')
         if next_url:
             return next_url
+
+        # 2. Role-based redirects
         role = getattr(self.request.user, 'role', None)
-        return {
+
+        redirect_map = {
             User.ADMIN: reverse_lazy('users:dashboard'),
             User.ADVERTISER: reverse_lazy('tasks:my_tasks'),
             User.MEMBER: reverse_lazy('tasks:task_list'),
-        }.get(role, reverse_lazy('tasks:task_list'))
+        }
+
+        return redirect_map.get(role, reverse_lazy('tasks:task_list'))
+
 
     def form_valid(self, form):
         messages.success(self.request, f'Welcome back, {form.get_user().get_short_name()}!')
@@ -223,14 +231,17 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
 
 
 
+
 class EmailVerificationView(TemplateView):
     template_name = 'users/email_verification.html'
 
     def get(self, request, uidb64, token):
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
+            # Ensure it's a valid UUID
+            uid = uuid.UUID(uid)
             user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist, AttributeError):
             user = None
 
         if user is not None and default_token_generator.check_token(user, token):
@@ -241,6 +252,8 @@ class EmailVerificationView(TemplateView):
         
         messages.error(request, 'Invalid or expired verification link.')
         return render(request, self.template_name)
+
+
 
 class ResendVerificationView(LoginRequiredMixin, TemplateView):
     """Resend email verification"""
@@ -319,19 +332,22 @@ class PasswordChangeView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-
-
 class CustomPasswordResetView(PasswordResetView):
+    template_name = "users/password_reset.html"
+    email_template_name = "users/password_reset_email.html"
+    subject_template_name = "users/password_reset_subject.txt"
+    success_url = reverse_lazy("users:password_reset_done")
+
     def send_mail(self, subject_template_name, email_template_name,
                   context, from_email, to_email, html_email_template_name=None):
         subject = render_to_string(subject_template_name, context).strip()
         body = render_to_string(email_template_name, context)
-
         email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
         if html_email_template_name:
             html_email = render_to_string(html_email_template_name, context)
             email_message.attach_alternative(html_email, "text/html")
         email_message.send()
+
 
 
 # ---------- API VIEWS ----------
@@ -358,21 +374,25 @@ class CheckPhoneAvailabilityView(TemplateView):
             'message': 'Phone available' if not exists else 'Phone taken'
         })
 
-
 class ValidateReferralCodeView(TemplateView):
     def get(self, request):
-        code = request.GET.get('code')
+        code = request.GET.get("code")
         if not code:
-            return JsonResponse({'valid': False, 'message': 'Code required'})
-        try:
-            referrer = User.objects.only("username").get(referral_code=code)
-            return JsonResponse({
-                'valid': True,
-                'message': f'Valid referral from {referrer.get_display_name()}',
-                'referrer': {'name': referrer.get_display_name(), 'username': referrer.username}
-            })
-        except User.DoesNotExist:
-            return JsonResponse({'valid': False, 'message': 'Invalid referral code'})
+            return JsonResponse({"valid": False, "message": "Code required"})
+
+        ref_code = ReferralCode.objects.filter(code=code).select_related("user").first()
+        if not ref_code:
+            return JsonResponse({"valid": False, "message": "Invalid referral code"})
+
+        referrer = ref_code.user
+        return JsonResponse({
+            "valid": True,
+            "message": f"Valid referral from {referrer.get_display_name()}",
+            "referrer": {
+                "username": referrer.username,
+                "email": referrer.email,
+            },
+        })
 
 
 
@@ -386,15 +406,23 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
     def get_object(self):
         return self.request.user
 
+    def get_profile(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Ensure extended profile exists
-        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
+        profile = self.get_profile()
+        # keep existing names
         context["extended_profile"] = profile
         context["extended_form"] = ExtendedProfileForm(instance=profile)
 
-        # Referral statistics (optimize by avoiding redundant lookups)
+        # also add the names tests/templates commonly expect
+        context["profile"] = profile
+        context["profile_form"] = context["extended_form"]
+
+        # Referral statistics
         context["referral_stats"] = {
             "total_referrals": getattr(self.request.user, "total_referrals", 0),
             "active_referrals": getattr(self.request.user, "active_referrals", 0),
@@ -403,18 +431,36 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
 
         return context
 
-    def form_valid(self, form):
-        """Save both User and Extended Profile."""
-        response = super().form_valid(form)
+    def post(self, request, *args, **kwargs):
+        """
+        Bind both the User form and the ExtendedProfileForm and validate both.
+        If both valid, save and redirect; otherwise re-render with errors.
+        """
+        self.object = self.get_object()
+        user_form = self.get_form()  # bound to request.POST by UpdateView machinery
+        profile = self.get_profile()
+        extended_form = ExtendedProfileForm(request.POST, request.FILES, instance=profile)
 
-        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
-        extended_form = ExtendedProfileForm(self.request.POST, instance=profile)
-        if extended_form.is_valid():
-            extended_form.save()
+        if user_form.is_valid() and extended_form.is_valid():
+            return self.forms_valid(user_form, extended_form)
+        else:
+            return self.forms_invalid(user_form, extended_form)
+
+    def forms_valid(self, user_form, extended_form):
+        # Save both forms (user_form is an UpdateView form instance)
+        user_form.save()
+        extended_form.save()
 
         messages.success(self.request, "Profile updated successfully!")
-        return response
+        return redirect(self.get_success_url())
 
+    def forms_invalid(self, user_form, extended_form):
+        # Rebuild context and render template with bound forms (with errors)
+        context = self.get_context_data(form=user_form)
+        context["extended_form"] = extended_form
+        # keep the alias that some templates/tests expect
+        context["profile_form"] = extended_form
+        return self.render_to_response(context)
 
 class PublicProfileView(DetailView):
     """Public-facing user profile page."""

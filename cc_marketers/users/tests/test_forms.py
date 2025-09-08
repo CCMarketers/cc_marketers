@@ -7,7 +7,7 @@ from users.forms import (
     ExtendedProfileForm, PhoneVerificationForm, PhoneVerificationCodeForm,
     PasswordChangeForm
 )
-from users.models import UserProfile
+# from users.models import UserProfile
 from referrals.models import ReferralCode
 
 User = get_user_model()
@@ -17,26 +17,28 @@ class CustomUserCreationFormTest(TestCase):
     """Test CustomUserCreationForm"""
 
     def setUp(self):
+        self.user = User.objects.create_user(
+            email="test@example.com",
+            password="testpassword123"
+        )
+        # If referral codes are auto-created by a signal, just grab it
+        self.referral_code = getattr(self.user, "referral_code", None)
+
+        # Or if not auto-created, create manually:
+        if not self.referral_code:
+            self.referral_code = ReferralCode.objects.create(
+                user=self.user, code="TEST123"
+            )
         self.valid_data = {
-            'email': 'test@example.com',
+            'email': 'newuser@example.com',
             'first_name': 'John',
             'last_name': 'Doe',
             'phone': '+1234567890',
             'password1': 'testpass123!',
             'password2': 'testpass123!',
-            'role': User.MEMBER
+            'referral_code': '',
+            'role': User.MEMBER,
         }
-        
-        # Create a referral code for testing
-        self.referrer = User.objects.create_user(
-            email='referrer@example.com',
-            password='pass123'
-        )
-        self.referral_code = ReferralCode.objects.create(
-            user=self.referrer,
-            code='TEST123',
-            is_active=True
-        )
 
     def test_form_valid_data(self):
         """Test form with valid data"""
@@ -49,7 +51,7 @@ class CustomUserCreationFormTest(TestCase):
         self.assertTrue(form.is_valid())
         
         user = form.save()
-        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.email, 'newuser@example.com')
         self.assertEqual(user.first_name, 'John')
         self.assertEqual(user.last_name, 'Doe')
         self.assertEqual(user.phone, '+1234567890')
@@ -58,16 +60,16 @@ class CustomUserCreationFormTest(TestCase):
 
     def test_duplicate_email_validation(self):
         """Test validation for duplicate email"""
-        # Create existing user
-        User.objects.create_user(email='test@example.com', password='pass123')
-        
-        form = CustomUserCreationForm(data=self.valid_data)
+        data = self.valid_data.copy()
+        data['email'] = 'test@example.com'  # existing user’s email
+        form = CustomUserCreationForm(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn('email', form.errors)
         self.assertEqual(
             form.errors['email'][0],
             'A user with this email already exists.'
         )
+
 
     def test_duplicate_phone_validation(self):
         """Test validation for duplicate phone"""
@@ -97,7 +99,8 @@ class CustomUserCreationFormTest(TestCase):
     def test_valid_referral_code(self):
         """Test form with valid referral code"""
         data = self.valid_data.copy()
-        data['referral_code'] = 'TEST123'
+        data['referral_code'] = self.referral_code.code
+
         
         form = CustomUserCreationForm(data=data)
         self.assertTrue(form.is_valid())
@@ -339,8 +342,13 @@ class UserProfileFormTest(TestCase):
             form.fields['bio'].widget.attrs['class'],
             'form-input'
         )
+        # self.assertEqual(
+        #     form.fields['birth_date'].widget.attrs['type'],
+        #     'date'
+        # )
+        widget = form.fields['birth_date'].widget
         self.assertEqual(
-            form.fields['birth_date'].widget.attrs['type'],
+            widget.input_type,
             'date'
         )
 
@@ -353,7 +361,8 @@ class ExtendedProfileFormTest(TestCase):
             email='test@example.com',
             password='testpass123'
         )
-        self.profile = UserProfile.objects.create(user=self.user)
+        self.profile = self.user.profile
+
 
     def test_form_fields(self):
         """Test form includes correct fields"""
