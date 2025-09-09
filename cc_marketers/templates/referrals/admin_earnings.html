@@ -1,4 +1,12 @@
 <!-- templates/referrals/admin_earnings.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin Earnings - TriLinkers{% endblock %}
+
+{% block content %}
+
 <div class="min-h-screen bg-white">
     <!-- Header -->
     <div class="bg-red-600 text-white py-6">
@@ -269,6 +277,7 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
 
 <script>
 // Handle select all checkbox

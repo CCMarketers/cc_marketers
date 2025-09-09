@@ -18,6 +18,7 @@ from wallets.models import WithdrawalRequest, Transaction
 
 from django.core import mail # <-- Import mail
 
+
 User = get_user_model()
 
 

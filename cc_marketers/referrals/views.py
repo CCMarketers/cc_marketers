@@ -2,9 +2,11 @@
 from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Count
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from .models import Referral, ReferralEarning, ReferralCode, CommissionTier
+
+User = get_user_model()
 
 class ReferralDashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'referrals/dashboard.html'
@@ -92,13 +94,15 @@ class CommissionTiersView(TemplateView):
         ).order_by('level', 'earning_type')
 
         # Attach display_rate for each tier
+        from decimal import Decimal
+
         for tier in tiers:
             if tier.earning_type == "task_completion":
-                tier.display_rate = f"${tier.rate * 0.50:.2f} per $50 task"
+                tier.display_rate = f"${tier.rate * Decimal('0.50'):.2f} per $50 task"
             elif tier.earning_type == "advertiser_funding":
                 tier.display_rate = f"${tier.rate:.0f} per $1000 funding"
             elif tier.earning_type == "signup":
-                tier.display_rate = f"${tier.rate * 0.10:.2f} per signup"
+                tier.display_rate = f"${tier.rate * Decimal('0.10'):.2f} per signup"
             else:
                 tier.display_rate = "Varies by amount"
 
@@ -128,13 +132,13 @@ class AdminReferralDashboardView(LoginRequiredMixin, UserPassesTestMixin, Templa
         
         # Top referrers
         top_referrers = User.objects.annotate(
-            referral_count=Count('referrals_made'),
+            referral_count=Count('referrals_made', distinct=True),
             total_earned=Sum('referral_earnings__amount')
-        ).filter(referral_count__gt=0).order_by('-referral_count')[:10]
+        ).filter(referral_count__gt=0).order_by('-referral_count')[:10].select_related().prefetch_related('referrals_made', 'referral_earnings')
         
         # Recent activity
-        recent_referrals = Referral.objects.order_by('-created_at')[:10]
-        recent_earnings = ReferralEarning.objects.order_by('-created_at')[:10]
+        recent_referrals = Referral.objects.select_related('referrer', 'referred').order_by('-created_at')[:10]
+        recent_earnings = ReferralEarning.objects.select_related('referrer', 'referral').order_by('-created_at')[:10]
         
         context.update({
             'total_users': total_users,

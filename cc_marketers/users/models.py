@@ -179,7 +179,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 # ---------- USER PROFILE ----------
-class UserProfile(models.Model):
+class UserProfile(models.Model): 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
     # Add these

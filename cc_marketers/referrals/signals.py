@@ -1,12 +1,11 @@
 # apps/referrals/signals.py
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.conf import settings
-from django.apps import apps
 from django.utils import timezone
 from .models import ReferralCode, Referral, ReferralEarning, CommissionTier
+from django.contrib.auth import get_user_model
 
-User = apps.get_model(settings.AUTH_USER_MODEL)
+User = get_user_model()
 
 
 # ---------------------------

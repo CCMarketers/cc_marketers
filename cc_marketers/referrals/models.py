@@ -8,12 +8,12 @@ import random
 from wallets.models import Wallet, Transaction
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class ReferralCode(models.Model):
-    """Unique referral code assigned to each user"""
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_code'
-    )
+    """Unique referral code assigned to each user""" 
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='referral_code')
     code = models.CharField(max_length=10, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -54,7 +54,7 @@ class Referral(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ['referrer', 'referred']
+        unique_together = ['referrer', 'referred', 'level']
 
     def __str__(self):
         return f"{self.referrer} → {self.referred} (Level {self.level})"
@@ -138,6 +138,9 @@ class ReferralEarning(models.Model):
         # Update wallet balance
         wallet.balance = balance_after
         wallet.save(update_fields=['balance'])
+    
+    class Meta:
+        ordering = ["-created_at"]
 
 class CommissionTier(models.Model):
     """Defines commission rates per referral level and earning type"""

@@ -1,4 +1,10 @@
 <!-- templates/referrals/admin_dashboard.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin Dashboard - TriLinkers{% endblock %}
+
+{% block content %}
 <div class="min-h-screen bg-white">
     <!-- Header -->
     <div class="bg-red-600 text-white py-6">
@@ -211,8 +217,8 @@
                         <p class="text-sm text-gray-600">View & manage</p>
                     </div>
                 </a>
-                
-                <a href="{% url 'admin:auth_user_changelist' %}" 
+
+                <a href="{% url 'admin:users_user_changelist' %}" 
                    class="flex items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                     <svg class="h-6 w-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
@@ -226,3 +232,7 @@
         </div>
     </div>
 </div>
+
+
+
+{% endblock %}
