@@ -2,6 +2,8 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from decimal import Decimal
+
 
 
 class SubscriptionPlan(models.Model):
@@ -9,8 +11,8 @@ class SubscriptionPlan(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     duration_days = models.IntegerField(default=30)  # e.g. 30 for monthly, 365 for yearly
     business_volume = models.IntegerField(default=0)
-    referral_commission = models.DecimalField(max_digits=10, decimal_places=2)
-    commission_to_tree = models.DecimalField(max_digits=10, decimal_places=2)
+    referral_commission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    commission_to_tree = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     daily_ad_limit = models.IntegerField(default=0)  # 0 means unlimited
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -19,7 +21,8 @@ class SubscriptionPlan(models.Model):
         return f"{self.name} - ${self.price}"
 
     class Meta:
-        ordering = ['price']
+        ordering = ['price', 'created_at']
+
 
 
 class UserSubscription(models.Model):
@@ -62,3 +65,4 @@ class UserSubscription(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+

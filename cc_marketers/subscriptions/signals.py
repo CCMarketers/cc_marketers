@@ -1,15 +1,34 @@
 
 
-# subscriptions/signals.py
+# # subscriptions/signals.py
+# from django.db.models.signals import post_save
+# from django.dispatch import receiver
+# from .models import UserSubscription
+
+
+# @receiver(post_save, sender=UserSubscription)
+# def subscription_activated(sender, instance, created, **kwargs):
+#     """Handle subscription activation"""
+#     if created and instance.status == 'active':
+#         try:
+#             # You can add additional logic here when a subscription is activated
+#             # For example, send welcome email, activate features, etc.
+#             print(f"New subscription activated for {instance.user.username}: {instance.plan.name}")
+#         except Exception as e:
+#             # Prevent exceptions in signal handlers from breaking model saves
+#             import logging
+#             logging.error(f"Subscription signal failed: {e}")
+
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import UserSubscription
 
-@receiver(post_save, sender=UserSubscription)
+@receiver(post_save, sender=UserSubscription, dispatch_uid="subscription_activated_signal")
 def subscription_activated(sender, instance, created, **kwargs):
-    """Handle subscription activation"""
     if created and instance.status == 'active':
-        # You can add additional logic here when a subscription is activated
-        # For example, send welcome email, activate features, etc.
-        print(f"New subscription activated for {instance.user.username}: {instance.plan.name}")
+        try:
+            print(f"New subscription activated for {instance.user.username}: {instance.plan.name}")
+        except Exception:
+            pass
 

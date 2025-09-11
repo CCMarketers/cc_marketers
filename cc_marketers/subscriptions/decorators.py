@@ -10,7 +10,7 @@ def subscription_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('users:login')
         
         active_subscription = SubscriptionService.get_user_active_subscription(request.user)
         if not active_subscription:
@@ -28,7 +28,7 @@ def plan_required(plan_name):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('users:login')
             
             active_subscription = SubscriptionService.get_user_active_subscription(request.user)
             if not active_subscription or active_subscription.plan.name != plan_name:
