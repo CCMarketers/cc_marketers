@@ -47,7 +47,10 @@ class TransactionAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     
     def reference_short(self, obj):
-        return obj.reference[:15] + '...' if len(obj.reference) > 15 else obj.reference
+        if not obj.reference:  # handle None or empty string
+            return "-"
+        return obj.reference[:14] + "..." if len(obj.reference) > 14 else obj.reference
+
     reference_short.short_description = 'Reference'
     
     def amount_display(self, obj):
@@ -63,9 +66,9 @@ class TransactionAdmin(admin.ModelAdmin):
     amount_display.short_description = 'Amount'
     
     def task_link(self, obj):
-        if obj.task:
+        if getattr(obj, "task_id", None):  # safer than obj.task
             url = reverse('admin:tasks_task_change', args=[obj.task.id])
-            return format_html('<a href="{}" target="_blank">Task #{}</a>', url, obj.task.id)
+            return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
         return '-'
     task_link.short_description = 'Related Task'
 
@@ -77,10 +80,12 @@ class EscrowTransactionAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at']
     
     def task_link(self, obj):
-        if obj.task:
-            url = reverse('admin:tasks_task_change', args=[obj.task.id])
+        if getattr(obj, "task_id", None):
+            url = reverse("admin:tasks_task_change", args=[obj.task.id])
             return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
-        return '-'
+        return "-"
+
+
     task_link.short_description = 'Task'
 
 @admin.register(WithdrawalRequest)

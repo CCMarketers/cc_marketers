@@ -1,9 +1,18 @@
-# wallets/forms.py
 from django import forms
 from decimal import Decimal
 from .models import WithdrawalRequest
 
+
 class WithdrawalRequestForm(forms.ModelForm):
+    # ✅ Define bank_code at class level, not inside Meta
+    bank_code = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
+            'placeholder': 'Bank Code (Optional)'
+        })
+    )
+
     class Meta:
         model = WithdrawalRequest
         fields = ['amount', 'withdrawal_method', 'account_number', 'account_name', 'bank_name', 'bank_code']
@@ -29,12 +38,8 @@ class WithdrawalRequestForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
                 'placeholder': 'Bank Name'
             }),
-            'bank_code': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
-                'placeholder': 'Bank Code (Optional)'
-            }),
         }
-    
+
     def clean_amount(self):
         amount = self.cleaned_data['amount']
         if amount < Decimal('1.00'):
@@ -43,8 +48,8 @@ class WithdrawalRequestForm(forms.ModelForm):
             raise forms.ValidationError("Maximum withdrawal amount is $10,000.00")
         return amount
 
-class FundWalletForm(forms.Form):
 
+class FundWalletForm(forms.Form):
     amount = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -57,12 +62,10 @@ class FundWalletForm(forms.Form):
     )
     description = forms.CharField(
         required=False,
+        strip=False,  # ✅ whitespace preserved
         widget=forms.Textarea(attrs={
             'class': 'w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
             'placeholder': 'Description (optional)',
             'rows': 3
         })
     )
-
-
-    

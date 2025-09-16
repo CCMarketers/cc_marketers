@@ -7,7 +7,7 @@ import uuid
 
 
 class Wallet(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wallet")
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -16,19 +16,19 @@ class Wallet(models.Model):
         return f"{self.user.username} - ${self.balance}"
 
     def get_available_balance(self):
-        """Just return actual wallet balance (escrow already deducted during debit)."""
-        return self.balance
+        pending = WithdrawalRequest.objects.filter(user=self.user, status='pending').aggregate(total=Sum('amount'))['total'] or 0
+        return self.balance - pending
+
+
+
+
+    def get_pending_withdrawals(self):
+        return WithdrawalRequest.objects.filter(
+            user=self.user, status='pending'
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
 
     def get_display_balance(self):
-        """Balance minus pending withdrawals."""
         return self.balance - self.get_pending_withdrawals()
-
-    
-    def get_pending_withdrawals(self):
-        return self.withdrawalrequest_set.filter(
-            status='pending'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
 
 
 class Transaction(models.Model):
@@ -59,7 +59,7 @@ class Transaction(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="transactions")
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     category = models.CharField(max_length=20, choices=TRANSACTION_CATEGORIES)
     amount = models.DecimalField(max_digits=12, decimal_places=2,
@@ -83,10 +83,12 @@ class Transaction(models.Model):
     related_transaction = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at', '-updated_at']
+
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} ${self.amount} ({self.category})"
@@ -95,7 +97,7 @@ class Transaction(models.Model):
 class EscrowTransaction(models.Model):
     """Tracks funds locked in escrow for tasks"""
     task = models.OneToOneField('tasks.Task', on_delete=models.CASCADE)
-    advertiser = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    advertiser = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="escrow_transaction")
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     taskwallet_transaction = models.ForeignKey(
         'tasks.TaskWalletTransaction',
@@ -127,20 +129,21 @@ class WithdrawalRequest(models.Model):
     WITHDRAWAL_METHODS = [
         ('paystack', 'Paystack'),
         ('flutterwave', 'Flutterwave'),
+        ('crypto', 'Crypto'),
         ('bank_transfer', 'Bank Transfer'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="withdrawals")
     amount = models.DecimalField(max_digits=12, decimal_places=2,
                                  validators=[MinValueValidator(Decimal('1.00'))])
     withdrawal_method = models.CharField(max_length=20, choices=WITHDRAWAL_METHODS)
 
-    # Bank details
-    account_number = models.CharField(max_length=20, blank=True)
-    account_name = models.CharField(max_length=100, blank=True)
-    bank_name = models.CharField(max_length=100, blank=True)
-    bank_code = models.CharField(max_length=10, blank=True)
+    account_number = models.CharField(max_length=20, blank=False)
+    account_name = models.CharField(max_length=100, blank=False)
+    bank_name = models.CharField(max_length=100, blank=False)
+    bank_code = models.CharField(max_length=10, blank=True)  
+
 
     status = models.CharField(max_length=10, choices=WITHDRAWAL_STATUS, default='pending')
     admin_notes = models.TextField(blank=True)
@@ -162,7 +165,8 @@ class WithdrawalRequest(models.Model):
     processed_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at', '-processed_at']
+
 
     def __str__(self):
         return f"{self.user.username} - ${self.amount} ({self.status})"

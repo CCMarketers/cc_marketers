@@ -179,31 +179,37 @@ class PaystackService:
                     "reference": payment_transaction.gateway_reference,
                 }
 
-                response = requests.post(url, json=data, headers=self.headers)
+                response = requests.post(url, json=data, headers=self.headers, timeout=15)
                 response_data = response.json()
 
-                if response.status_code == 200 and response_data.get("status"):
+                if response.status_code == 200 and response_data.get("status") is True:
                     paystack_data = response_data["data"]
-                    # Create Paystack-specific record
+
+                    # Save Paystack-specific transaction
                     PaystackTransaction.objects.create(
                         transaction=payment_transaction,
-                        authorization_url=paystack_data["authorization_url"],
-                        access_code=paystack_data["access_code"],
-                        paystack_reference=paystack_data["reference"],
+                        paystack_reference=paystack_data.get("reference"),
+                        transfer_code=paystack_data.get("transfer_code"),
                     )
 
+                    # Attach gateway response for auditing
                     payment_transaction.gateway_response = response_data
                     payment_transaction.save(update_fields=["gateway_response", "updated_at"])
 
                     return {
-                       "success": True,
-                        "transaction": payment_transaction,
-                        "authorization_url": paystack_data["authorization_url"],
-                        "access_code": paystack_data["access_code"],
-                        "reference": paystack_data["reference"],
+                        "success": True,
+                        "data": {
+                            "transaction_id": str(payment_transaction.id),
+                            "internal_reference": payment_transaction.internal_reference,
+                            "gateway_reference": payment_transaction.gateway_reference,
+                            "paystack_reference": paystack_data.get("reference"),
+                            "transfer_code": paystack_data.get("transfer_code"),
+                            "status": paystack_data.get("status"),
+                            "raw": response_data,
+                        },
                     }
 
-                # Failure: mark txn failed immediately (no money moved yet on our side)
+                # Failure: mark txn failed
                 payment_transaction.status = PaymentTransaction.Status.FAILED
                 payment_transaction.gateway_response = response_data
                 payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
@@ -211,12 +217,11 @@ class PaystackService:
                 return {
                     "success": False,
                     "error": response_data.get("message", "Transfer failed"),
-                    "data": {"raw": response_data}
+                    "data": {"raw": response_data},
                 }
 
         except Exception as e:
             return {"success": False, "error": str(e), "data": {}}
-
 
     def get_banks(self):
         """Get list of Nigerian banks from Paystack — consistent return."""

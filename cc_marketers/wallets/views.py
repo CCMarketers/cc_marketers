@@ -169,6 +169,8 @@ class FundWalletView(LoginRequiredMixin, FormView):
     form_class = FundWalletForm
     success_url = reverse_lazy('wallets:dashboard')
 
+# wallets/views.py
+
 @method_decorator(staff_member_required, name='dispatch')
 class AdminWithdrawalListView(ListView):
     """Admin view to manage withdrawal requests"""
@@ -178,7 +180,8 @@ class AdminWithdrawalListView(ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = WithdrawalRequest.objects.all()
+        # Optimized to prefetch user data and avoid N+1 queries
+        queryset = WithdrawalRequest.objects.all().select_related('user')
         
         # Filter by status
         status = self.request.GET.get('status')
@@ -186,6 +189,7 @@ class AdminWithdrawalListView(ListView):
             queryset = queryset.filter(status=status)
         
         return queryset
+
 
 @method_decorator(staff_member_required, name='dispatch')
 class AdminWithdrawalDetailView(DetailView):

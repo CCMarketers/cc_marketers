@@ -38,13 +38,15 @@ INSTALLED_APPS = [
     # Local apps
     'users', 
     'tasks', 
-    'wallets', 
     'referrals', 
     'core', 
     'commerce', 
     'offerwalls',
     'subscriptions',
     'payments',
+
+    "wallets.apps.WalletsConfig",
+
 ]
 
 MIDDLEWARE = [
