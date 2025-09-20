@@ -137,7 +137,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-COMPANY_SYSTEM_USERNAME = config('COMPANY_SYSTEM_USERNAME')
+COMPANY_SYSTEM_USERNAME =os.getenv("COMPANY_SYSTEM_USERNAME", "considerateclub")
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
