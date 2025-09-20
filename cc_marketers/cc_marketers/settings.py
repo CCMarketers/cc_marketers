@@ -15,11 +15,11 @@ SECRET_KEY = config('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-#DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+#DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 
-BACKEND_URL = "http://127.0.0.1:8000/"
+BACKEND_URL = config('BACKEND_URL')
 
 # Application definition
 
@@ -137,7 +137,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-COMPANY_SYSTEM_USERNAME = "considerateclub"
+COMPANY_SYSTEM_USERNAME = config('COMPANY_SYSTEM_USERNAME')
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
