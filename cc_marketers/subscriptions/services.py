@@ -1,114 +1,116 @@
-
 # subscriptions/services.py
-from django.utils import timezone
-from django.db import transaction
-from wallets.models import Wallet  # Assuming you have this model
-from .models import SubscriptionPlan, UserSubscription
 from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+
+from wallets.models import Wallet
 from tasks.services import TaskWalletService
 
+from .models import SubscriptionPlan, UserSubscription
+
+
 class SubscriptionService:
-    
+    """Business logic for handling user subscriptions."""
+
     @staticmethod
     def subscribe_user(user, plan_id):
-        """Subscribe a user to a plan by deducting from wallet balance & allocate TaskWallet funds"""
-        try:
-            plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
-        except SubscriptionPlan.DoesNotExist:
-            return {'success': False, 'error': 'Plan not found'}
-        
-        try:
-            wallet = Wallet.objects.get(user=user)
-        except Wallet.DoesNotExist:
-            return {'success': False, 'error': 'Wallet not found'}
-        
+        """
+        Subscribe a user to a plan by deducting from wallet balance & allocate TaskWallet funds.
+        Returns a dict with {'success': bool, 'subscription' or 'error': ...}.
+        """
+        plan = (
+            SubscriptionPlan.objects.filter(id=plan_id, is_active=True)
+            .select_for_update()
+            .first()
+        )
+        if not plan:
+            return {"success": False, "error": "Plan not found"}
+
+        wallet = Wallet.objects.select_for_update().filter(user=user).first()
+        if not wallet:
+            return {"success": False, "error": "Wallet not found"}
+
         if wallet.balance < plan.price:
-            return {'success': False, 'error': 'Insufficient wallet balance'}
-        
-        from django.db import transaction
+            return {"success": False, "error": "Insufficient wallet balance"}
 
         with transaction.atomic():
-            try:
-                # Cancel existing subscriptions
-                UserSubscription.objects.filter(user=user, status='active').update(status='cancelled')
+            # Cancel existing active subscriptions
+            UserSubscription.objects.filter(user=user, status="active").update(status="cancelled")
 
-                # Deduct subscription price
-                wallet.balance -= plan.price
-                wallet.save()
+            # Deduct subscription price
+            wallet.balance -= plan.price
+            wallet.save(update_fields=["balance"])
 
-                # Create subscription
-                subscription = UserSubscription.objects.create(
+            # Create subscription
+            subscription = UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                start_date=timezone.now(),
+                expiry_date=timezone.now() + timezone.timedelta(days=plan.duration_days),
+                status="active",
+            )
+
+            # Task Wallet allocation for specific plan
+            if plan.name == "Business Member Plan":
+                TaskWalletService.credit_wallet(
                     user=user,
-                    plan=plan,
-                    expiry_date=timezone.now() + timezone.timedelta(days=plan.duration_days)
+                    amount=Decimal("10.00"),
+                    category="subscription_allocation",
+                    description=f"Monthly allocation from subscription plan {plan.name}",
                 )
 
-                # Task Wallet allocation
-                if plan.name == "Business Member Plan":
-                    TaskWalletService.credit_wallet(
-                        user=user,
-                        amount=Decimal("10.00"),
-                        category="subscription_allocation",
-                        description=f"Monthly allocation from subscription plan {plan.name}"
-                    )
-
-            except Exception as e:
-                # Rollback transaction explicitly
-                transaction.set_rollback(True)
-                return {'success': False, 'error': str(e)}
-
-        return {'success': True, 'subscription': subscription}
-
+        return {"success": True, "subscription": subscription}
 
     @staticmethod
     def check_and_renew_subscriptions():
-        """Check for expired subscriptions and renew if auto-renewal is enabled"""
+        """
+        Check for expired subscriptions and renew if auto-renewal is enabled.
+        """
         expired_subscriptions = UserSubscription.objects.filter(
-            status='active',
-            expiry_date__lte=timezone.now()
-        )
-        
+            status="active",
+            expiry_date__lte=timezone.now(),
+        ).select_related("user", "plan")
+
         for subscription in expired_subscriptions:
-            if subscription.auto_renewal:
-                try:
-                    wallet = Wallet.objects.get(user=subscription.user)
-                    if wallet.balance >= subscription.plan.price:
-                        with transaction.atomic():
-                            # Deduct renewal fee
-                            wallet.balance -= subscription.plan.price
-                            wallet.save()
+            renewed = False
+            if getattr(subscription, "auto_renewal", False):
+                wallet = Wallet.objects.select_for_update().filter(user=subscription.user).first()
+                if wallet and wallet.balance >= subscription.plan.price:
+                    with transaction.atomic():
+                        # Deduct renewal fee
+                        wallet.balance -= subscription.plan.price
+                        wallet.save(update_fields=["balance"])
 
-                            # Renew subscription
-                            subscription.start_date = timezone.now()
-                            subscription.expiry_date = timezone.now() + timezone.timedelta(
-                                days=subscription.plan.duration_days
+                        # Renew subscription
+                        now = timezone.now()
+                        subscription.start_date = now
+                        subscription.expiry_date = now + timezone.timedelta(days=subscription.plan.duration_days)
+                        subscription.save(update_fields=["start_date", "expiry_date"])
+
+                        if subscription.plan.name == "Business Member Plan":
+                            TaskWalletService.credit_wallet(
+                                user=subscription.user,
+                                amount=Decimal("10.00"),
+                                category="subscription_allocation",
+                                description=f"Monthly allocation from subscription plan {subscription.plan.name}",
                             )
-                            subscription.save()
-
-                            # ✅ Allocate Task Wallet funds again on renewal
-                            if subscription.plan.name == "Business Member Plan":
-                                TaskWalletService.credit_wallet(
-                                    user=subscription.user,
-                                    amount=Decimal("10.00"),
-                                    category="subscription_allocation",
-                                    description=f"Monthly allocation from subscription plan {subscription.plan.name}"
-                                )
-                            continue
-                except Wallet.DoesNotExist:
-                    pass
-            
-            # Mark as expired if not renewed
-            subscription.status = 'expired'
-            subscription.save()
+                        renewed = True
+            if not renewed:
+                subscription.status = "expired"
+                subscription.save(update_fields=["status"])
 
     @staticmethod
     def get_user_active_subscription(user):
-        """Get user's current active subscription"""
-        try:
-            return UserSubscription.objects.get(
+        """
+        Get user's current active subscription or None.
+        """
+        return (
+            UserSubscription.objects.filter(
                 user=user,
-                status='active',
-                expiry_date__gt=timezone.now()
+                status="active",
+                expiry_date__gt=timezone.now(),
             )
-        except UserSubscription.DoesNotExist:
-            return None
+            .order_by("-expiry_date")
+            .first()
+        )

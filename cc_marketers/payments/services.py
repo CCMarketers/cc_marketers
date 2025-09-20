@@ -1,53 +1,106 @@
 # payments/services.py
-import requests
+import logging
 import hmac
 import hashlib
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from typing import Any, Dict
+
+import requests
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from .models import PaymentTransaction, PaystackTransaction, PaymentGateway, WebhookEvent
+
+from .models import (
+    PaymentTransaction,
+    PaystackTransaction,
+    PaymentGateway,
+    WebhookEvent,
+)
+
+logger = logging.getLogger(__name__)
+
+# Default HTTP timeout (seconds) for requests to external services
+HTTP_TIMEOUT = getattr(settings, "PAYMENT_HTTP_TIMEOUT", 15)
+
+
+def _safe_json(response: requests.Response) -> Dict[str, Any]:
+    """Safely parse JSON response; return empty dict on failure."""
+    try:
+        return response.json() if response.content else {}
+    except ValueError:
+        logger.warning("Non-JSON response from %s (status=%s)", response.url, response.status_code)
+        return {}
+
+
+def _ok_resp(response: requests.Response) -> bool:
+    """Simple helper: treat 200-299 as OK for many Paystack endpoints (we still check payload status where needed)."""
+    return 200 <= response.status_code < 300
 
 
 class PaystackService:
-    """Service class for Paystack API integration"""
+    """Service class for Paystack API integration.
+
+    Methods return a consistent structure:
+        {"success": bool, "data": {...}, "error": "message"}
+    """
 
     def __init__(self):
         self.secret_key = settings.PAYSTACK_SECRET_KEY
-        self.public_key = settings.PAYSTACK_PUBLIC_KEY
+        self.public_key = getattr(settings, "PAYSTACK_PUBLIC_KEY", None)
         self.base_url = "https://api.paystack.co"
-        self.headers = {
+        self.session = requests.Session()
+        self.session.headers.update({
             "Authorization": f"Bearer {self.secret_key}",
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+        })
 
-    # ---------- Customer Funding ----------
-    def initialize_payment(self, user, amount, currency='NGN', callback_url=None):
+    # ------------------------
+    # Helpers
+    # ------------------------
+    def _get_gateway(self):
+        try:
+            return PaymentGateway.objects.get(name__iexact="paystack")
+        except PaymentGateway.DoesNotExist:
+            logger.error("Paystack PaymentGateway not configured in DB")
+            return None
+
+    # ------------------------
+    # Initialize funding (checkout)
+    # ------------------------
+    def initialize_payment(self, user, amount, currency="NGN", callback_url=None):
         """
         Initialize a payment transaction with Paystack.
-        Creates PaymentTransaction + PaystackTransaction (pending) on success.
-        Returns a consistent shape: {"success": bool, "data": {...}}.
+
+        Returns:
+            {"success": bool, "data": {...}, "error": str}
         """
         try:
-            gateway = PaymentGateway.objects.get(name='paystack')
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            # Normalise amount to Decimal
+            try:
+                amount_dec = Decimal(amount)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
 
             with transaction.atomic():
-                # 1. Create local payment record (pending)
+                # Create local pending PaymentTransaction
                 payment_transaction = PaymentTransaction.objects.create(
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.FUNDING,
-                    amount=Decimal(amount),
+                    amount=amount_dec,
                     currency=currency,
-                    gateway_reference=f"PS_{timezone.now().strftime('%Y%m%d%H%M%S')}_{user.id}",
+                    gateway_reference=f"PS_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
                 )
 
-                # 2. Build request payload
                 url = f"{self.base_url}/transaction/initialize"
-                data = {
+                payload = {
                     "email": user.email,
-                    "amount": int(Decimal(amount) * 100),  # Convert to kobo
+                    "amount": int(amount_dec * Decimal("100")),  # convert to kobo
                     "currency": currency,
                     "reference": payment_transaction.gateway_reference,
                     "callback_url": callback_url,
@@ -59,27 +112,30 @@ class PaystackService:
                     },
                 }
 
-                # 3. Send to Paystack
-                response = requests.post(url, json=data, headers=self.headers, timeout=15)
-                response_data = response.json()
+                resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
 
-                # 4. Handle success
-                if response.status_code == 200 and response_data.get("status") is True:
-                    paystack_data = response_data.get("data", {})
+                if _ok_resp(resp) and resp_data.get("status") is True:
+                    pay_data = resp_data.get("data", {})
+                    # Defensive check for authorization_url
+                    if "authorization_url" not in pay_data:
+                        # mark txn failed and return
+                        payment_transaction.status = PaymentTransaction.Status.FAILED
+                        payment_transaction.gateway_response = resp_data
+                        payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+                        err = "Missing authorization URL from gateway"
+                        logger.error(err + " - resp: %s", resp_data)
+                        return {"success": False, "data": resp_data, "error": err}
 
-                    # Defensive check – must contain authorization_url
-                    if "authorization_url" not in paystack_data:
-                        raise ValueError("No authorization_url returned from Paystack")
-
+                    # Persist PaystackTransaction
                     PaystackTransaction.objects.create(
                         transaction=payment_transaction,
-                        authorization_url=paystack_data["authorization_url"],
-                        access_code=paystack_data.get("access_code"),
-                        paystack_reference=paystack_data.get("reference"),
+                        authorization_url=pay_data.get("authorization_url"),
+                        access_code=pay_data.get("access_code"),
+                        paystack_reference=pay_data.get("reference") or "",
                     )
 
-                    # Save gateway response
-                    payment_transaction.gateway_response = response_data
+                    payment_transaction.gateway_response = resp_data
                     payment_transaction.save(update_fields=["gateway_response", "updated_at"])
 
                     return {
@@ -88,172 +144,218 @@ class PaystackService:
                             "transaction_id": str(payment_transaction.id),
                             "internal_reference": payment_transaction.internal_reference,
                             "gateway_reference": payment_transaction.gateway_reference,
-                            "authorization_url": paystack_data["authorization_url"],
-                            "access_code": paystack_data.get("access_code"),
-                            "reference": paystack_data.get("reference"),
-                            "raw": response_data,
+                            "authorization_url": pay_data.get("authorization_url"),
+                            "access_code": pay_data.get("access_code"),
+                            "reference": pay_data.get("reference"),
+                            "raw": resp_data,
                         },
+                        "error": None,
                     }
 
-                # 5. Failure path
+                # Failure path: mark txn failed
                 payment_transaction.status = PaymentTransaction.Status.FAILED
-                payment_transaction.gateway_response = response_data
+                payment_transaction.gateway_response = resp_data
                 payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
 
-                return {
-                    "success": False,
-                    "error": response_data.get("message", "Payment initialization failed"),
-                    "data": {"raw": response_data},
-                }
+                err_msg = resp_data.get("message") or resp_data.get("error") or "Payment initialization failed"
+                logger.info("Paystack init failed: %s", err_msg)
+                return {"success": False, "data": resp_data, "error": err_msg}
 
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": {}}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error during payment initialization: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error in initialize_payment: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
 
-    def verify_payment(self, reference):
-        """Verify a payment with Paystack — consistent return."""
+    # ------------------------
+    # Verify payment status
+    # ------------------------
+    def verify_payment(self, reference: str) -> Dict[str, Any]:
+        """
+        Verify a payment with Paystack.
+        Returns {"success": bool, "data": {...}, "error": str}
+        """
         try:
             url = f"{self.base_url}/transaction/verify/{reference}"
-            response = requests.get(url, headers=self.headers)
-            data = response.json() if response.content else {}
+            resp = self.session.get(url, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
 
-            return {
-                "success": response.status_code == 200 and data.get("status", False),
-                "data": data
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": {}}
+            ok = _ok_resp(resp) and resp_data.get("status", False)
+            return {"success": ok, "data": resp_data, "error": None if ok else resp_data.get("message", "Verification failed")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
 
-    # ---------- Payouts / Withdrawals ----------
-
-    def create_transfer_recipient(self, user, bank_code, account_number):
-        """Create a transfer recipient for withdrawals — consistent return."""
+    # ------------------------
+    # Create transfer recipient
+    # ------------------------
+    def create_transfer_recipient(self, user, bank_code: str, account_number: str) -> Dict[str, Any]:
+        """Create a transfer recipient (nuban) for withdrawals."""
         try:
             url = f"{self.base_url}/transferrecipient"
-            data = {
+            payload = {
                 "type": "nuban",
-                "name": f"{user.first_name} {user.last_name}".strip() or user.username,
+                "name": f"{user.first_name} {user.last_name}".strip() or getattr(user, "username", str(user.id)),
                 "account_number": account_number,
                 "bank_code": bank_code,
                 "currency": "NGN",
-                "metadata": {"user_id": str(user.id)}
+                "metadata": {"user_id": str(user.id)},
             }
-            response = requests.post(url, json=data, headers=self.headers)
-            response_data = response.json()
-            ok = response.status_code in (200, 201) and response_data.get("status", False)
+            resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp) and resp_data.get("status", False)
 
-            return {
-                "success": ok,
-                "data": response_data if ok else {},
-                **({} if ok else {"error": response_data.get("message", "Failed to create recipient")})
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": {}}
+            if ok:
+                return {"success": True, "data": resp_data.get("data", {}), "error": None}
+            return {"success": False, "data": resp_data, "error": resp_data.get("message", "Failed to create recipient")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error creating transfer recipient: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error creating transfer recipient: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
 
-    def initiate_transfer(self, user, amount, recipient_code, reason="Wallet withdrawal"):
+    # ------------------------
+    # Initiate transfer (withdrawal)
+    # ------------------------
+    def initiate_transfer(self, user, amount, recipient_code: str, reason: str = "Wallet withdrawal") -> Dict[str, Any]:
         """
-        Initiate a transfer to user's bank account.
-        Creates PaymentTransaction + PaystackTransaction (pending) when API acknowledges.
-        Returns a consistent shape.
+        Initiate a transfer to a recipient (withdrawal).
+        Creates a PENDING PaymentTransaction and PaystackTransaction on acknowledgement.
         """
         try:
-            gateway = PaymentGateway.objects.get(name='paystack')
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            try:
+                amount_dec = Decimal(amount)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
 
             with transaction.atomic():
-                # Create withdrawal transaction (PENDING) first
                 payment_transaction = PaymentTransaction.objects.create(
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
-                    amount=Decimal(amount),
+                    amount=amount_dec,
                     currency="NGN",
-                    gateway_reference=f"WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{user.id}",
+                    gateway_reference=f"WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
                 )
 
                 url = f"{self.base_url}/transfer"
-                data = {
+                payload = {
                     "source": "balance",
-                    "amount": int(Decimal(amount) * 100),  # kobo
+                    "amount": int(amount_dec * Decimal("100")),  # kobo
                     "recipient": recipient_code,
                     "reason": reason,
                     "reference": payment_transaction.gateway_reference,
                 }
 
-                response = requests.post(url, json=data, headers=self.headers, timeout=15)
-                response_data = response.json()
+                resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
 
-                if response.status_code == 200 and response_data.get("status") is True:
-                    paystack_data = response_data["data"]
-
-                    # Save Paystack-specific transaction
+                if _ok_resp(resp) and resp_data.get("status", False):
+                    pay_data = resp_data.get("data", {})
                     PaystackTransaction.objects.create(
                         transaction=payment_transaction,
-                        paystack_reference=paystack_data.get("reference"),
-                        transfer_code=paystack_data.get("transfer_code"),
+                        paystack_reference=pay_data.get("reference") or "",
+                        transfer_code=pay_data.get("transfer_code") or "",
                     )
 
-                    # Attach gateway response for auditing
-                    payment_transaction.gateway_response = response_data
+                    payment_transaction.gateway_response = resp_data
                     payment_transaction.save(update_fields=["gateway_response", "updated_at"])
-
                     return {
                         "success": True,
                         "data": {
                             "transaction_id": str(payment_transaction.id),
                             "internal_reference": payment_transaction.internal_reference,
                             "gateway_reference": payment_transaction.gateway_reference,
-                            "paystack_reference": paystack_data.get("reference"),
-                            "transfer_code": paystack_data.get("transfer_code"),
-                            "status": paystack_data.get("status"),
-                            "raw": response_data,
+                            "paystack_reference": pay_data.get("reference"),
+                            "transfer_code": pay_data.get("transfer_code"),
+                            "status": pay_data.get("status"),
+                            "raw": resp_data,
                         },
+                        "error": None,
                     }
 
-                # Failure: mark txn failed
+                # Mark as failed and persist response
                 payment_transaction.status = PaymentTransaction.Status.FAILED
-                payment_transaction.gateway_response = response_data
+                payment_transaction.gateway_response = resp_data
                 payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
 
-                return {
-                    "success": False,
-                    "error": response_data.get("message", "Transfer failed"),
-                    "data": {"raw": response_data},
-                }
+                err = resp_data.get("message") or "Transfer initiation failed"
+                logger.info("Paystack transfer failed: %s", err)
+                return {"success": False, "data": resp_data, "error": err}
 
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": {}}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error initiating transfer: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error initiating transfer: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
 
-    def get_banks(self):
-        """Get list of Nigerian banks from Paystack — consistent return."""
+    # ------------------------
+    # Get banks
+    # ------------------------
+    def get_banks(self) -> Dict[str, Any]:
+        """Return list of banks from Paystack (data list)"""
         try:
             url = f"{self.base_url}/bank"
-            response = requests.get(url, headers=self.headers)
-            data = response.json() if response.content else {}
-            ok = response.status_code == 200
-            return {"success": ok, "data": data.get("data", []) if ok else [], **({} if ok else {"error": "Failed to fetch banks"})}
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": []}
+            resp = self.session.get(url, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp)
 
-    def resolve_account_number(self, account_number, bank_code):
-        """Resolve account number to get account name — consistent return."""
+            if ok and isinstance(resp_data.get("data", None), list):
+                return {"success": True, "data": resp_data.get("data", []), "error": None}
+            return {"success": False, "data": [], "error": resp_data.get("message", "Failed to fetch banks")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error fetching banks: %s", exc)
+            return {"success": False, "data": [], "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error fetching banks: %s", exc)
+            return {"success": False, "data": [], "error": str(exc)}
+
+    # ------------------------
+    # Resolve account number
+    # ------------------------
+    def resolve_account_number(self, account_number: str, bank_code: str) -> Dict[str, Any]:
+        """Resolve an account number to an account name."""
         try:
             url = f"{self.base_url}/bank/resolve"
             params = {"account_number": account_number, "bank_code": bank_code}
-            response = requests.get(url, params=params, headers=self.headers)
-            data = response.json() if response.content else {}
-            ok = response.status_code == 200 and data.get("status", False)
-            return {"success": ok, "data": data if ok else {}, **({} if ok else {"error": data.get("message", "Resolve failed")})}
-        except Exception as e:
-            return {"success": False, "error": str(e), "data": {}}
+            resp = self.session.get(url, params=params, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp) and resp_data.get("status", False)
+
+            if ok:
+                # Paystack returns { "status": True, "message": "...", "data": { "account_name": "...", ... } }
+                return {"success": True, "data": resp_data.get("data", {}), "error": None}
+            return {"success": False, "data": {}, "error": resp_data.get("message", "Resolve failed")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error resolving account: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error resolving account: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
 
 
 class WebhookService:
-    """Service for handling payment webhooks"""
+    """Service for handling payment webhooks (Paystack)."""
 
     @staticmethod
-    def verify_paystack_signature(payload, signature):
-        """Verify Paystack webhook signature"""
+    def verify_paystack_signature(payload: bytes, signature: str) -> bool:
+        """Verify Paystack webhook signature using HMAC-SHA512."""
         secret_key = settings.PAYSTACK_SECRET_KEY
+        if not secret_key:
+            logger.error("PAYSTACK_SECRET_KEY not set in settings")
+            return False
+
         computed_signature = hmac.new(
             secret_key.encode("utf-8"),
             payload,
@@ -263,98 +365,111 @@ class WebhookService:
         return hmac.compare_digest(computed_signature, signature)
 
     @staticmethod
-    def process_paystack_webhook(event_data):
-        """Process Paystack webhook events"""
+    def process_paystack_webhook(event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process incoming Paystack webhook JSON and handle idempotency."""
         event_type = event_data.get("event")
-        data = event_data.get("data", {})
+        data = event_data.get("data", {}) or {}
         reference = data.get("reference")
-
         if not reference:
-            return {"success": False, "error": "No reference found"}
+            logger.warning("Webhook missing reference: %s", event_data)
+            return {"success": False, "error": "No reference found", "data": {}}
 
-        gateway = PaymentGateway.objects.get(name='paystack')
-        webhook_event, _ = WebhookEvent.objects.get_or_create(
+        gateway = PaymentGateway.objects.filter(name__iexact="paystack").first()
+        if not gateway:
+            logger.error("Webhook received but PaymentGateway 'paystack' not configured")
+            return {"success": False, "error": "Gateway not configured", "data": {}}
+
+        webhook_event, created = WebhookEvent.objects.get_or_create(
             gateway=gateway,
             reference=reference,
-            defaults={
-                "event_type": event_type,
-                "payload": event_data,
-            },
+            defaults={"event_type": event_type, "payload": event_data},
         )
 
         if webhook_event.processed:
-            return {"success": True, "message": "Duplicate event ignored"}
+            # Already handled; idempotent behavior
+            logger.info("Duplicate webhook ignored for reference %s", reference)
+            return {"success": True, "message": "Duplicate event ignored", "data": {}}
 
         try:
             if event_type == "charge.success":
                 result = WebhookService._handle_successful_charge(data, webhook_event)
             elif event_type == "transfer.success":
                 result = WebhookService._handle_successful_transfer(data, webhook_event)
-            elif event_type in ["transfer.failed", "transfer.reversed"]:
+            elif event_type in ("transfer.failed", "transfer.reversed"):
                 result = WebhookService._handle_failed_transfer(data, webhook_event)
             else:
+                # Unhandled event recorded for audit
                 webhook_event.event_type = WebhookEvent.EventType.OTHER
-                webhook_event.save(update_fields=["event_type"])
-                result = {"success": True, "message": "Unhandled event recorded"}
+                webhook_event.payload = event_data
+                webhook_event.save(update_fields=["event_type", "payload"])
+                result = {"success": True, "message": "Unhandled event recorded", "data": {}}
 
             return result
+        except Exception as exc:
+            logger.exception("Error processing webhook for reference %s: %s", reference, exc)
+            return {"success": False, "error": str(exc), "data": {}}
 
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-    # ----------------- Event Handlers -----------------
+    # -----------------
+    # Event handlers
+    # -----------------
+    # payments/services.py (WebhookService)
 
     @staticmethod
-    def _handle_successful_charge(data, webhook_event):
-        """Handle successful charge webhook (funding)"""
+    @transaction.atomic
+    def _handle_successful_charge(data: Dict[str, Any], webhook_event) -> Dict[str, Any]:
         reference = data.get("reference")
-        amount = Decimal(data.get("amount", 0)) / 100  # Convert from kobo
-        from wallets.services import WalletService
+        amount = Decimal(str(data.get("amount", 0))) / 100  # kobo → naira
 
         try:
-            with transaction.atomic():
-                payment_txn = PaymentTransaction.objects.select_for_update().get(
-                    gateway_reference=reference,
-                    transaction_type=PaymentTransaction.TransactionType.FUNDING,
-                )
-
-                if payment_txn.status == PaymentTransaction.Status.PENDING:
-                    payment_txn.status = PaymentTransaction.Status.SUCCESS
-                    payment_txn.completed_at = timezone.now()
-                    payment_txn.gateway_response = data
-                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "updated_at"])
-
-                    # Credit wallet and LINK to payment transaction
-                    WalletService.credit_wallet(
-                        user=payment_txn.user,
-                        amount=amount,
-                        category="funding",
-                        description=f"Wallet funding via Paystack (Ref: {reference})",
-                        reference=payment_txn.internal_reference,
-                        payment_transaction=payment_txn,
-                    )
-
-                    webhook_event.processed = True
-                    webhook_event.processed_at = timezone.now()
-                    webhook_event.save(update_fields=["processed", "processed_at"])
-
-                    return {"success": True, "message": "Charge processed successfully"}
-
-                return {"success": True, "message": "Charge already processed"}
-
+            payment_txn = PaymentTransaction.objects.select_for_update().get(
+                gateway_reference=reference,
+                transaction_type=PaymentTransaction.TransactionType.FUNDING,
+            )
         except PaymentTransaction.DoesNotExist:
-            return {"success": False, "error": "Funding transaction not found"}
+            logger.warning("PaymentTransaction not found for reference %s", reference)
+            return {"success": False, "error": "PaymentTransaction not found", "data": {}}
+
+        if payment_txn.status == PaymentTransaction.Status.SUCCESS:
+            webhook_event.processed = True
+            webhook_event.save(update_fields=["processed"])
+            return {"success": True, "message": "Already processed", "data": {}}
+
+        # ✅ Mark success
+        payment_txn.status = PaymentTransaction.Status.SUCCESS
+        payment_txn.completed_at = timezone.now()
+        payment_txn.gateway_response = data
+        payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "updated_at"])
+
+        # ✅ CREDIT WALLET
+        from wallets.services import WalletService
+        WalletService.credit_wallet(
+            user=payment_txn.user,
+            amount=amount,
+            category="funding",
+            description=f"Wallet funding via Paystack (Ref: {reference})",
+            reference=payment_txn.internal_reference,
+            payment_transaction=payment_txn,
+        )
+
+        # ✅ Mark webhook processed
+        webhook_event.processed = True
+        webhook_event.processed_at = timezone.now()
+        webhook_event.payload = data
+        webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+
+        return {"success": True, "message": "Wallet funded successfully", "data": {"reference": reference}}
+
+
 
     @staticmethod
-    def _handle_successful_transfer(data, webhook_event):
-        """Handle successful withdrawal transfer webhook"""
+    def _handle_successful_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle successful withdrawal transfer webhook."""
         reference = data.get("reference")
-
         try:
             with transaction.atomic():
-                payment_txn = PaymentTransaction.objects.select_for_update().get(
-                    gateway_reference=reference,
-                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
+                payment_txn = (
+                    PaymentTransaction.objects.select_for_update()
+                    .get(gateway_reference=reference, transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL)
                 )
 
                 if payment_txn.status == PaymentTransaction.Status.PENDING:
@@ -363,39 +478,39 @@ class WebhookService:
                     payment_txn.gateway_response = data
                     payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "updated_at"])
 
-                    # The admin flow already debited wallet and created WithdrawalRequest
-                    # We only need to mark the related WithdrawalRequest as approved if present.
+                    # Mark any matching WithdrawalRequest as approved (if present)
                     from wallets.models import WithdrawalRequest
+
                     withdrawal = WithdrawalRequest.objects.filter(gateway_reference=reference).first()
                     if withdrawal:
-                        withdrawal.status = "approved"  # idempotent
+                        withdrawal.status = "approved"
                         withdrawal.processed_at = withdrawal.processed_at or timezone.now()
                         withdrawal.gateway_response = data
                         withdrawal.save(update_fields=["status", "processed_at", "gateway_response"])
 
                     webhook_event.processed = True
                     webhook_event.processed_at = timezone.now()
-                    webhook_event.save(update_fields=["processed", "processed_at"])
+                    webhook_event.payload = data
+                    webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+                    return {"success": True, "message": "Transfer processed successfully", "data": {}}
 
-                    return {"success": True, "message": "Transfer processed successfully"}
-
-                return {"success": True, "message": "Transfer already processed"}
-
+                return {"success": True, "message": "Transfer already processed", "data": {}}
         except PaymentTransaction.DoesNotExist:
-            return {"success": False, "error": "Withdrawal transaction not found"}
+            logger.warning("Withdrawal transaction not found for reference %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
 
     @staticmethod
-    def _handle_failed_transfer(data, webhook_event):
-        """Handle failed/reversed withdrawal webhook"""
+    def _handle_failed_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle failed or reversed withdrawal webhook; refund user."""
         reference = data.get("reference")
         from wallets.services import WalletService
         from wallets.models import WithdrawalRequest
 
         try:
             with transaction.atomic():
-                payment_txn = PaymentTransaction.objects.select_for_update().get(
-                    gateway_reference=reference,
-                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
+                payment_txn = (
+                    PaymentTransaction.objects.select_for_update()
+                    .get(gateway_reference=reference, transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL)
                 )
 
                 if payment_txn.status == PaymentTransaction.Status.PENDING:
@@ -403,7 +518,7 @@ class WebhookService:
                     payment_txn.gateway_response = data
                     payment_txn.save(update_fields=["status", "gateway_response", "updated_at"])
 
-                    # Refund wallet (link back to the original payment transaction)
+                    # Refund the user's wallet
                     WalletService.credit_wallet(
                         user=payment_txn.user,
                         amount=payment_txn.amount,
@@ -422,12 +537,11 @@ class WebhookService:
 
                     webhook_event.processed = True
                     webhook_event.processed_at = timezone.now()
-                    webhook_event.save(update_fields=["processed", "processed_at"])
+                    webhook_event.payload = data
+                    webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+                    return {"success": True, "message": "Failed transfer processed", "data": {}}
 
-                    return {"success": True, "message": "Failed transfer processed"}
-
-                return {"success": True, "message": "Failed transfer already processed"}
-
+                return {"success": True, "message": "Failed transfer already processed", "data": {}}
         except PaymentTransaction.DoesNotExist:
-            return {"success": False, "error": "Withdrawal transaction not found"}
-
+            logger.warning("Withdrawal transaction not found for failed transfer reference %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}

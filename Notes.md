@@ -24,21 +24,61 @@ the limit on tasks to be done by each level
 
 
 
-## 🔹 5. Referral System (Network Marketing)
+Login security
 
-* **Direct Referral Bonus**:
 
-  * Each direct referral who subscribes → \$5 bonus.
-  * Monthly recurring (as long as referral renews subscription).
-  * Example: 10 referrals = \$50/month.
 
-* **Indirect Referral Bonus** (second-level commission):
 
-  * Level 1 (my direct referral): ₦5 per month.
-  * Level 2 (referral of my referral): ₦3 per month.
 
-* **Recurring**:
+🔐 1. Security
 
-  * All referral bonuses are monthly recurring as long as the downline renews their subscription.
+[ ] All forms include {% csrf_token %}.
 
----
+[ ] Sensitive views use @login_required or proper permission checks.
+
+[ ] No use of eval(), exec(), or unsafe deserialization.
+
+⚡ 2. Performance
+
+[ ] Checked for N+1 queries (with django-debug-toolbar).
+
+[ ] Use select_related / prefetch_related where needed.
+
+[ ] Expensive queries use caching (Redis, memcached).
+
+[ ] Loops with .count() / .exists() replaced with ORM annotate().
+
+[ ] High-volume inserts/updates use .bulk_create() / .bulk_update().
+
+[ ] Frequently queried fields have proper DB indexes.
+
+🛠 3. Maintainability
+
+[ ] Functions/methods < 50 lines, well-named and modular.
+
+[ ] No unused imports, dead code, or AI “hallucinated” stubs.
+
+[ ] Code follows DRY (no unnecessary duplication).
+
+[ ] Business logic separated (views ≠ business ≠ models).
+
+[ ] Clear docstrings explaining why, not just what.
+
+📦 5. Dependencies
+
+[ ] No outdated or insecure packages (pip-audit, safety check).
+
+[ ] Only necessary libraries included (no AI-added bloat).
+
+[ ] Licenses checked (no GPL unless project allows it).
+
+
+📊 6. Monitoring & Deployment
+
+[ ] Logging uses logging module (no print in production).
+
+[ ] Errors logged at proper levels (ERROR, WARNING).
+
+
+
+So i will give you some of my code blocks esure the above are enforce and applied on them 

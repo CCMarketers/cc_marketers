@@ -1,133 +1,152 @@
-# payments/models.py
-from django.db import models
-from django.conf import settings  
-from django.utils import timezone
 import uuid
+
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
 
 
 class PaymentGateway(models.Model):
-    """Model to store different payment gateways"""
+    """
+    Stores configuration for each payment gateway (e.g., Paystack, Flutterwave).
+    """
     name = models.CharField(max_length=50, unique=True)
     is_active = models.BooleanField(default=True)
-    config = models.JSONField(default=dict)  # Store gateway-specific config
+    config = models.JSONField(default=dict, blank=True)  # gateway-specific config
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return self.name
-    
+
     class Meta:
-        db_table = 'payment_gateways'
+        db_table = "payment_gateways"
+        verbose_name = "Payment Gateway"
+        verbose_name_plural = "Payment Gateways"
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class PaymentTransaction(models.Model):
-    """Model to track all payment transactions"""
-    
+    """
+    Tracks all inflow/outflow transactions, regardless of gateway.
+    """
+
     class TransactionType(models.TextChoices):
-        FUNDING = 'funding', 'Funding'
-        WITHDRAWAL = 'withdrawal', 'Withdrawal'
-    
+        FUNDING = "funding", "Funding"
+        WITHDRAWAL = "withdrawal", "Withdrawal"
+
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        SUCCESS = 'success', 'Success'
-        FAILED = 'failed', 'Failed'
-        CANCELLED = 'cancelled', 'Cancelled'
-    
+        PENDING = "pending", "Pending"
+        SUCCESS = "success", "Success"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # ✅ Use AUTH_USER_MODEL instead of User
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='payment_transactions'
+        related_name="payment_transactions",
     )
     gateway = models.ForeignKey(PaymentGateway, on_delete=models.CASCADE)
-    
+
     transaction_type = models.CharField(max_length=20, choices=TransactionType.choices)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    currency = models.CharField(max_length=3, default='NGN')
-    
-    # Gateway-specific reference
-    gateway_reference = models.CharField(max_length=255, unique=True)
-    internal_reference = models.CharField(max_length=100, unique=True, blank=True)
-    
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
-    
-    # Metadata
+    currency = models.CharField(max_length=3, default="NGN")
+
+    gateway_reference = models.CharField(max_length=255, unique=True, db_index=True)
+    internal_reference = models.CharField(max_length=100, unique=True, blank=True, db_index=True)
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+
+    # Raw gateway responses & arbitrary metadata
     gateway_response = models.JSONField(default=dict, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
-    
-    # Timestamps
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
+
+    class Meta:
+        db_table = "payment_transactions"
+        ordering = ["-created_at"]
+        verbose_name = "Payment Transaction"
+        verbose_name_plural = "Payment Transactions"
+
+    def __str__(self) -> str:
+        return f"{self.transaction_type.title()} - {self.user} - {self.amount} {self.currency}"
+
+    def _generate_internal_reference(self) -> str:
+        """Generate a predictable internal reference once per transaction."""
+        return f"TXN_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(self.id)[:8]}"
+
     def save(self, *args, **kwargs):
         if not self.internal_reference:
-            self.internal_reference = f"TXN_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(self.id)[:8]}"
+            self.internal_reference = self._generate_internal_reference()
         super().save(*args, **kwargs)
-    
-    def __str__(self):
-        return f"{self.transaction_type.title()} - {self.user} - {self.amount} {self.currency}"
-    
-    class Meta:
-        db_table = 'payment_transactions'
-        ordering = ['-created_at']
 
 
 class PaystackTransaction(models.Model):
-    """Paystack-specific transaction details"""
+    """
+    Holds Paystack-specific fields linked to a generic PaymentTransaction.
+    """
     transaction = models.OneToOneField(
-        PaymentTransaction, 
-        on_delete=models.CASCADE, 
-        related_name='paystack_details'
+        PaymentTransaction,
+        on_delete=models.CASCADE,
+        related_name="paystack_details",
     )
-    
-    # Paystack specific fields
+
+    # Paystack checkout data
     authorization_url = models.URLField(blank=True)
     access_code = models.CharField(max_length=255, blank=True)
-    paystack_reference = models.CharField(max_length=255, unique=True)
-    
-    # For withdrawals
+    paystack_reference = models.CharField(max_length=255, unique=True, db_index=True)
+
+    # Withdrawal / transfer data
     recipient_code = models.CharField(max_length=255, blank=True)
     transfer_code = models.CharField(max_length=255, blank=True)
-    
-    # Bank details for withdrawals
+
+    # Bank details (for withdrawals)
     bank_code = models.CharField(max_length=10, blank=True)
     account_number = models.CharField(max_length=20, blank=True)
     account_name = models.CharField(max_length=255, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"Paystack - {self.paystack_reference}"
-    
+
     class Meta:
-        db_table = 'paystack_transactions'
+        db_table = "paystack_transactions"
+        verbose_name = "Paystack Transaction"
+        verbose_name_plural = "Paystack Transactions"
+
+    def __str__(self) -> str:
+        return f"Paystack - {self.paystack_reference}"
 
 
 class WebhookEvent(models.Model):
-    """Store webhook events for auditing and debugging"""
-    
+    """
+    Stores raw webhook events for auditing and debugging. One row per event.
+    """
+
     class EventType(models.TextChoices):
-        CHARGE_SUCCESS = 'charge.success', 'Charge Success'
-        TRANSFER_SUCCESS = 'transfer.success', 'Transfer Success'
-        TRANSFER_FAILED = 'transfer.failed', 'Transfer Failed'
-        OTHER = 'other', 'Other'
-    
+        CHARGE_SUCCESS = "charge.success", "Charge Success"
+        TRANSFER_SUCCESS = "transfer.success", "Transfer Success"
+        TRANSFER_FAILED = "transfer.failed", "Transfer Failed"
+        OTHER = "other", "Other"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     gateway = models.ForeignKey(PaymentGateway, on_delete=models.CASCADE)
     event_type = models.CharField(max_length=50, choices=EventType.choices)
-    
+
     reference = models.CharField(max_length=255, db_index=True)
     payload = models.JSONField()
     processed = models.BooleanField(default=False)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
-    
-    def __str__(self):
-        return f"{self.gateway.name} - {self.event_type} - {self.reference}"
-    
+
     class Meta:
-        db_table = 'webhook_events'
-        ordering = ['-created_at']
+        db_table = "webhook_events"
+        ordering = ["-created_at"]
+        verbose_name = "Webhook Event"
+        verbose_name_plural = "Webhook Events"
+
+    def __str__(self) -> str:
+        return f"{self.gateway.name} - {self.event_type} - {self.reference}"

@@ -1,65 +1,82 @@
-# tasks/signals.py - Integration with existing tasks app
+# tasks/signals.py
+import logging
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Task, TaskSubmission  # Assuming these exist in your tasks app
-from wallets.services import WalletService
-import logging
+
+from .models import Task, Submission  # use real models
+from .services import TaskWalletService  # your escrow service
 
 logger = logging.getLogger(__name__)
 
+
 @receiver(post_save, sender=Task)
 def handle_task_creation(sender, instance, created, **kwargs):
-    """When a task is created, lock funds in escrow"""
-    if created and instance.reward_amount:
+    """
+    When a task is created, lock advertiser funds in escrow.
+    Uses TaskWalletService.create_task_escrow
+    """
+    if created:
+        # We don't have a reward_amount field; use total_payout
+        amount = instance.total_payout
         try:
-            # Create escrow transaction
-            WalletService.create_task_escrow(
-                advertiser=instance.advertiser,  # Assuming Task has advertiser field
+            TaskWalletService.create_task_escrow(
+                advertiser=instance.advertiser,
                 task=instance,
-                amount=instance.reward_amount  # Assuming Task has reward_amount field
+                amount=amount,
             )
-            logger.info(f"Escrow created for task {instance.id}: ${instance.reward_amount}")
-            
+            logger.info(f"Escrow created for Task {instance.pk}: ${amount}")
         except ValueError as e:
-            logger.error(f"Failed to create escrow for task {instance.id}: {str(e)}")
-            # Optionally, you could set task status to 'insufficient_funds' or similar
-            instance.status = 'insufficient_funds'
-            instance.save()
+            logger.error(f"Failed to create escrow for Task {instance.pk}: {str(e)}")
+            # Optionally mark status
+            instance.status = "insufficient_funds"
+            instance.save(update_fields=["status"])
 
-@receiver(post_save, sender=TaskSubmission)
-def handle_task_submission_approval(sender, instance, created, **kwargs):
-    """When a task submission is approved, release escrow funds to member"""
-    if not created and hasattr(instance, 'status'):
-        
-        # Task approved - release escrow to member
-        if instance.status == 'approved' and hasattr(instance, 'previous_status'):
-            if instance.previous_status != 'approved':
-                try:
-                    WalletService.release_escrow_to_member(
-                        task=instance.task,
-                        member=instance.member  # Assuming TaskSubmission has member field
-                    )
-                    logger.info(f"Escrow released for task {instance.task.id} to {instance.member.username}")
-                    
-                except ValueError as e:
-                    logger.error(f"Failed to release escrow for task {instance.task.id}: {str(e)}")
-        
-        # Task rejected - refund escrow to advertiser
-        elif instance.status == 'rejected' and hasattr(instance, 'previous_status'):
-            if instance.previous_status != 'rejected':
-                try:
-                    WalletService.refund_escrow_to_advertiser(task=instance.task)
-                    logger.info(f"Escrow refunded for task {instance.task.id}")
-                    
-                except ValueError as e:
-                    logger.error(f"Failed to refund escrow for task {instance.task.id}: {str(e)}")
 
-@receiver(pre_save, sender=TaskSubmission)
+@receiver(pre_save, sender=Submission)
 def store_previous_status(sender, instance, **kwargs):
-    """Store previous status to detect changes"""
+    """
+    Store previous status to detect changes on update.
+    """
     if instance.pk:
         try:
-            previous = TaskSubmission.objects.get(pk=instance.pk)
+            previous = Submission.objects.get(pk=instance.pk)
             instance.previous_status = previous.status
-        except TaskSubmission.DoesNotExist:
+        except Submission.DoesNotExist:
             instance.previous_status = None
+
+
+@receiver(post_save, sender=Submission)
+def handle_submission_status_change(sender, instance, created, **kwargs):
+    """
+    When a submission is approved or rejected, release or refund escrow.
+    """
+    # Only handle status changes on existing records
+    if created or not hasattr(instance, "previous_status"):
+        return
+
+    # APPROVED → release escrow to member
+    if instance.status == "approved" and instance.previous_status != "approved":
+        try:
+            # You need to locate the EscrowTransaction for this task
+            escrow = instance.task.escrowtransaction_set.filter(status="locked").first()
+            if escrow:
+                TaskWalletService.release_task_escrow(escrow, member=instance.member)
+                logger.info(
+                    f"Escrow released for Task {instance.task.pk} to {instance.member.username}"
+                )
+        except ValueError as e:
+            logger.error(
+                f"Failed to release escrow for Task {instance.task.pk}: {str(e)}"
+            )
+
+    # REJECTED → refund escrow to advertiser
+    elif instance.status == "rejected" and instance.previous_status != "rejected":
+        try:
+            escrow = instance.task.escrowtransaction_set.filter(status="locked").first()
+            if escrow:
+                TaskWalletService.refund_task_escrow(escrow)
+                logger.info(f"Escrow refunded for Task {instance.task.pk}")
+        except ValueError as e:
+            logger.error(
+                f"Failed to refund escrow for Task {instance.task.pk}: {str(e)}"
+            )

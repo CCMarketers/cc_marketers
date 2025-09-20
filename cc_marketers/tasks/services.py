@@ -1,144 +1,152 @@
 # tasks/services/task_wallet_service.py
 from decimal import Decimal
 from django.db import transaction
-from wallets.models import EscrowTransaction
-from .models import TaskWallet, TaskWalletTransaction
 from django.utils import timezone
-from wallets.services import WalletService
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-
-
+from wallets.models import EscrowTransaction
+from .models import TaskWallet, TaskWalletTransaction
+from wallets.services import WalletService  # main wallet service
 
 User = get_user_model()
 
 
 def get_company_user():
-    """Return or create the system/company user for escrow operations."""
-    return User.objects.get_or_create(
+    """
+    Return or create the system/company user for escrow operations.
+    """
+    user, _ = User.objects.get_or_create(
         username=settings.COMPANY_SYSTEM_USERNAME,
         defaults={
             "email": f"{settings.COMPANY_SYSTEM_USERNAME}@gmail.com",
-            "role": User.ADMIN,
+            "role": getattr(User, 'ADMIN', None),
             "is_staff": True,
             "is_superuser": True,
         },
-    )[0]
-
+    )
+    return user
 
 
 class TaskWalletService:
-    """Service layer for handling all TaskWallet operations."""
+    """
+    Service layer for handling all TaskWallet operations.
+    """
 
+    # -------------------------------
+    # Utility helpers
+    # -------------------------------
     @staticmethod
     def split_payment(amount, company_rate=Decimal("0.20")):
-        """Split escrow amount between worker and company."""
+        """
+        Split escrow amount between worker and company.
+        Returns (member_amount, company_cut)
+        """
+        amount = Decimal(amount)
         company_cut = (amount * company_rate).quantize(Decimal("0.01"))
         member_amount = amount - company_cut
         return member_amount, company_cut
-    
+
     @staticmethod
     def get_or_create_wallet(user):
-        """Get or create a TaskWallet for a user."""
+        """
+        Get or create a TaskWallet for a user.
+        """
         wallet, _ = TaskWallet.objects.get_or_create(user=user)
         return wallet
 
     # -------------------------------
     # Balance Operations
     # -------------------------------
-
     @staticmethod
     @transaction.atomic
-    def credit_wallet(user, amount, category="admin_adjustment", description=""):
-        """Credit TaskWallet and log transaction."""
+    def credit_wallet(user, amount, category="admin_adjustment", description="", reference=None):
+        """
+        Credit TaskWallet and log transaction.
+        """
+        amount = Decimal(amount)
         wallet = TaskWalletService.get_or_create_wallet(user)
+
         before = wallet.balance
-        wallet.balance += Decimal(amount)
-        wallet.save()
+        wallet.balance += amount
+        wallet.save(update_fields=['balance'])
 
         TaskWalletTransaction.objects.create(
             user=user,
             transaction_type="credit",
             category=category,
-            amount=Decimal(amount),
+            amount=amount,
             balance_before=before,
             balance_after=wallet.balance,
             description=description,
+            reference=reference,
         )
         return wallet
 
     @staticmethod
     @transaction.atomic
-    def debit_wallet(user, amount, category="task_posting", description=""):
-        """Debit TaskWallet and log transaction."""
+    def debit_wallet(user, amount, category="task_posting", description="", reference=None):
+        """
+        Debit TaskWallet and log transaction.
+        """
+        amount = Decimal(amount)
         wallet = TaskWalletService.get_or_create_wallet(user)
-        if wallet.balance < Decimal(amount):
+        if wallet.balance < amount:
             raise ValueError("Insufficient Task Wallet balance")
 
         before = wallet.balance
-        wallet.balance -= Decimal(amount)
-        wallet.save()
+        wallet.balance -= amount
+        wallet.save(update_fields=['balance'])
 
         TaskWalletTransaction.objects.create(
             user=user,
             transaction_type="debit",
             category=category,
-            amount=Decimal(amount),
+            amount=amount,
             balance_before=before,
             balance_after=wallet.balance,
             description=description,
+            reference=reference,
         )
         return wallet
 
     # -------------------------------
     # Transfers
     # -------------------------------
-
     @staticmethod
     @transaction.atomic
     def transfer_from_main_wallet(user, amount):
-        """Move funds from Main Wallet into TaskWallet."""
-        from wallets.services import WalletService
-
+        """
+        Move funds from Main Wallet into TaskWallet.
+        """
+        amount = Decimal(amount)
         # debit from main wallet
         debit_txn = WalletService.debit_wallet(
             user=user,
-            amount=Decimal(amount),
+            amount=amount,
             category="task_wallet_topup",
             description="Top-up Task Wallet",
         )
 
         # credit task wallet
-        wallet = TaskWalletService.get_or_create_wallet(user)
-        before = wallet.balance
-        wallet.balance += Decimal(amount)
-        wallet.save()
-
-        TaskWalletTransaction.objects.create(
+        return TaskWalletService.credit_wallet(
             user=user,
-            transaction_type="credit",
+            amount=amount,
             category="topup_from_main",
-            amount=Decimal(amount),
-            balance_before=before,
-            balance_after=wallet.balance,
-            reference=debit_txn.reference,
             description="Top-up from Main Wallet",
+            reference=getattr(debit_txn, "reference", None),
         )
-        return wallet
 
-    
     # -------------------------------
     # Escrow
     # -------------------------------
-
     @staticmethod
     @transaction.atomic
     def create_task_escrow(advertiser, task, amount):
         """
         Lock advertiser funds in escrow when task is created.
         """
+        amount = Decimal(amount)
         wallet = TaskWalletService.get_or_create_wallet(advertiser)
 
         if wallet.balance < amount:
@@ -146,12 +154,12 @@ class TaskWalletService:
 
         before = wallet.balance
         wallet.balance -= amount
-        wallet.save()
+        wallet.save(update_fields=['balance'])
 
-        # Log transaction with before/after balances
         txn = TaskWalletTransaction.objects.create(
             user=advertiser,
             transaction_type="debit",
+            category="task_posting",
             amount=amount,
             balance_before=before,
             balance_after=wallet.balance,
@@ -165,7 +173,6 @@ class TaskWalletService:
             taskwallet_transaction=txn,
             status="locked",
         )
-
         return escrow
 
     @staticmethod
@@ -196,19 +203,17 @@ class TaskWalletService:
             category="company_cut",
         )
 
-        # Mark escrow released
         escrow.status = "released"
         escrow.released_at = timezone.now()
-        escrow.save()
+        escrow.save(update_fields=['status', 'released_at'])
 
-        # Update transaction status if field exists
-        if hasattr(escrow.taskwallet_transaction, "status"):
+        # Update transaction status if applicable
+        if hasattr(escrow, "taskwallet_transaction") and hasattr(escrow.taskwallet_transaction, "status"):
             escrow.taskwallet_transaction.status = "success"
-            escrow.taskwallet_transaction.save()
+            escrow.taskwallet_transaction.save(update_fields=['status'])
 
         return escrow
-    
-        
+
     @staticmethod
     @transaction.atomic
     def refund_task_escrow(escrow):
@@ -222,11 +227,12 @@ class TaskWalletService:
 
         before = wallet.balance
         wallet.balance += escrow.amount
-        wallet.save()
+        wallet.save(update_fields=['balance'])
 
         TaskWalletTransaction.objects.create(
             user=escrow.advertiser,
             transaction_type="credit",
+            category="task_posting",
             amount=escrow.amount,
             balance_before=before,
             balance_after=wallet.balance,
@@ -235,13 +241,10 @@ class TaskWalletService:
 
         escrow.status = "refunded"
         escrow.released_at = timezone.now()
-        escrow.save()
+        escrow.save(update_fields=['status', 'released_at'])
 
-        if hasattr(escrow.taskwallet_transaction, "status"):
+        if hasattr(escrow, "taskwallet_transaction") and hasattr(escrow.taskwallet_transaction, "status"):
             escrow.taskwallet_transaction.status = "failed"
-            escrow.taskwallet_transaction.save()
+            escrow.taskwallet_transaction.save(update_fields=['status'])
 
         return escrow
-
-        
-

@@ -5,6 +5,8 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 import uuid
+from django.db.models.expressions import Combinable
+
 
 class Task(models.Model):
     TASK_STATUS_CHOICES = [
@@ -13,7 +15,7 @@ class Task(models.Model):
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
-    
+
     advertiser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -22,8 +24,8 @@ class Task(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     payout_per_slot = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
+        max_digits=10,
+        decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
     total_slots = models.PositiveIntegerField(validators=[MinValueValidator(1)])
@@ -33,30 +35,39 @@ class Task(models.Model):
     status = models.CharField(max_length=20, choices=TASK_STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
-    def __str__(self):
-        return self.title
-    
+        indexes = [
+            models.Index(fields=['status', 'deadline']),
+        ]
+
     def save(self, *args, **kwargs):
-        if not self.pk:  # New task
+        """Auto initialise and adjust remaining_slots."""
+        if not self.pk:  # new task
             self.remaining_slots = self.total_slots
+        else:
+            # only clamp if remaining_slots is a real int, not an F() expression
+            if not isinstance(self.remaining_slots, Combinable):
+                if self.remaining_slots > self.total_slots:
+                    self.remaining_slots = self.total_slots
         super().save(*args, **kwargs)
-    
+
+    def __str__(self):
+        return f"Task #{self.pk}: {self.title}"
+
     @property
     def is_full(self):
         return self.remaining_slots <= 0
-    
+
     @property
     def is_expired(self):
         return timezone.now() > self.deadline
-    
+
     @property
     def total_payout(self):
         return self.payout_per_slot * self.total_slots
-    
+
     @property
     def filled_slots(self):
         return self.total_slots - self.remaining_slots
@@ -69,7 +80,7 @@ class Submission(models.Model):
         ('rejected', 'Rejected'),
         ('resubmitted', 'Resubmitted'),
     ]
-    
+
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='submissions')
     member = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -90,25 +101,35 @@ class Submission(models.Model):
         blank=True,
         related_name='reviewed_submissions'
     )
-    
+
     class Meta:
-        unique_together = ['task', 'member']
         ordering = ['-submitted_at']
-    
+        constraints = [
+            models.UniqueConstraint(fields=['task', 'member'], name='unique_submission_per_member'),
+        ]
+        indexes = [
+            models.Index(fields=['status']),
+        ]
+
     def __str__(self):
-        return f"{self.member.get_display_name()} - {self.task.title}"
-    
+        return f"Submission #{self.pk} by {self.member} for {self.task.title}"
+
+    @property
+    def member_name(self):
+        return getattr(self.member, 'get_display_name', lambda: self.member.username)()
+
+    def mark_reviewed(self, reviewer):
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+
     def approve(self, reviewer):
+        self.mark_reviewed(reviewer)
         self.status = 'approved'
-        self.reviewed_by = reviewer
-        self.reviewed_at = timezone.now()
         self.save()
-        # Trigger payout logic here
-        
+
     def reject(self, reviewer, reason):
+        self.mark_reviewed(reviewer)
         self.status = 'rejected'
-        self.reviewed_by = reviewer
-        self.reviewed_at = timezone.now()
         self.rejection_reason = reason
         self.save()
 
@@ -121,7 +142,7 @@ class Dispute(models.Model):
         ('resolved_favor_advertiser', 'Resolved - Favor Advertiser'),
         ('closed', 'Closed'),
     ]
-    
+
     submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name='dispute')
     raised_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -140,12 +161,12 @@ class Dispute(models.Model):
         blank=True,
         related_name='resolved_disputes'
     )
-    
+
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
-        return f"Dispute #{self.id} - {self.submission.task.title}"
+        return f"Dispute #{self.pk} - {self.submission.task.title}"
 
 
 class TaskWallet(models.Model):
@@ -155,7 +176,6 @@ class TaskWallet(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    
     def __str__(self):
         return f"Task Wallet - {self.user.username}: ${self.balance}"
 
@@ -168,14 +188,12 @@ class TaskWalletTransaction(models.Model):
         ('credit', 'Credit'),
         ('debit', 'Debit'),
     ]
-
     CATEGORIES = [
-        ('subscription_bonus', 'Subscription Bonus'),  # fixed $10 from subscription
+        ('subscription_bonus', 'Subscription Bonus'),
         ('task_posting', 'Task Posting'),
         ('topup_from_main', 'Top-up from Main Wallet'),
         ('admin_adjustment', 'Admin Adjustment'),
     ]
-
     STATUS = [
         ('pending', 'Pending'),
         ('success', 'Success'),
@@ -186,22 +204,20 @@ class TaskWalletTransaction(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     category = models.CharField(max_length=30, choices=CATEGORIES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2,
-                                 validators=[MinValueValidator(Decimal('0.01'))])
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
     balance_before = models.DecimalField(max_digits=12, decimal_places=2)
     balance_after = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS, default='success')
     description = models.TextField(blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # 👇 Add this
     reference = models.CharField(max_length=100, blank=True, null=True, unique=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} ${self.amount} ({self.category})"
-
