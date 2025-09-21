@@ -162,9 +162,27 @@ def cancel_subscription(request):
                 ),
             )
 
-    # Refund only if within 6 hours & allowed
-    if refund_allowed and time_diff <= timedelta(hours=6):
-        refund_amount = active_subscription.plan.price
+    # # Refund only if within 6 hours & allowed
+    # if refund_allowed and time_diff <= timedelta(hours=6):
+    #     refund_amount = active_subscription.plan.price
+    #     WalletService.credit_wallet(
+    #         user=request.user,
+    #         amount=refund_amount,
+    #         category="subscription_refund",
+    #         description=f"Refund for {active_subscription.plan.name} (cancelled within 6 hours)",
+    #         reference=f"REFUND_{request.user.id}_{active_subscription.id}",
+    #     )
+    #     messages.success(
+    #         request, f"Subscription cancelled. ${refund_amount} refunded to your wallet."
+    #     )
+    # elif refund_allowed:
+    #     messages.success(
+    #         request, "Subscription cancelled successfully (no refund, beyond 6 hours)."
+    #     )
+
+    refund_amount = active_subscription.plan.price
+
+    if refund_allowed and time_diff <= timedelta(hours=6) and refund_amount > 0:
         WalletService.credit_wallet(
             user=request.user,
             amount=refund_amount,
@@ -179,5 +197,6 @@ def cancel_subscription(request):
         messages.success(
             request, "Subscription cancelled successfully (no refund, beyond 6 hours)."
         )
+
 
     return redirect("subscriptions:my_subscription")
