@@ -27,7 +27,9 @@ the limit on tasks to be done by each level
 Login security
 
 
-
+Emails
+on subscription
+notifications of task tone on my task i post
 
 
 🔐 1. Security
@@ -82,3 +84,16 @@ Login security
 
 
 So i will give you some of my code blocks esure the above are enforce and applied on them 
+
+
+
+
+
+
+mail said fail but it was sucessfull
+payment gate way not configure
+
+
+cd cc_marketers
+venv\scripts\activate
+

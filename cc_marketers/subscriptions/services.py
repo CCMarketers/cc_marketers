@@ -19,22 +19,22 @@ class SubscriptionService:
         Subscribe a user to a plan by deducting from wallet balance & allocate TaskWallet funds.
         Returns a dict with {'success': bool, 'subscription' or 'error': ...}.
         """
-        plan = (
-            SubscriptionPlan.objects.filter(id=plan_id, is_active=True)
-            .select_for_update()
-            .first()
-        )
-        if not plan:
-            return {"success": False, "error": "Plan not found"}
-
-        wallet = Wallet.objects.select_for_update().filter(user=user).first()
-        if not wallet:
-            return {"success": False, "error": "Wallet not found"}
-
-        if wallet.balance < plan.price:
-            return {"success": False, "error": "Insufficient wallet balance"}
-
         with transaction.atomic():
+            plan = (
+                SubscriptionPlan.objects.filter(id=plan_id, is_active=True)
+                .select_for_update()
+                .first()
+            )
+            if not plan:
+                return {"success": False, "error": "Plan not found"}
+
+            wallet = Wallet.objects.select_for_update().filter(user=user).first()
+            if not wallet:
+                return {"success": False, "error": "Wallet not found"}
+
+            if wallet.balance < plan.price:
+                return {"success": False, "error": "Insufficient wallet balance"}
+
             # Cancel existing active subscriptions
             UserSubscription.objects.filter(user=user, status="active").update(status="cancelled")
 
