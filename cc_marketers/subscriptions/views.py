@@ -73,7 +73,13 @@ def my_subscription(request):
     Display user's current subscription & wallet balance (minus pending withdrawals).
     """
     active_subscription = SubscriptionService.get_user_active_subscription(request.user)
-    subscription_history = UserSubscription.objects.filter(user=request.user)
+    subscription_history = (
+        UserSubscription.objects
+        .filter(user=request.user)
+        .select_related("plan")              # fetch plan in same query
+        .order_by("-start_date")[:20]        # limit to 20 most recent
+    )
+
 
     wallet = Wallet.objects.filter(user=request.user).first()
     if wallet:
@@ -155,7 +161,7 @@ def cancel_subscription(request):
             TaskWalletService.debit_wallet(
                 user=request.user,
                 amount=allocation_amount,
-                category="subscription_allocation_reversal",
+                category="subscription_reversal",
                 description=(
                     f"Reversal of monthly allocation from cancelled plan "
                     f"{active_subscription.plan.name}"
