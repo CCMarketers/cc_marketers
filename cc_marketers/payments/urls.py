@@ -50,7 +50,8 @@ urlpatterns = [
     path('verify-account/', views.verify_account, name='verify_account'),
 
     # Webhooks
-    path('webhooks/paystack/', views.paystack_webhook, name='paystack_webhook'),
+    # path('webhooks/paystack/', views.paystack_webhook, name='paystack_webhook'),
+    path('webhook/paystack/', views.paystack_webhook, name='paystack_webhook'),
     path('webhooks/flutterwave/', views.flutterwave_webhook, name='flutterwave_webhook'),
     path('callback/flutterwave/', views.flutterwave_callback, name='flutterwave_callback'),
 
