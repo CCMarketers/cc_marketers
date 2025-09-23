@@ -561,13 +561,25 @@ class WebhookService:
         # Flutterwave does NOT use HMAC here
         return hmac.compare_digest(signature, secret_hash)
 
-
     @staticmethod
     def process_flutterwave_webhook(event_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process incoming Flutterwave webhook JSON and handle idempotency."""
-        event_type = event_data.get("event")
-        data = event_data.get("data", {}) or {}
-        tx_ref = data.get("tx_ref") or data.get("reference")
+        # Flutterwave sometimes sends 'event' or 'event.type'
+        event_type = (
+            event_data.get("event")
+            or event_data.get("event.type")
+            or "unknown"
+        )
+
+        # Some webhooks wrap data inside "data", others send fields at the root
+        data = event_data.get("data") or event_data
+
+        # Normalize tx_ref lookup
+        tx_ref = (
+            data.get("tx_ref")
+            or data.get("txRef")
+            or data.get("reference")
+        )
 
         if not tx_ref:
             logger.warning("Flutterwave webhook missing tx_ref: %s", event_data)
@@ -589,20 +601,29 @@ class WebhookService:
             return {"success": True, "message": "Duplicate event ignored", "data": {}}
 
         try:
-            # Successful charge
-            if event_type == "charge.completed" and data.get("status") == "successful":
+            status = data.get("status", "").lower()
+
+            # Card/charge payment
+            if event_type == "charge.completed" and status == "successful":
                 result = WebhookService._handle_successful_flutterwave_charge(data, webhook_event)
-            # Successful transfer
-            elif event_type == "transfer.completed" and data.get("status") == "SUCCESSFUL":
-                result = WebhookService._handle_successful_flutterwave_transfer(data, webhook_event)
-            # Failed transfer
-            elif event_type == "transfer.completed" and data.get("status") in ["FAILED", "CANCELLED"]:
-                result = WebhookService._handle_failed_flutterwave_transfer(data, webhook_event)
+
+            # Bank transfer webhook (your current payload)
+            elif event_type == "BANK_TRANSFER_TRANSACTION" and status == "successful":
+                result = WebhookService._handle_successful_flutterwave_charge(data, webhook_event)
+
+            # Transfers
+            elif event_type == "transfer.completed":
+                if status == "successful":
+                    result = WebhookService._handle_successful_flutterwave_transfer(data, webhook_event)
+                elif status in ["failed", "cancelled"]:
+                    result = WebhookService._handle_failed_flutterwave_transfer(data, webhook_event)
+                else:
+                    result = {"success": True, "message": "Unhandled transfer status", "data": data}
             else:
                 webhook_event.event_type = WebhookEvent.EventType.OTHER
                 webhook_event.payload = event_data
                 webhook_event.save(update_fields=["event_type", "payload"])
-                result = {"success": True, "message": "Unhandled Flutterwave event recorded", "data": {}}
+                result = {"success": True, "message": f"Unhandled Flutterwave event {event_type}", "data": data}
 
             return result
         except Exception as exc:
