@@ -549,21 +549,18 @@ class WebhookService:
     # -----------------
     # Flutterwave signature & processing
     # -----------------
+
     @staticmethod
     def verify_flutterwave_signature(payload: bytes, signature: str) -> bool:
-        """Verify Flutterwave webhook signature using HMAC-SHA256."""
+        """Verify Flutterwave webhook signature (simple header match)."""
         secret_hash = getattr(settings, "FLUTTERWAVE_SECRET_HASH", "")
         if not secret_hash:
             logger.error("FLUTTERWAVE_SECRET_HASH not set in settings")
             return False
 
-        computed_signature = hmac.new(
-            secret_hash.encode("utf-8"),
-            payload,
-            hashlib.sha256,
-        ).hexdigest()
+        # Flutterwave does NOT use HMAC here
+        return hmac.compare_digest(signature, secret_hash)
 
-        return hmac.compare_digest(computed_signature, signature)
 
     @staticmethod
     def process_flutterwave_webhook(event_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -994,7 +991,7 @@ class FlutterwaveService:
                     "currency": "NGN",
                     "reference": payment_transaction.gateway_reference,
                     "narration": narration,
-                    "callback_url": "https://cc-marketers.onrender.com/flutterwave/webhook",  
+                    "callback_url": "https://cc-marketers.onrender.com/payments/webhooks/flutterwave/",  
                     "debit_currency": "NGN",
                 }
 
