@@ -150,3 +150,38 @@ class WebhookEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.gateway.name} - {self.event_type} - {self.reference}"
+
+class FlutterwaveTransaction(models.Model):
+    """
+    Holds Flutterwave-specific fields linked to a generic PaymentTransaction.
+    """
+    transaction = models.OneToOneField(
+        PaymentTransaction,
+        on_delete=models.CASCADE,
+        related_name="flutterwave_details",
+    )
+
+    # Flutterwave payment data
+    payment_link = models.URLField(blank=True)
+    flutterwave_id = models.CharField(max_length=255, blank=True)  # Flutterwave transaction ID
+    flutterwave_reference = models.CharField(max_length=255, unique=True, db_index=True)
+    
+    # Transfer/withdrawal data
+    transfer_id = models.CharField(max_length=255, blank=True)
+    beneficiary_id = models.CharField(max_length=255, blank=True)
+
+    # Bank details (for withdrawals)
+    bank_code = models.CharField(max_length=10, blank=True)
+    account_number = models.CharField(max_length=20, blank=True)
+    account_name = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "flutterwave_transactions"
+        verbose_name = "Flutterwave Transaction"
+        verbose_name_plural = "Flutterwave Transactions"
+
+    def __str__(self) -> str:
+        return f"Flutterwave - {self.flutterwave_reference}"
+

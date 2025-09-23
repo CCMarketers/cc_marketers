@@ -212,12 +212,7 @@ LOGGING = {
     },
 }
 
-# Payment Gateway Settings
-PAYSTACK_PUBLIC_KEY = 'pk_test_your_paystack_public_key'
-PAYSTACK_SECRET_KEY = 'sk_test_your_paystack_secret_key'
 
-FLUTTERWAVE_PUBLIC_KEY = 'FLWPUBK_TEST-your_flutterwave_public_key'
-FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-your_flutterwave_secret_key'
 
 # Wallet System Settings
 WALLET_SETTINGS = {
@@ -242,6 +237,12 @@ CELERY_RESULT_SERIALIZER = 'json'
 PAYSTACK_PUBLIC_KEY = 'pk_test_98d1f58ea371bbbfe691ec17b30268cc31ebf7d7'  # Replace with your actual keys
 PAYSTACK_SECRET_KEY = 'sk_test_9c232d742d7dddb0b9e808f5427bbc07f76ce702'  # Replace with your actual keys
 PAYSTACK_BASE_URL = "https://api.paystack.co"
+
+
+# Flutterwave Configuration
+FLUTTERWAVE_PUBLIC_KEY = os.getenv('FLUTTERWAVE_PUBLIC_KEY', 'FLWPUBK_TEST-98e0b254d41e0dddbf2ce87e6ffce2f3-X')
+FLUTTERWAVE_SECRET_KEY = os.getenv('FLUTTERWAVE_SECRET_KEY', 'FLWSECK_TEST-873c9d0a2801967e1574981766aaa02e-X')
+FLUTTERWAVE_SECRET_HASH = os.getenv('FLUTTERWAVE_SECRET_HASH', 'FLWSECK_TEST0397597f0c4f')  # For webhook verification
 
 # For production, use:
 # PAYSTACK_PUBLIC_KEY = 'pk_live_your_live_public_key'

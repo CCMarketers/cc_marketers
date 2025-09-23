@@ -69,3 +69,4 @@ class FundWalletForm(forms.Form):
             'rows': 3
         })
     )
+

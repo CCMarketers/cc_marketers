@@ -15,8 +15,8 @@ from .models import (
     PaystackTransaction,
     PaymentGateway,
     WebhookEvent,
+    FlutterwaveTransaction,    
 )
-
 logger = logging.getLogger(__name__)
 
 # Default HTTP timeout (seconds) for requests to external services
@@ -345,13 +345,15 @@ class PaystackService:
             return {"success": False, "data": {}, "error": str(exc)}
 
 
+
+
 class WebhookService:
-    """Service for handling payment webhooks (Paystack)."""
+    """Service for handling payment webhooks (Paystack & Flutterwave)."""
 
     @staticmethod
     def verify_paystack_signature(payload: bytes, signature: str) -> bool:
         """Verify Paystack webhook signature using HMAC-SHA512."""
-        secret_key = settings.PAYSTACK_SECRET_KEY
+        secret_key = getattr(settings, "PAYSTACK_SECRET_KEY", "")
         if not secret_key:
             logger.error("PAYSTACK_SECRET_KEY not set in settings")
             return False
@@ -410,15 +412,14 @@ class WebhookService:
             return {"success": False, "error": str(exc), "data": {}}
 
     # -----------------
-    # Event handlers
+    # Paystack event handlers
     # -----------------
-    # payments/services.py (WebhookService)
-
     @staticmethod
     @transaction.atomic
-    def _handle_successful_charge(data: Dict[str, Any], webhook_event) -> Dict[str, Any]:
+    def _handle_successful_charge(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
         reference = data.get("reference")
-        amount = Decimal(str(data.get("amount", 0))) / 100  # kobo → naira
+        # Paystack sends amount in kobo; convert to naira
+        amount = Decimal(str(data.get("amount", 0))) / Decimal("100")
 
         try:
             payment_txn = PaymentTransaction.objects.select_for_update().get(
@@ -434,24 +435,25 @@ class WebhookService:
             webhook_event.save(update_fields=["processed"])
             return {"success": True, "message": "Already processed", "data": {}}
 
-        # ✅ Mark success
+        # Mark success on payment transaction
         payment_txn.status = PaymentTransaction.Status.SUCCESS
         payment_txn.completed_at = timezone.now()
         payment_txn.gateway_response = data
-        payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "updated_at"])
+        payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
 
-        # ✅ CREDIT WALLET
+        # Credit wallet
         from wallets.services import WalletService
+
         WalletService.credit_wallet(
             user=payment_txn.user,
             amount=amount,
             category="funding",
-            description=f"Wallet funding via Paystack (Ref: {reference})",
+            description=f"Wallet funding via {PaymentGateway.name} (Ref: {reference})",
             reference=payment_txn.internal_reference,
             payment_transaction=payment_txn,
         )
 
-        # ✅ Mark webhook processed
+        # Mark webhook processed
         webhook_event.processed = True
         webhook_event.processed_at = timezone.now()
         webhook_event.payload = data
@@ -459,11 +461,9 @@ class WebhookService:
 
         return {"success": True, "message": "Wallet funded successfully", "data": {"reference": reference}}
 
-
-
     @staticmethod
     def _handle_successful_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
-        """Handle successful withdrawal transfer webhook."""
+        """Handle successful Paystack withdrawal transfer webhook."""
         reference = data.get("reference")
         try:
             with transaction.atomic():
@@ -476,7 +476,7 @@ class WebhookService:
                     payment_txn.status = PaymentTransaction.Status.SUCCESS
                     payment_txn.completed_at = timezone.now()
                     payment_txn.gateway_response = data
-                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "updated_at"])
+                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
 
                     # Mark any matching WithdrawalRequest as approved (if present)
                     from wallets.models import WithdrawalRequest
@@ -501,7 +501,7 @@ class WebhookService:
 
     @staticmethod
     def _handle_failed_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
-        """Handle failed or reversed withdrawal webhook; refund user."""
+        """Handle failed or reversed Paystack withdrawal webhook; refund user."""
         reference = data.get("reference")
         from wallets.services import WalletService
         from wallets.models import WithdrawalRequest
@@ -516,7 +516,7 @@ class WebhookService:
                 if payment_txn.status == PaymentTransaction.Status.PENDING:
                     payment_txn.status = PaymentTransaction.Status.FAILED
                     payment_txn.gateway_response = data
-                    payment_txn.save(update_fields=["status", "gateway_response", "updated_at"])
+                    payment_txn.save(update_fields=["status", "gateway_response"])
 
                     # Refund the user's wallet
                     WalletService.credit_wallet(
@@ -539,9 +539,552 @@ class WebhookService:
                     webhook_event.processed_at = timezone.now()
                     webhook_event.payload = data
                     webhook_event.save(update_fields=["processed", "processed_at", "payload"])
-                    return {"success": True, "message": "Failed transfer processed", "data": {}}
+                    return {"success": True, "message": "Failed transfer processed (refund issued)", "data": {}}
 
                 return {"success": True, "message": "Failed transfer already processed", "data": {}}
         except PaymentTransaction.DoesNotExist:
             logger.warning("Withdrawal transaction not found for failed transfer reference %s", reference)
             return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
+
+    # -----------------
+    # Flutterwave signature & processing
+    # -----------------
+    @staticmethod
+    def verify_flutterwave_signature(payload: bytes, signature: str) -> bool:
+        """Verify Flutterwave webhook signature using HMAC-SHA256."""
+        secret_hash = getattr(settings, "FLUTTERWAVE_SECRET_HASH", "")
+        if not secret_hash:
+            logger.error("FLUTTERWAVE_SECRET_HASH not set in settings")
+            return False
+
+        computed_signature = hmac.new(
+            secret_hash.encode("utf-8"),
+            payload,
+            hashlib.sha256,
+        ).hexdigest()
+
+        return hmac.compare_digest(computed_signature, signature)
+
+    @staticmethod
+    def process_flutterwave_webhook(event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process incoming Flutterwave webhook JSON and handle idempotency."""
+        event_type = event_data.get("event")
+        data = event_data.get("data", {}) or {}
+        tx_ref = data.get("tx_ref") or data.get("reference")
+
+        if not tx_ref:
+            logger.warning("Flutterwave webhook missing tx_ref: %s", event_data)
+            return {"success": False, "error": "No tx_ref found", "data": {}}
+
+        gateway = PaymentGateway.objects.filter(name__iexact="flutterwave").first()
+        if not gateway:
+            logger.error("Webhook received but PaymentGateway 'flutterwave' not configured")
+            return {"success": False, "error": "Gateway not configured", "data": {}}
+
+        webhook_event, created = WebhookEvent.objects.get_or_create(
+            gateway=gateway,
+            reference=tx_ref,
+            defaults={"event_type": event_type, "payload": event_data},
+        )
+
+        if webhook_event.processed:
+            logger.info("Duplicate Flutterwave webhook ignored for reference %s", tx_ref)
+            return {"success": True, "message": "Duplicate event ignored", "data": {}}
+
+        try:
+            # Successful charge
+            if event_type == "charge.completed" and data.get("status") == "successful":
+                result = WebhookService._handle_successful_flutterwave_charge(data, webhook_event)
+            # Successful transfer
+            elif event_type == "transfer.completed" and data.get("status") == "SUCCESSFUL":
+                result = WebhookService._handle_successful_flutterwave_transfer(data, webhook_event)
+            # Failed transfer
+            elif event_type == "transfer.completed" and data.get("status") in ["FAILED", "CANCELLED"]:
+                result = WebhookService._handle_failed_flutterwave_transfer(data, webhook_event)
+            else:
+                webhook_event.event_type = WebhookEvent.EventType.OTHER
+                webhook_event.payload = event_data
+                webhook_event.save(update_fields=["event_type", "payload"])
+                result = {"success": True, "message": "Unhandled Flutterwave event recorded", "data": {}}
+
+            return result
+        except Exception as exc:
+            logger.exception("Error processing Flutterwave webhook for reference %s: %s", tx_ref, exc)
+            return {"success": False, "error": str(exc), "data": {}}
+
+    # Flutterwave event handlers
+    @staticmethod
+    @transaction.atomic
+    def _handle_successful_flutterwave_charge(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        # Flutterwave can send tx_ref, flw_ref, or reference
+        tx_ref = data.get("tx_ref") or data.get("flw_ref") or data.get("reference")
+
+        if not tx_ref:
+            logger.error("No reference found in Flutterwave webhook: %s", data)
+            return {"success": False, "error": "Missing transaction reference", "data": {}}
+
+        amount = Decimal(str(data.get("amount", 0)))
+
+        try:
+            payment_txn = PaymentTransaction.objects.select_for_update().get(
+                gateway_reference=tx_ref,
+                transaction_type=PaymentTransaction.TransactionType.FUNDING,
+            )
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("PaymentTransaction not found for Flutterwave reference %s", tx_ref)
+            return {"success": False, "error": "PaymentTransaction not found", "data": {}}
+
+        # If already processed, exit early
+        if payment_txn.status == PaymentTransaction.Status.SUCCESS:
+            webhook_event.processed = True
+            webhook_event.save(update_fields=["processed"])
+            return {"success": True, "message": "Already processed", "data": {}}
+
+        # Mark transaction as success
+        payment_txn.status = PaymentTransaction.Status.SUCCESS
+        payment_txn.completed_at = timezone.now()
+        payment_txn.gateway_response = data
+        payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
+
+        # Credit wallet
+        from wallets.services import WalletService
+        WalletService.credit_wallet(
+            user=payment_txn.user,
+            amount=amount,
+            category="funding",
+            description=f"Wallet funding via Flutterwave (Ref: {tx_ref})",
+            reference=payment_txn.internal_reference,
+            payment_transaction=payment_txn,
+        )
+
+        # Mark webhook processed
+        webhook_event.processed = True
+        webhook_event.processed_at = timezone.now()
+        webhook_event.payload = data
+        webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+
+        return {"success": True, "message": "Wallet funded successfully", "data": {"reference": tx_ref}}
+
+    @staticmethod
+    def _handle_successful_flutterwave_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle successful Flutterwave withdrawal transfer webhook."""
+        reference = data.get("reference")
+        try:
+            with transaction.atomic():
+                payment_txn = (
+                    PaymentTransaction.objects.select_for_update()
+                    .get(gateway_reference=reference, transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL)
+                )
+
+                if payment_txn.status == PaymentTransaction.Status.PENDING:
+                    payment_txn.status = PaymentTransaction.Status.SUCCESS
+                    payment_txn.completed_at = timezone.now()
+                    payment_txn.gateway_response = data
+                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
+
+                    # Mark any matching WithdrawalRequest as approved (if present)
+                    from wallets.models import WithdrawalRequest
+
+                    withdrawal = WithdrawalRequest.objects.filter(gateway_reference=reference).first()
+                    if withdrawal:
+                        withdrawal.status = "approved"
+                        withdrawal.processed_at = withdrawal.processed_at or timezone.now()
+                        withdrawal.gateway_response = data
+                        withdrawal.save(update_fields=["status", "processed_at", "gateway_response"])
+
+                    webhook_event.processed = True
+                    webhook_event.processed_at = timezone.now()
+                    webhook_event.payload = data
+                    webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+                    return {"success": True, "message": "Transfer processed successfully", "data": {}}
+
+                return {"success": True, "message": "Transfer already processed", "data": {}}
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("Withdrawal transaction not found for Flutterwave reference %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
+
+    @staticmethod
+    def _handle_failed_flutterwave_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle failed Flutterwave withdrawal webhook; refund user."""
+        reference = data.get("reference")
+        from wallets.services import WalletService
+        from wallets.models import WithdrawalRequest
+
+        try:
+            with transaction.atomic():
+                payment_txn = (
+                    PaymentTransaction.objects.select_for_update()
+                    .get(gateway_reference=reference, transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL)
+                )
+
+                if payment_txn.status == PaymentTransaction.Status.PENDING:
+                    payment_txn.status = PaymentTransaction.Status.FAILED
+                    payment_txn.gateway_response = data
+                    payment_txn.save(update_fields=["status", "gateway_response"])
+
+                    # Refund the user's wallet
+                    WalletService.credit_wallet(
+                        user=payment_txn.user,
+                        amount=payment_txn.amount,
+                        category="withdrawal_refund",
+                        description=f"Refund for failed Flutterwave withdrawal (Ref: {reference})",
+                        reference=payment_txn.internal_reference,
+                        payment_transaction=payment_txn,
+                    )
+
+                    withdrawal = WithdrawalRequest.objects.filter(gateway_reference=reference).first()
+                    if withdrawal:
+                        withdrawal.status = "rejected"
+                        withdrawal.processed_at = timezone.now()
+                        withdrawal.gateway_response = data
+                        withdrawal.save(update_fields=["status", "processed_at", "gateway_response"])
+
+                    webhook_event.processed = True
+                    webhook_event.processed_at = timezone.now()
+                    webhook_event.payload = data
+                    webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+                    return {"success": True, "message": "Failed transfer processed (refund issued)", "data": {}}
+
+                return {"success": True, "message": "Failed transfer already processed", "data": {}}
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("Withdrawal transaction not found for failed Flutterwave transfer reference %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
+
+
+class FlutterwaveService:
+    """Service class for Flutterwave API integration.
+
+    Methods return a consistent structure:
+        {"success": bool, "data": {...}, "error": "message"}
+    """
+
+    def __init__(self):
+        self.secret_key = settings.FLUTTERWAVE_SECRET_KEY
+        self.public_key = getattr(settings, "FLUTTERWAVE_PUBLIC_KEY", None)
+        self.base_url = "https://api.flutterwave.com/v3"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {self.secret_key}",
+            "Content-Type": "application/json",
+        })
+
+    # ------------------------
+    # Helpers
+    # ------------------------
+    def _get_gateway(self):
+        try:
+            return PaymentGateway.objects.get(name__iexact="flutterwave")
+        except PaymentGateway.DoesNotExist:
+            logger.error("Flutterwave PaymentGateway not configured in DB")
+            return None
+
+    # ------------------------
+    # Initialize funding (payment)
+    # ------------------------
+    def initialize_payment(self, user, amount, currency="NGN", callback_url=None):
+        """
+        Initialize a payment transaction with Flutterwave.
+
+        Returns:
+            {"success": bool, "data": {...}, "error": str}
+        """
+        try:
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            # Normalize amount to Decimal
+            try:
+                amount_dec = Decimal(amount)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
+
+            with transaction.atomic():
+                # Create local pending PaymentTransaction
+                payment_transaction = PaymentTransaction.objects.create(
+                    user=user,
+                    gateway=gateway,
+                    transaction_type=PaymentTransaction.TransactionType.FUNDING,
+                    amount=amount_dec,
+                    currency=currency,
+                    gateway_reference=f"FLW_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    status=PaymentTransaction.Status.PENDING,
+                )
+
+                url = f"{self.base_url}/payments"
+                payload = {
+                    "tx_ref": payment_transaction.gateway_reference,
+                    "amount": str(amount_dec),  # Flutterwave expects string
+                    "currency": currency,
+                    "redirect_url": callback_url or "https://example.com/callback",
+                    "payment_options": "card,banktransfer,ussd",
+                    "customer": {
+                        "email": user.email,
+                        "phonenumber": getattr(user, 'phone', ''),
+                        "name": f"{user.first_name} {user.last_name}".strip() or getattr(user, 'username', str(user.id)),
+                    },
+                    "customizations": {
+                        "title": "Wallet Funding",
+                        "description": "Fund your wallet",
+                        "logo": "https://yourapp.com/logo.png",  # Update with your logo
+                    },
+                    "meta": {
+                        "user_id": str(user.id),
+                        "transaction_id": str(payment_transaction.id),
+                        "purpose": "wallet_funding",
+                        "internal_reference": payment_transaction.internal_reference,
+                    },
+                }
+
+                resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
+
+                if _ok_resp(resp) and resp_data.get("status") == "success":
+                    pay_data = resp_data.get("data", {})
+                    
+                    # Check for payment link
+                    if "link" not in pay_data:
+                        payment_transaction.status = PaymentTransaction.Status.FAILED
+                        payment_transaction.gateway_response = resp_data
+                        payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+                        err = "Missing payment link from gateway"
+                        logger.error(err + " - resp: %s", resp_data)
+                        return {"success": False, "data": resp_data, "error": err}
+
+                    # Persist FlutterwaveTransaction
+                    FlutterwaveTransaction.objects.create(
+                        transaction=payment_transaction,
+                        payment_link=pay_data.get("link"),
+                        flutterwave_reference=payment_transaction.gateway_reference,
+                    )
+
+                    payment_transaction.gateway_response = resp_data
+                    payment_transaction.save(update_fields=["gateway_response", "updated_at"])
+
+                    return {
+                        "success": True,
+                        "data": {
+                            "transaction_id": str(payment_transaction.id),
+                            "internal_reference": payment_transaction.internal_reference,
+                            "gateway_reference": payment_transaction.gateway_reference,
+                            "payment_link": pay_data.get("link"),
+                            "raw": resp_data,
+                        },
+                        "error": None,
+                    }
+
+                # Failure path: mark txn failed
+                payment_transaction.status = PaymentTransaction.Status.FAILED
+                payment_transaction.gateway_response = resp_data
+                payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+
+                err_msg = resp_data.get("message") or "Payment initialization failed"
+                logger.info("Flutterwave init failed: %s", err_msg)
+                return {"success": False, "data": resp_data, "error": err_msg}
+
+        except requests.RequestException as exc:
+            logger.exception("HTTP error during payment initialization: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error in initialize_payment: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Verify payment status
+    # ------------------------
+    def verify_payment(self, transaction_id: str) -> Dict[str, Any]:
+        """
+        Verify a payment with Flutterwave using transaction ID.
+        Returns {"success": bool, "data": {...}, "error": str}
+        """
+        try:
+            url = f"{self.base_url}/transactions/{transaction_id}/verify"
+            resp = self.session.get(url, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            ok = _ok_resp(resp) and resp_data.get("status") == "success"
+            return {"success": ok, "data": resp_data, "error": None if ok else resp_data.get("message", "Verification failed")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    def verify_payment_by_reference(self, tx_ref: str) -> Dict[str, Any]:
+        """
+        Verify a payment with Flutterwave using transaction reference.
+        Returns {"success": bool, "data": {...}, "error": str}
+        """
+        try:
+            url = f"{self.base_url}/transactions/verify_by_reference"
+            params = {"tx_ref": tx_ref}
+            resp = self.session.get(url, params=params, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            ok = _ok_resp(resp) and resp_data.get("status") == "success"
+            return {"success": ok, "data": resp_data, "error": None if ok else resp_data.get("message", "Verification failed")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error during payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Create beneficiary (for transfers)
+    # ------------------------
+    def create_beneficiary(self, user, bank_code: str, account_number: str) -> Dict[str, Any]:
+        """Create a beneficiary for transfers (withdrawals)."""
+        try:
+            url = f"{self.base_url}/beneficiaries"
+            payload = {
+                "account_bank": bank_code,
+                "account_number": account_number,
+                "beneficiary_name": f"{user.first_name} {user.last_name}".strip() or getattr(user, "username", str(user.id)),
+            }
+            resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp) and resp_data.get("status") == "success"
+
+            if ok:
+                return {"success": True, "data": resp_data.get("data", {}), "error": None}
+            return {"success": False, "data": resp_data, "error": resp_data.get("message", "Failed to create beneficiary")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error creating beneficiary: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error creating beneficiary: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Initiate transfer (withdrawal)
+    # ------------------------
+    def initiate_transfer(self, user, amount, bank_code: str, account_number: str, narration: str = "Wallet withdrawal") -> Dict[str, Any]:
+        """
+        Initiate a transfer (withdrawal).
+        Creates a PENDING PaymentTransaction and FlutterwaveTransaction.
+        """
+        try:
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            try:
+                amount_dec = Decimal(amount)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
+
+            with transaction.atomic():
+                payment_transaction = PaymentTransaction.objects.create(
+                    user=user,
+                    gateway=gateway,
+                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
+                    amount=amount_dec,
+                    currency="NGN",
+                    gateway_reference=f"FLW_WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    status=PaymentTransaction.Status.PENDING,
+                )
+
+                url = f"{self.base_url}/transfers"
+                payload = {
+                    "account_bank": bank_code,
+                    "account_number": account_number,
+                    "amount": int(amount_dec),  # Flutterwave expects integer for NGN
+                    "currency": "NGN",
+                    "reference": payment_transaction.gateway_reference,
+                    "narration": narration,
+                    "callback_url": "https://cc-marketers.onrender.com/flutterwave/webhook",  
+                    "debit_currency": "NGN",
+                }
+
+                resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
+
+                if _ok_resp(resp) and resp_data.get("status") == "success":
+                    pay_data = resp_data.get("data", {})
+                    FlutterwaveTransaction.objects.create(
+                        transaction=payment_transaction,
+                        flutterwave_reference=payment_transaction.gateway_reference,
+                        transfer_id=str(pay_data.get("id", "")),
+                        bank_code=bank_code,
+                        account_number=account_number,
+                    )
+
+                    payment_transaction.gateway_response = resp_data
+                    payment_transaction.save(update_fields=["gateway_response", "updated_at"])
+                    return {
+                        "success": True,
+                        "data": {
+                            "transaction_id": str(payment_transaction.id),
+                            "internal_reference": payment_transaction.internal_reference,
+                            "gateway_reference": payment_transaction.gateway_reference,
+                            "transfer_id": pay_data.get("id"),
+                            "status": pay_data.get("status"),
+                            "raw": resp_data,
+                        },
+                        "error": None,
+                    }
+
+                # Mark as failed and persist response
+                payment_transaction.status = PaymentTransaction.Status.FAILED
+                payment_transaction.gateway_response = resp_data
+                payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+
+                err = resp_data.get("message") or "Transfer initiation failed"
+                logger.info("Flutterwave transfer failed: %s", err)
+                return {"success": False, "data": resp_data, "error": err}
+
+        except requests.RequestException as exc:
+            logger.exception("HTTP error initiating transfer: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error initiating transfer: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Get banks
+    # ------------------------
+    def get_banks(self, country: str = "NG") -> Dict[str, Any]:
+        """Return list of banks from Flutterwave."""
+        try:
+            url = f"{self.base_url}/banks/{country}"
+            resp = self.session.get(url, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp) and resp_data.get("status") == "success"
+
+            if ok and isinstance(resp_data.get("data", None), list):
+                return {"success": True, "data": resp_data.get("data", []), "error": None}
+            return {"success": False, "data": [], "error": resp_data.get("message", "Failed to fetch banks")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error fetching banks: %s", exc)
+            return {"success": False, "data": [], "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error fetching banks: %s", exc)
+            return {"success": False, "data": [], "error": str(exc)}
+
+    # ------------------------
+    # Resolve account number
+    # ------------------------
+    def resolve_account_number(self, account_number: str, bank_code: str) -> Dict[str, Any]:
+        """Resolve an account number to an account name."""
+        try:
+            url = f"{self.base_url}/accounts/resolve"
+            payload = {
+                "account_number": account_number,
+                "account_bank": bank_code
+            }
+            resp = self.session.post(url, json=payload, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+            ok = _ok_resp(resp) and resp_data.get("status") == "success"
+
+            if ok:
+                return {"success": True, "data": resp_data.get("data", {}), "error": None}
+            return {"success": False, "data": {}, "error": resp_data.get("message", "Resolve failed")}
+        except requests.RequestException as exc:
+            logger.exception("HTTP error resolving account: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+        except Exception as exc:
+            logger.exception("Unexpected error resolving account: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+

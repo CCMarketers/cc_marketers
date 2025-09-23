@@ -1,255 +1,261 @@
 <!-- payments/templates/payments/withdraw.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Withdraw Funds</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-white">
-    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md mx-auto">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold text-red-600">Withdraw Funds</h2>
-                <p class="mt-2 text-gray-600">Transfer money from your wallet to your bank account</p>
-            </div>
+{% extends 'base.html' %}
 
-            <!-- Messages -->
-            {% if messages %}
+{% block title %}Withdraw Funds{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-red-600">Withdraw Funds</h2>
+            <p class="mt-2 text-gray-600">Transfer money from your wallet to your bank account</p>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Form -->
+        <div class="bg-white border-2 border-red-100 rounded-lg shadow-lg p-6">
+            <form method="post" id="withdrawal-form">
+                {% csrf_token %}
+
+                <!-- Amount -->
                 <div class="mb-6">
-                    {% for message in messages %}
-                        <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
-                            {{ message }}
+                    <label for="{{ form.amount.id_for_label }}" class="block text-sm font-semibold text-red-600 mb-2">
+                        Amount (₦)
+                    </label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.amount.errors.0 }}
                         </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-            {% endif %}
 
-            <!-- Withdrawal Form -->
-            <div class="bg-white border-2 border-red-100 rounded-lg shadow-lg p-6">
-                <form method="post" id="withdrawal-form">
-                    {% csrf_token %}
-                    
-                    <!-- Amount Field -->
-                    <div class="mb-6">
-                        <label for="id_amount" class="block text-sm font-semibold text-red-600 mb-2">
-                            Amount (₦)
-                        </label>
-                        {{ form.amount }}
-                        {% if form.amount.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                {{ form.amount.errors.0 }}
-                            </div>
-                        {% endif %}
-                        <p class="mt-1 text-xs text-gray-500">{{ form.amount.help_text }}</p>
-                    </div>
-
-                    <!-- Bank Selection -->
-                    <div class="mb-6">
-                        <label for="bank_select" class="block text-sm font-semibold text-red-600 mb-2">
-                            Select Bank
-                        </label>
-                        <select id="bank_select" name="bank_code" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
-                            <option value="">Loading banks...</option>
-                        </select>
-                        {% if form.bank_code.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                {{ form.bank_code.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Account Number -->
-                    <div class="mb-6">
-                        <label for="account_number" class="block text-sm font-semibold text-red-600 mb-2">
-                            Account Number
-                        </label>
-                        {{ form.account_number }}
-                        {% if form.account_number.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                {{ form.account_number.errors.0 }}
-                            </div>
-                        {% endif %}
-                        <p class="mt-1 text-xs text-gray-500">{{ form.account_number.help_text }}</p>
-                    </div>
-
-                    <!-- Account Name Display -->
-                    <div class="mb-6" id="account-name-section" style="display: none;">
-                        <label class="block text-sm font-semibold text-red-600 mb-2">
-                            Account Name
-                        </label>
-                        <div id="account-name-display" class="w-full px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-gray-700">
-                            <!-- Account name will be displayed here -->
+                <!-- Gateway Choice -->
+                {% if show_gateway_choice %}
+                <div class="mb-6">
+                    <label for="{{ form.gateway.id_for_label }}" class="block text-sm font-semibold text-red-600 mb-2">
+                        Payment Gateway
+                    </label>
+                    {{ form.gateway }}
+                    {% if form.gateway.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.gateway.errors.0 }}
                         </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Bank -->
+                <div class="mb-6">
+                    <label for="bank_select" class="block text-sm font-semibold text-red-600 mb-2">
+                        Select Bank
+                    </label>
+                    <select id="bank_select" name="bank_code" class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                        <option value="">Loading banks...</option>
+                    </select>
+                    {% if form.bank_code.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.bank_code.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Account Number -->
+                <div class="mb-6">
+                    <label for="account_number" class="block text-sm font-semibold text-red-600 mb-2">
+                        Account Number
+                    </label>
+                    {{ form.account_number }}
+                    {% if form.account_number.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {{ form.account_number.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Account Name -->
+                <div class="mb-6 hidden" id="account-name-section">
+                    <label class="block text-sm font-semibold text-red-600 mb-2">Account Name</label>
+                    <div id="account-name-display" class="w-full px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-gray-700">
+                        <!-- account name appears here -->
                     </div>
+                </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit" id="submit-btn" class="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 font-semibold transition duration-200" disabled>
-                        <span id="submit-text">Verify Account Details</span>
-                        <span id="loading-spinner" class="hidden">
-                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Processing...
-                        </span>
-                    </button>
-                </form>
-            </div>
+                <!-- Notices -->
+                {% if debug %}
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-yellow-800">Development/Testing Notice</h3>
+                    <p class="mt-2 text-sm text-yellow-700">
+                        Withdrawals are simulated in development. In production, funds are sent to your bank.
+                    </p>
+                </div>
+                {% else %}
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-blue-800">Withdrawal Information</h3>
+                    <p class="mt-2 text-sm text-blue-700">
+                        Minimum withdrawal: ₦100. Processing time: 5–15 minutes.
+                    </p>
+                </div>
+                {% endif %}
 
-            <!-- Back to Wallet -->
-            <div class="text-center mt-6">
-                <a href="{% url 'wallets:dashboard' %}" class="text-red-600 hover:text-red-800 font-medium">
-                    ← Back to Wallet
-                </a>
-            </div>
+                <!-- Submit -->
+                <button type="submit" id="submit-btn" class="w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold cursor-not-allowed" disabled>
+                    <span id="submit-text">Verify Account Details</span>
+                    <span id="loading-spinner" class="hidden">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                    </span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Back -->
+        <div class="text-center mt-6">
+            <a href="{% url 'wallets:dashboard' %}" class="text-red-600 hover:text-red-800 font-medium">
+                ← Back to Wallet
+            </a>
         </div>
     </div>
+</div>
 
-    <script>
-        let banks = [];
-        let isAccountVerified = false;
-        
-        // Load banks on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBanks();
-            setupEventListeners();
-        });
-        
-        function loadBanks() {
-            fetch('{% url "payments:get_banks" %}')
-                .then(response => response.json())
-                .then(data => {
-                    banks = data.banks;
-                    const bankSelect = document.getElementById('bank_select');
-                    bankSelect.innerHTML = '<option value="">Select Bank</option>';
-                    
-                    banks.forEach(bank => {
+<script>
+    let banks = [];
+    let isAccountVerified = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBanks();
+        setupEvents();
+    });
+
+    function getGateway() {
+        const gatewaySelect = document.querySelector('select[name="gateway"]');
+        return gatewaySelect ? gatewaySelect.value : 'paystack';
+    }
+
+    function loadBanks() {
+        const banksUrl = getGateway() === 'flutterwave'
+            ? '{% url "payments:get_flutterwave_banks" %}'
+            : '{% url "payments:get_banks" %}';
+
+        fetch(banksUrl)
+            .then(r => r.json())
+            .then(data => {
+                const bankSelect = document.getElementById('bank_select');
+                bankSelect.innerHTML = '<option value="">Select Bank</option>';
+                if (data.success && data.banks) {
+                    data.banks.forEach(bank => {
                         const option = document.createElement('option');
                         option.value = bank.code;
                         option.textContent = bank.name;
                         bankSelect.appendChild(option);
                     });
-                })
-                .catch(error => {
-                    console.error('Error loading banks:', error);
-                    document.getElementById('bank_select').innerHTML = '<option value="">Error loading banks</option>';
-                });
-        }
-        
-        function setupEventListeners() {
-            const bankSelect = document.getElementById('bank_select');
-            const accountNumberInput = document.getElementById('account_number');
-            const submitBtn = document.getElementById('submit-btn');
-            
-            // Verify account when both bank and account number are provided
-            function checkAccountVerification() {
-                const bankCode = bankSelect.value;
-                const accountNumber = accountNumberInput.value;
-                
-                if (bankCode && accountNumber && accountNumber.length === 10) {
-                    verifyAccount(bankCode, accountNumber);
-                } else {
-                    hideAccountName();
-                    updateSubmitButton(false);
-                }
-            }
-            
-            bankSelect.addEventListener('change', checkAccountVerification);
-            accountNumberInput.addEventListener('input', debounce(checkAccountVerification, 500));
-        }
-        
-        function verifyAccount(bankCode, accountNumber) {
-            const accountNameSection = document.getElementById('account-name-section');
-            const accountNameDisplay = document.getElementById('account-name-display');
-            
-            // Show loading state
-            accountNameDisplay.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-4 w-4 text-red-500 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying...</div>';
-            accountNameSection.style.display = 'block';
-            
-            fetch('{% url "payments:verify_account" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({
-                    bank_code: bankCode,
-                    account_number: accountNumber
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    accountNameDisplay.innerHTML = data.account_name;
-                    isAccountVerified = true;
-                    updateSubmitButton(true);
-                } else {
-                    accountNameDisplay.innerHTML = `<span class="text-red-600">Error: ${data.error}</span>`;
-                    isAccountVerified = false;
-                    updateSubmitButton(false);
                 }
             })
-            .catch(error => {
-                console.error('Error verifying account:', error);
-                accountNameDisplay.innerHTML = '<span class="text-red-600">Verification failed</span>';
-                isAccountVerified = false;
-                updateSubmitButton(false);
+            .catch(err => {
+                console.error('Error loading banks:', err);
+                document.getElementById('bank_select').innerHTML = '<option>Error loading banks</option>';
             });
+    }
+
+    function setupEvents() {
+        const gatewaySelect = document.querySelector('select[name="gateway"]');
+        const bankSelect = document.getElementById('bank_select');
+        const accountNumberInput = document.getElementById('account_number');
+
+        if (gatewaySelect) gatewaySelect.addEventListener('change', loadBanks);
+        bankSelect.addEventListener('change', debounce(checkVerify, 500));
+        accountNumberInput.addEventListener('input', debounce(checkVerify, 500));
+    }
+
+    function checkVerify() {
+        const bankCode = document.getElementById('bank_select').value;
+        const accountNumber = document.getElementById('account_number').value;
+        if (bankCode && accountNumber.length === 10) {
+            verifyAccount(bankCode, accountNumber);
+        } else {
+            hideAccount();
+            updateSubmit(false);
         }
-        
-        function hideAccountName() {
-            document.getElementById('account-name-section').style.display = 'none';
-            isAccountVerified = false;
-        }
-        
-        function updateSubmitButton(canSubmit) {
-            const submitBtn = document.getElementById('submit-btn');
-            const submitText = document.getElementById('submit-text');
-            
-            if (canSubmit && isAccountVerified) {
-                submitBtn.disabled = false;
-                submitBtn.className = 'w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 font-semibold transition duration-200';
-                submitText.textContent = 'Process Withdrawal';
+    }
+
+    function verifyAccount(bankCode, accountNumber) {
+        const section = document.getElementById('account-name-section');
+        const display = document.getElementById('account-name-display');
+        section.classList.remove('hidden');
+        display.innerHTML = 'Verifying...';
+
+        const verifyUrl = getGateway() === 'flutterwave'
+            ? '{% url "payments:verify_flutterwave_account" %}'
+            : '{% url "payments:verify_account" %}';
+
+        fetch(verifyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ bank_code: bankCode, account_number: accountNumber })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                display.innerHTML = data.account_name;
+                isAccountVerified = true;
+                updateSubmit(true);
             } else {
-                submitBtn.disabled = true;
-                submitBtn.className = 'w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold cursor-not-allowed';
-                submitText.textContent = 'Verify Account Details';
+                display.innerHTML = `<span class="text-red-600">Error: ${data.error}</span>`;
+                isAccountVerified = false;
+                updateSubmit(false);
             }
-        }
-        
-        // Form submission
-        document.getElementById('withdrawal-form').addEventListener('submit', function(e) {
-            if (!isAccountVerified) {
-                e.preventDefault();
-                alert('Please verify your account details first');
-                return false;
-            }
-            
-            // Show loading state
-            const submitBtn = document.getElementById('submit-btn');
-            const submitText = document.getElementById('submit-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            
-            submitBtn.disabled = true;
-            submitText.style.display = 'none';
-            loadingSpinner.style.display = 'inline';
+        })
+        .catch(err => {
+            console.error('Error verifying account:', err);
+            display.innerHTML = '<span class="text-red-600">Verification failed</span>';
+            isAccountVerified = false;
+            updateSubmit(false);
         });
-        
-        // Utility function for debouncing
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
+    }
+
+    function hideAccount() {
+        document.getElementById('account-name-section').classList.add('hidden');
+        isAccountVerified = false;
+    }
+
+    function updateSubmit(canSubmit) {
+        const btn = document.getElementById('submit-btn');
+        const text = document.getElementById('submit-text');
+        if (canSubmit && isAccountVerified) {
+            btn.disabled = false;
+            btn.className = 'w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-semibold transition duration-200';
+            text.textContent = 'Process Withdrawal';
+        } else {
+            btn.disabled = true;
+            btn.className = 'w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold cursor-not-allowed';
+            text.textContent = 'Verify Account Details';
         }
-    </script>
-</body>
-</html>
+    }
+
+    // debounce
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+</script>
+{% endblock %}

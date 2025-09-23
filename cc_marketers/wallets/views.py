@@ -18,6 +18,8 @@ from .services import WalletService
 from subscriptions.decorators import subscription_required, plan_required
 
 
+
+
 class WalletDashboardView(LoginRequiredMixin, DetailView):
     """Main wallet dashboard showing balance, recent transactions."""
     model = Wallet

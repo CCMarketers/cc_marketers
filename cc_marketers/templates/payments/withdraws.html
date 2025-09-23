@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw Funds</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Withdraw Funds</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post" id="withdrawal-form">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.amount.id_for_label }}" class="form-label">Amount (₦)</label>
+                                        {{ form.amount }}
+                                        {% if form.amount.errors %}
+                                            <div class="text-danger small">{{ form.amount.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                {% if show_gateway_choice %}
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.gateway.id_for_label }}" class="form-label">Payment Gateway</label>
+                                            {{ form.gateway }}
+                                            {% if form.gateway.errors %}
+                                                <div class="text-danger small">{{ form.gateway.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bank-select" class="form-label">Select Bank</label>
+                                        <select class="form-control" id="bank-select" name="bank_code" required>
+                                            <option value="">-- Select Bank --</option>
+                                        </select>
+                                        {% if form.bank_code.errors %}
+                                            <div class="text-danger small">{{ form.bank_code.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.account_number.id_for_label }}" class="form-label">Account Number</label>
+                                        {{ form.account_number }}
+                                        {% if form.account_number.errors %}
+                                            <div class="text-danger small">{{ form.account_number.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div id="account-name-display" class="alert alert-info d-none">
+                                    <strong>Account Name:</strong> <span id="account-name"></span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger w-100" id="withdraw-btn" disabled>
+                                <i class="fas fa-money-bill-wave me-2"></i>Withdraw Funds
+                            </button>
+                        </form>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Minimum withdrawal: ₦100. Processing time: 5-15 minutes.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gatewaySelect = document.querySelector('select[name="gateway"]');
+            const bankSelect = document.getElementById('bank-select');
+            const accountNumberInput = document.getElementById('account-number');
+            const accountNameDisplay = document.getElementById('account-name-display');
+            const accountNameSpan = document.getElementById('account-name');
+            const withdrawBtn = document.getElementById('withdraw-btn');
+
+            // Load banks based on selected gateway
+            function loadBanks() {
+                const selectedGateway = gatewaySelect ? gatewaySelect.value : 'paystack';
+                const banksUrl = selectedGateway === 'flutterwave' ? 
+                    '{% url "payments:get_flutterwave_banks" %}' : 
+                    '{% url "payments:get_banks" %}';
+
+                fetch(banksUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        bankSelect.innerHTML = '<option value="">-- Select Bank --</option>';
+                        if (data.success && data.banks) {
+                            data.banks.forEach(bank => {
+                                const option = document.createElement('option');
+                                option.value = bank.code;
+                                option.textContent = bank.name;
+                                bankSelect.appendChild(option);
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Error loading banks:', error));
+            }
+
+            // Verify account details
+            function verifyAccount() {
+                const bankCode = bankSelect.value;
+                const accountNumber = accountNumberInput.value;
+
+                if (!bankCode || !accountNumber || accountNumber.length < 10) {
+                    accountNameDisplay.classList.add('d-none');
+                    withdrawBtn.disabled = true;
+                    return;
+                }
+
+                const selectedGateway = gatewaySelect ? gatewaySelect.value : 'paystack';
+                const verifyUrl = selectedGateway === 'flutterwave' ? 
+                    '{% url "payments:verify_flutterwave_account" %}' : 
+                    '{% url "payments:verify_account" %}';
+
+                fetch(verifyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        bank_code: bankCode,
+                        account_number: accountNumber
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        accountNameSpan.textContent = data.account_name;
+                        accountNameDisplay.classList.remove('d-none');
+                        withdrawBtn.disabled = false;
+                    } else {
+                        accountNameDisplay.classList.add('d-none');
+                        withdrawBtn.disabled = true;
+                        alert('Invalid account details: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error verifying account:', error);
+                    accountNameDisplay.classList.add('d-none');
+                    withdrawBtn.disabled = true;
+                });
+            }
+
+            // Event listeners
+            if (gatewaySelect) {
+                gatewaySelect.addEventListener('change', loadBanks);
+            }
+            bankSelect.addEventListener('change', verifyAccount);
+            accountNumberInput.addEventListener('input', verifyAccount);
+
+            // Load banks on page load
+            loadBanks();
+        });
+    </script>
+</body>
+</html>
