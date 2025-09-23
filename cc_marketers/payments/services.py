@@ -448,7 +448,7 @@ class WebhookService:
             user=payment_txn.user,
             amount=amount,
             category="funding",
-            description=f"Wallet funding via {PaymentGateway.name} (Ref: {reference})",
+            description=f"Wallet funding via paystack (Ref: {reference})",
             reference=payment_txn.internal_reference,
             payment_transaction=payment_txn,
         )
