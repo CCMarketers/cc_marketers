@@ -558,7 +558,6 @@ class WebhookService:
             logger.error("FLUTTERWAVE_SECRET_HASH not set in settings")
             return False
 
-        # Flutterwave does NOT use HMAC here
         return hmac.compare_digest(signature, secret_hash)
 
     @staticmethod
@@ -578,8 +577,12 @@ class WebhookService:
         tx_ref = (
             data.get("tx_ref")
             or data.get("txRef")
+            or data.get("flw_ref")
+            or data.get("flwRef")
             or data.get("reference")
+            or data.get("orderRef")
         )
+
 
         if not tx_ref:
             logger.warning("Flutterwave webhook missing tx_ref: %s", event_data)
@@ -635,7 +638,15 @@ class WebhookService:
     @transaction.atomic
     def _handle_successful_flutterwave_charge(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
         # Flutterwave can send tx_ref, flw_ref, or reference
-        tx_ref = data.get("tx_ref") or data.get("flw_ref") or data.get("reference")
+        tx_ref = (
+            data.get("tx_ref")
+            or data.get("txRef")
+            or data.get("flw_ref")
+            or data.get("flwRef")
+            or data.get("reference")
+            or data.get("orderRef")
+        )
+
 
         if not tx_ref:
             logger.error("No reference found in Flutterwave webhook: %s", data)
