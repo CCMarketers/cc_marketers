@@ -157,11 +157,11 @@ def payment_callback(request):
 
     return redirect("wallets:dashboard")
 
-
 @login_required
 def flutterwave_callback(request):
     """
-    Flutterwave callback handler. Similar pattern to Paystack.
+    Handle Flutterwave callback after payment.
+    Use webhook as source of truth, but verify here for user feedback.
     """
     tx_ref = request.GET.get("tx_ref")
     transaction_id = request.GET.get("transaction_id")
@@ -172,7 +172,10 @@ def flutterwave_callback(request):
         return redirect("wallets:dashboard")
 
     try:
-        PaymentTransaction.objects.get(gateway_reference=tx_ref, user=request.user)
+        txn = PaymentTransaction.objects.get(
+            gateway_reference=tx_ref,
+            user=request.user
+        )
     except PaymentTransaction.DoesNotExist:
         messages.error(request, "Transaction not found")
         return redirect("wallets:dashboard")
@@ -181,24 +184,32 @@ def flutterwave_callback(request):
         messages.error(request, "An internal error occurred.")
         return redirect("wallets:dashboard")
 
-    if status != "successful" or not transaction_id:
-        messages.error(request, "Payment was not completed successfully")
+    # ✅ First check DB (webhook may have updated it already)
+    if txn.status == PaymentTransaction.Status.SUCCESS:
+        messages.success(request, "Payment completed successfully! Your wallet has been credited.")
+        return redirect("wallets:dashboard")
+
+    # ✅ If no transaction_id, just inform the user
+    if not transaction_id:
+        messages.warning(request, "Payment is still being verified. Please refresh shortly.")
         return redirect("wallets:dashboard")
 
     try:
         flutterwave_service = FlutterwaveService()
         verification = flutterwave_service.verify_payment(transaction_id)
-        if verification.get("success") and verification.get("data", {}).get("data", {}).get("status") == "successful":
+
+        if (
+            verification.get("status") == "success"
+            and verification.get("data", {}).get("status") == "successful"
+        ):
             messages.success(request, "Payment successful! Wallet will be credited shortly.")
         else:
-            logger.info("Flutterwave verification failed for txid=%s: %s", transaction_id, verification)
-            messages.error(request, "Payment verification failed")
+            messages.warning(request, "Payment is being verified. Please check again in a moment.")
     except Exception as exc:
         logger.exception("Error in Flutterwave callback: %s", exc)
         messages.error(request, "An error occurred during payment verification")
 
     return redirect("wallets:dashboard")
-
 
 # -------------------------
 # Withdrawals
