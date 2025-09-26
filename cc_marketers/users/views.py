@@ -326,11 +326,12 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
         # Wallets and balances
         wallet = WalletService.get_or_create_wallet(user)
         pending_withdrawals = (
-            WithdrawalRequest.objects.filter(user=user, status="pending").aggregate(total=Sum("amount"))["total"]
+            WithdrawalRequest.objects.filter(user=user, status="pending").aggregate(total=Sum("amount_usd"))["total"]
             or Decimal("0.00")
         )
         try:
             available_balance = wallet.get_available_balance() - pending_withdrawals
+
         except Exception:
             logger.exception("Error computing available balance for user %s", user.pk)
             available_balance = Decimal("0.00")

@@ -16,6 +16,7 @@ from .forms import WithdrawalRequestForm, FundWalletForm
 from .models import Wallet, Transaction, WithdrawalRequest, EscrowTransaction
 from .services import WalletService
 from subscriptions.decorators import subscription_required, plan_required
+from payments.services import CurrencyService
 
 
 
@@ -49,23 +50,24 @@ class WalletDashboardView(LoginRequiredMixin, DetailView):
                 'task_earning', 'referral_bonus',
                 'escrow_release', 'task_payment', 'task_completion'
             ]
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
 
         context['total_withdrawn'] = Transaction.objects.filter(
             user=user,
             transaction_type='debit',
             category='withdrawal',
             status='success'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
 
         # Pending withdrawals
         pending_withdrawals = WithdrawalRequest.objects.filter(
             user=user, status='pending'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
+        balance_local = CurrencyService.convert_usd_to_local(wallet.balance, user.preferred_currency)
 
         context['pending_withdrawals'] = pending_withdrawals
         context['wallet_balance'] = wallet.balance
-
+        context['balance_local'] = balance_local
         # Available = wallet.available - pending withdrawals already reserved inside get_available_balance
         context['available_balance'] = wallet.get_available_balance()
 
@@ -126,7 +128,7 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
 
             WalletService.create_withdrawal_request(
                 user=self.request.user,
-                amount=form.cleaned_data['amount'],
+                amount=form.cleaned_data['amount_usd'],
                 withdrawal_method=form.cleaned_data['withdrawal_method'],
                 account_details=account_details
             )
@@ -143,7 +145,7 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
         wallet = WalletService.get_or_create_wallet(self.request.user)
         pending_withdrawals = WithdrawalRequest.objects.filter(
             user=self.request.user, status='pending'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
 
         context['wallet'] = wallet
         context['available_balance'] = wallet.get_available_balance()

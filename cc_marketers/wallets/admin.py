@@ -91,7 +91,7 @@ class EscrowTransactionAdmin(admin.ModelAdmin):
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_display = [
-        'id_short', 'user', 'amount', 'withdrawal_method', 
+        'id_short', 'user', 'amount_usd', 'withdrawal_method', 
         'status_display', 'created_at', 'processed_by'
     ]
     list_filter = ['status', 'withdrawal_method', 'created_at']
@@ -101,7 +101,7 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Request Details', {
-            'fields': ('user', 'amount', 'withdrawal_method', 'status')
+            'fields': ('user', 'amount_usd', 'withdrawal_method', 'status')
         }),
         ('Bank Details', {
             'fields': ('account_number', 'account_name', 'bank_name', 'bank_code')

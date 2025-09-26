@@ -248,4 +248,10 @@ FLUTTERWAVE_SECRET_HASH = os.getenv('FLUTTERWAVE_SECRET_HASH', 'TEST0397597f0c4f
 # PAYSTACK_PUBLIC_KEY = 'pk_live_your_live_public_key'
 # PAYSTACK_SECRET_KEY = 'sk_live_your_live_secret_key'
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
 

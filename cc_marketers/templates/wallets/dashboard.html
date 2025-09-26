@@ -126,9 +126,9 @@
                         <td class="px-6 py-4 text-sm text-red-600">{{ transaction.get_category_display }}</td>
                         <td class="px-6 py-4 text-sm font-medium">
                             {% if transaction.transaction_type == 'credit' %}
-                                <span class="text-green-600">+${{ transaction.amount|floatformat:2 }}</span>
+                                <span class="text-green-600">+${{ transaction.amount_usd |floatformat:2 }}</span>
                             {% else %}
-                                <span class="text-red-600">-${{ transaction.amount|floatformat:2 }}</span>
+                                <span class="text-red-600">-${{ transaction.amount_usd |floatformat:2 }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4">

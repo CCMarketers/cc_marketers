@@ -1,11 +1,10 @@
 # payments/views.py
 import json
 import logging
-from decimal import Decimal, InvalidOperation
-from typing import Optional, Tuple
+from decimal import Decimal
+from typing import Optional
 
 from django import forms
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -165,7 +164,7 @@ def flutterwave_callback(request):
     """
     tx_ref = request.GET.get("tx_ref")
     transaction_id = request.GET.get("transaction_id")
-    status = request.GET.get("status")
+    request.GET.get("status")
 
     if not tx_ref:
         messages.error(request, "Invalid payment reference")

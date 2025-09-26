@@ -70,6 +70,32 @@ class User(AbstractBaseUser, PermissionsMixin):
         (ADVERTISER, "Advertiser"),
     ]
 
+    CURRENCY_CHOICES = [
+        ('NGN', 'Nigerian Naira'),
+        ('GHS', 'Ghanaian Cedi'),
+        ('KES', 'Kenyan Shilling'),
+        ('USD', 'US Dollar'),
+    ]
+    
+    COUNTRY_CHOICES = [
+        ('NG', 'Nigeria'),
+        ('GH', 'Ghana'),
+        ('KE', 'Kenya'),
+        ('US', 'United States'),
+    ]
+    
+    preferred_currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='NGN'
+    )
+    country = models.CharField(
+        max_length=2,
+        choices=COUNTRY_CHOICES,
+        null=True,
+        blank=True
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     email = models.EmailField(_("email address"), unique=True, db_index=True)
@@ -112,7 +138,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     birth_date = models.DateField(null=True, blank=True)
 
     # Location
-    country = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
 

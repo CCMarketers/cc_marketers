@@ -51,7 +51,11 @@ class CustomUserCreationForm(UserCreationForm):
         initial=User.MEMBER,
         widget=forms.Select(attrs={'class': 'form-input'})
     )
-    
+    preferred_currency = forms.ChoiceField(
+        choices=User.CURRENCY_CHOICES,
+        # initial=User.NGN,
+        widget=forms.Select(attrs={'class': 'form-input'})
+    )
     class Meta:
         model = User
         fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'role')

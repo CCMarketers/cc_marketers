@@ -97,3 +97,21 @@ payment gate way not configure
 cd cc_marketers
 venv\scripts\activate
 
+
+git push origin main  
+git push company main
+
+
+
+calculating betwen naira and dollar
+remove the text in funding page
+
+
+db issues
+
+try to cancel paid subscription
+
+
+How does the aproval logic works
+Draft for tasks 
+View closed disputes

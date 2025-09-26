@@ -16,7 +16,7 @@ class Wallet(models.Model):
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+ 
     def __str__(self):
         return f"{getattr(self.user, 'username', self.user.id)} - ₦{self.balance:,.2f}"
 
@@ -27,7 +27,7 @@ class Wallet(models.Model):
         """
         pending = WithdrawalRequest.objects.filter(
             user=self.user, status='pending'
-        ).aggregate(total=Sum('amount'))['total']
+        ).aggregate(total=Sum('amount_usd'))['total']
         return pending or Decimal('0.00')
 
     def get_available_balance(self) -> Decimal:
@@ -75,7 +75,7 @@ class Transaction(models.Model):
     )
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     category = models.CharField(max_length=20, choices=TRANSACTION_CATEGORIES)
-    amount = models.DecimalField(
+    amount_usd = models.DecimalField(
         max_digits=12, decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
@@ -84,6 +84,9 @@ class Transaction(models.Model):
     status = models.CharField(max_length=10, choices=TRANSACTION_STATUS, default='pending')
     reference = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True)
+    # amount_usd = models.DecimalField(max_digits=15, decimal_places=2, default='0.0')
+    amount_local = models.DecimalField(max_digits=15, decimal_places=2, default='0.0')
+    currency = models.CharField(max_length=3, default='USD')
 
     payment_transaction = models.ForeignKey(
         'payments.PaymentTransaction',
@@ -105,7 +108,7 @@ class Transaction(models.Model):
     def __str__(self):
         return (
             f"{getattr(self.user, 'username', self.user.id)} "
-            f"- {self.transaction_type} ₦{self.amount:,.2f} ({self.category})"
+            f"- {self.transaction_type} ₦{self.amount_usd:,.2f} ({self.category})"
         )
 
 
@@ -161,7 +164,7 @@ class WithdrawalRequest(models.Model):
         on_delete=models.CASCADE,
         related_name="withdrawals"
     )
-    amount = models.DecimalField(
+    amount_usd = models.DecimalField(
         max_digits=12, decimal_places=2,
         validators=[MinValueValidator(Decimal('1.00'))]
     )

@@ -15,9 +15,9 @@ class WithdrawalRequestForm(forms.ModelForm):
 
     class Meta:
         model = WithdrawalRequest
-        fields = ['amount', 'withdrawal_method', 'account_number', 'account_name', 'bank_name', 'bank_code']
+        fields = ['amount_usd', 'withdrawal_method', 'account_number', 'account_name', 'bank_name', 'bank_code']
         widgets = {
-            'amount': forms.NumberInput(attrs={
+            'amount_usd': forms.NumberInput(attrs={
                 'class': 'w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
                 'placeholder': '0.00',
                 'step': '0.01',
@@ -41,12 +41,12 @@ class WithdrawalRequestForm(forms.ModelForm):
         }
 
     def clean_amount(self):
-        amount = self.cleaned_data['amount']
-        if amount < Decimal('1.00'):
+        amount_usd = self.cleaned_data['amount']
+        if amount_usd < Decimal('1.00'):
             raise forms.ValidationError("Minimum withdrawal amount is $1.00")
-        if amount > Decimal('10000.00'):
+        if amount_usd > Decimal('10000.00'):
             raise forms.ValidationError("Maximum withdrawal amount is $10,000.00")
-        return amount
+        return amount_usd
 
 
 class FundWalletForm(forms.Form):

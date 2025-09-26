@@ -56,12 +56,12 @@ class WalletService:
 
     @transaction.atomic
     @staticmethod
-    def credit_wallet(user, amount, category, description="", reference=None, task=None, payment_transaction=None):
-        if amount is None:
+    def credit_wallet(user, amount_usd, category, description="", reference=None, task=None, payment_transaction=None, extra_data=None):
+        if amount_usd is None:
             raise ValueError("Amount must be provided and greater than zero")
 
         try:
-            amount = Decimal(amount)
+            amount = Decimal(amount_usd)
         except (InvalidOperation, TypeError):
             raise ValueError("Amount must be a number")
 
@@ -85,11 +85,26 @@ class WalletService:
                 # fallback
                 wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
 
+        # txn = Transaction.objects.create(
+        #     user=user,
+        #     transaction_type='credit',
+        #     category=category,
+        #     amount=amount,
+        #     balance_before=wallet_balance,
+        #     balance_after=wallet_balance + amount,
+        #     status='success',
+        #     reference=reference or str(uuid.uuid4()),
+        #     description=description,
+        #     task=task,
+        #     payment_transaction=payment_transaction,
+        # )
         txn = Transaction.objects.create(
             user=user,
             transaction_type='credit',
             category=category,
-            amount=amount,
+            amount_usd=extra_data.get("amount_usd", amount),
+            amount_local=extra_data.get("amount_local", amount),
+            currency=extra_data.get("currency", "USD"),
             balance_before=wallet_balance,
             balance_after=wallet_balance + amount,
             status='success',
@@ -99,6 +114,7 @@ class WalletService:
             payment_transaction=payment_transaction,
         )
 
+
         # Update real wallet model
         wallet.balance = wallet_balance + amount
         wallet.save(update_fields=["balance", "updated_at"])
@@ -106,7 +122,7 @@ class WalletService:
     
     @transaction.atomic
     @staticmethod
-    def debit_wallet(user, amount, category, description="", reference=None, task=None, payment_transaction=None):
+    def debit_wallet(user, amount, category, description="", reference=None, task=None, payment_transaction=None, extra_data=None):
         if amount is None:
             raise ValueError("Amount must be provided and greater than zero")
 
@@ -140,7 +156,9 @@ class WalletService:
             user=user,
             transaction_type='debit',
             category=category,
-            amount=amount,
+            amount_usd=amount,
+            amount_local=extra_data.get("amount_local", amount),
+            currency=extra_data.get("currency", "USD"),
             balance_before=current_balance,
             balance_after=current_balance - amount,
             status='success',
@@ -149,6 +167,7 @@ class WalletService:
             task=task,
             payment_transaction=payment_transaction,
         )
+
 
         wallet.balance = current_balance - amount
         wallet.save(update_fields=["balance", "updated_at"])
@@ -343,7 +362,7 @@ class WalletService:
 
         withdrawal = WithdrawalRequest.objects.create(
             user=user,
-            amount=amount,
+            amount_usd=amount,
             withdrawal_method=withdrawal_method,
             account_number=account_details.get('account_number', ''),
             account_name=account_details.get('account_name', ''),
