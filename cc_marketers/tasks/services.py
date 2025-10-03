@@ -185,7 +185,7 @@ class TaskWalletService:
             raise ValueError("Escrow already released or refunded")
 
         # Split payment
-        member_amount, company_cut = TaskWalletService.split_payment(escrow.amount)
+        member_amount, company_cut = TaskWalletService.split_payment(escrow.amount_usd)
 
         # Pay worker
         WalletService.credit_wallet(
