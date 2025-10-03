@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Referral Dashboard - TriLinkers{% endblock %}
+{% block title %}Referral Dashboard - CC_Marketers{% endblock %}
 
 {% block content %}
 <div class="fade-in-up">
@@ -11,7 +11,7 @@
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-3xl font-bold mb-2">💰 Referral Dashboard</h1>
-                <p class="text-purple-100">Earn money by inviting friends to TriLinkers</p>
+                <p class="text-purple-100">Earn money by inviting friends to CC_Marketers</p>
             </div>
             <div class="text-right">
                 <p class="text-purple-100 text-sm">Your referral code</p>
@@ -148,7 +148,7 @@
                 <textarea id="custom-message" 
                           rows="3" 
                           class="w-full px-4 py-3 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                          placeholder="Add a personal message to invite your friends...">🚀 Join me on TriLinkers and earn money by completing tasks! Use my referral link to get started with a bonus. It's legit and I'm already earning!</textarea>
+                          placeholder="Add a personal message to invite your friends...">🚀 Join me on CC_Marketers and earn money by completing tasks! Use my referral link to get started with a bonus. It's legit and I'm already earning!</textarea>
             </div>
         </div>
         
@@ -311,7 +311,7 @@
 <!-- Share functionality scripts -->
 <script>
 const referralLink = "{{ request.build_absolute_uri }}/register/{{ user.referral_code }}/";
-const customMessage = () => document.getElementById('custom-message').value || "🚀 Join me on TriLinkers and earn money by completing tasks! Use my referral link to get started with a bonus.";
+const customMessage = () => document.getElementById('custom-message').value || "🚀 Join me on CC_Marketers and earn money by completing tasks! Use my referral link to get started with a bonus.";
 
 function shareWhatsApp() {
     const message = encodeURIComponent(`${customMessage()}\n\n${referralLink}`);
@@ -319,7 +319,7 @@ function shareWhatsApp() {
 }
 
 function shareTwitter() {
-    const message = encodeURIComponent(`${customMessage()} ${referralLink} #TriLinkers #EarnMoney`);
+    const message = encodeURIComponent(`${customMessage()} ${referralLink} #CC_Marketers #EarnMoney`);
     window.open(`https://twitter.com/intent/tweet?text=${message}`, '_blank');
 }
 
@@ -329,7 +329,7 @@ function shareFacebook() {
 }
 
 function shareEmail() {
-    const subject = encodeURIComponent('Join TriLinkers and Earn Money!');
+    const subject = encodeURIComponent('Join CC_Marketers and Earn Money!');
     const body = encodeURIComponent(`Hi!\n\n${customMessage()}\n\nClick here to join: ${referralLink}\n\nBest regards!`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
 }
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageTextarea = document.getElementById('custom-message');
     
     if (totalReferrals > 0 && totalEarnings > 0 && messageTextarea) {
-        const successMessage = `🔥 I've earned $${totalEarnings.toLocaleString()} on TriLinkers already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
+        const successMessage = `🔥 I've earned $${totalEarnings.toLocaleString()} on CC_Marketers already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
         messageTextarea.placeholder = successMessage;
     }
 });
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}">
                     <span class="text-blue-600 mr-2">💬</span>
-                    <p class="text-blue-800">Share personal success stories about earning on TriLinkers</p>
+                    <p class="text-blue-800">Share personal success stories about earning on CC_Marketers</p>
                 </div>
                 <div class="flex items-start">
                     <span class="text-blue-600 mr-2">📱</span>

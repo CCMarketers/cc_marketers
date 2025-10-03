@@ -169,7 +169,7 @@ class TaskWalletService:
         escrow = EscrowTransaction.objects.create(
             task=task,
             advertiser=advertiser,
-            amount=amount,
+            amount_usd=amount,
             taskwallet_transaction=txn,
             status="locked",
         )

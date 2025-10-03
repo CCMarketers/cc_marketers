@@ -2,9 +2,8 @@
 from django.db import transaction
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
-import uuid
 
-from .models import Wallet, Transaction, EscrowTransaction, WithdrawalRequest
+from .models import Wallet, EscrowTransaction, WithdrawalRequest
 from referrals.models import ReferralEarning, Referral
 
 from tasks.models import TaskWalletTransaction
@@ -15,6 +14,8 @@ from unittest.mock import Mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
+
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 
 User = get_user_model()
@@ -54,75 +55,211 @@ class WalletService:
             return None
 
 
-    @transaction.atomic
+    # @transaction.atomic
+    # @staticmethod
+    # def credit_wallet(user, amount, category, description="", reference=None, task=None, extra_data=None):
+    #     if amount is None:
+    #         raise ValueError("Amount must be provided and greater than zero")
+
+    #     try:
+    #         amount = Decimal(amount)
+    #     except (InvalidOperation, TypeError):
+    #         raise ValueError("Amount must be a number")
+
+    #     if amount <= 0:
+    #         raise ValueError("Amount must be greater than zero")
+        
+    #     if not reference:
+    #         raise ValueError("Reference must be provided for idempotency")
+
+    #     extra_data = extra_data or {}
+    #     wallet = WalletService.get_or_create_wallet(user)
+
+    #     try:
+    #         wallet_balance = Decimal(wallet.balance)
+    #     except Exception:
+    #         wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
+
+    #     gateway_reference = extra_data.get("gateway_reference")
+    #     if not gateway_reference:
+    #         # fallback: use reference if no separate gateway_reference is provided
+    #         gateway_reference = reference
+
+    #     txn, created = PaymentTransaction.objects.get_or_create(
+    #         gateway_reference=gateway_reference,
+    #         defaults={
+    #             "user": user,
+    #             "transaction_type": "credit",
+    #             "category": category,
+    #             "amount_usd": amount,  # always USD
+    #             "amount_local": extra_data.get("amount_local"),  # optional
+    #             "currency": extra_data.get("currency", "USD"),
+    #             "balance_before": wallet_balance,
+    #             "balance_after": wallet_balance + amount,  # USD only
+    #             "status": "success",
+    #             "reference": reference,
+    #             "description": description,
+    #             "task": task,
+    #         },
+    #     )
+
+
+    #     if created:
+    #         # update wallet only once
+    #         wallet.balance = wallet_balance + amount
+    #         wallet.save(update_fields=["balance", "updated_at"])
+
+    #     return txn
+
+#     @transaction.atomic
+#     @staticmethod
+#     def credit_wallet(user, amount, category, description="", reference=None, task=None, extra_data=None):
+#         """Credit wallet with proper idempotency handling."""
+        
+#         if amount is None:
+#             raise ValueError("Amount must be provided and greater than zero")
+
+#         try:
+#             amount = Decimal(amount)
+#         except (InvalidOperation, TypeError):
+#             raise ValueError("Amount must be a number")
+
+#         if amount <= 0:
+#             raise ValueError("Amount must be greater than zero")
+
+#         if not reference:
+#             raise ValueError("Reference must be provided for idempotency")
+
+#         extra_data = extra_data or {}
+        
+#         # ✅ KEY FIX: Use internal reference for idempotency, not gateway_reference
+#         # gateway_reference is for the payment initialization transaction
+#         # reference should be unique per wallet credit operation
+#         wallet_txn_reference = reference  # This should be wallet_credit_ref from webhook
+        
+#         from wallets.models import Wallet
+#         from payments.models import PaymentTransaction
+
+#         try:
+#             wallet = Wallet.objects.select_for_update().get(user=user)
+#         except ObjectDoesNotExist:
+#             wallet, _ = Wallet.objects.select_for_update().get_or_create(
+#                 user=user, 
+#                 defaults={"balance": Decimal("0.00")}
+#             )
+
+#         try:
+#             wallet_balance = Decimal(wallet.balance)
+#         except Exception:
+#             wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
+
+#         # ✅ Check by internal reference (not gateway_reference)
+#         # This ensures each wallet credit is unique even if gateway sends duplicate webhooks
+#         txn, created = PaymentTransaction.objects.get_or_create(
+#             reference=wallet_txn_reference,  # ✅ Use internal reference
+#             user=user,  # ✅ Add user to ensure uniqueness per user
+#             defaults={
+#                 "user": user,
+#                 "transaction_type": PaymentTransaction.TransactionType.FUNDING if hasattr(PaymentTransaction.TransactionType, 'FUNDING') else "credit",
+#                 "category": category,
+#                 "amount_usd": amount,
+#                 "amount_local": extra_data.get("amount_local"),
+#                 "currency": extra_data.get("currency", "USD"),
+#                 "balance_before": wallet_balance,
+#                 "balance_after": wallet_balance + amount,
+#                 "status": PaymentTransaction.Status.SUCCESS if hasattr(PaymentTransaction.Status, 'SUCCESS') else "success",
+#                 "gateway_reference": extra_data.get("gateway_reference"),  # ✅ Store for reference only
+#                 "description": description,
+#                 "task": task,
+#                 "gateway_response": extra_data.get("gateway_response") or None,
+#             },
+#         )
+
+#         if created:
+#             wallet.balance = (wallet_balance + amount)
+#             wallet.updated_at = timezone.now()
+#             wallet.save(update_fields=["balance", "updated_at"]) 
+#             logger.info(
+#                 "Wallet credited: user=%s ref=%s gateway_ref=%s amount=%s", 
+#                 user.id if hasattr(user, 'id') else user, 
+#                 wallet_txn_reference,
+#                 extra_data.get("gateway_reference"),
+#                 amount
+#             )
+#         else:
+#             logger.info(
+#                 "Duplicate wallet credit prevented: user=%s ref=%s", 
+#                 user.id if hasattr(user, 'id') else user,
+#                 wallet_txn_reference
+#             )
+
+#         return txn
+
+
+
+#     @transaction.atomic
+#     @staticmethod
+#     def debit_wallet(user, amount, category, description="", reference=None, task=None, extra_data=None, payment_transaction=None):
+#         if amount is None:
+#             raise ValueError("Amount must be provided and greater than zero")
+
+#         try:
+#             amount = Decimal(amount)
+#         except (InvalidOperation, TypeError):
+#             raise ValueError("Amount must be a number")
+
+#         if amount <= 0:
+#             raise ValueError("Amount must be greater than zero")
+
+#         extra_data = extra_data or {}
+#         wallet = WalletService.get_or_create_wallet(user)
+
+#         # compute available balance
+#         try:
+#             current_balance = Decimal(wallet.balance)
+#         except Exception:
+#             if isinstance(getattr(wallet, "balance", None), Mock):
+#                 try:
+#                     current_balance = wallet.balance
+#                 except Exception:
+#                     current_balance = Decimal('0.00')
+#             else:
+#                 current_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
+
+#         available_balance = wallet.get_available_balance() if category == 'escrow' else current_balance
+#         if available_balance < amount:
+#             raise ValueError(f"Insufficient balance. Available: ${available_balance}, Required: ${amount}")
+
+#         txn = PaymentTransaction.objects.create(
+#             user=user,
+#             transaction_type='debit',
+#             category=category,
+#             amount_usd=amount,
+#             amount_local=extra_data.get("amount_local", amount),
+#             currency=extra_data.get("currency", "USD"),
+#             balance_before=current_balance,
+#             balance_after=current_balance - amount,
+#             status='success',
+#             reference=reference or str(uuid.uuid4()),
+#             description=description,
+#             task=task,
+#             payment_transaction=payment_transaction,  # ← THIS WAS COMMENTED OUT
+#         )
+
+#         wallet.balance = current_balance - amount
+#         wallet.save(update_fields=["balance", "updated_at"])
+#         return txn
+#    # ---------- Escrow (Task) ----------
+
+
     @staticmethod
-    def credit_wallet(user, amount_usd, category, description="", reference=None, task=None, payment_transaction=None, extra_data=None):
-        if amount_usd is None:
-            raise ValueError("Amount must be provided and greater than zero")
-
-        try:
-            amount = Decimal(amount_usd)
-        except (InvalidOperation, TypeError):
-            raise ValueError("Amount must be a number")
-
-        if amount <= 0:
-            raise ValueError("Amount must be greater than zero")
-
-        wallet = WalletService.get_or_create_wallet(user)
-
-        # ensure wallet.balance is a Decimal for correct arithmetic/comparison
-        try:
-            wallet_balance = Decimal(wallet.balance)
-        except Exception:
-            # If tests supply Mocks that are not convertible, try to read as string
-            if isinstance(getattr(wallet, "balance", None), Mock):
-                # Try to use attribute directly if test set it to Decimal previously
-                try:
-                    wallet_balance = wallet.balance
-                except Exception:
-                    wallet_balance = Decimal('0.00')
-            else:
-                # fallback
-                wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
-
-        # txn = Transaction.objects.create(
-        #     user=user,
-        #     transaction_type='credit',
-        #     category=category,
-        #     amount=amount,
-        #     balance_before=wallet_balance,
-        #     balance_after=wallet_balance + amount,
-        #     status='success',
-        #     reference=reference or str(uuid.uuid4()),
-        #     description=description,
-        #     task=task,
-        #     payment_transaction=payment_transaction,
-        # )
-        txn = Transaction.objects.create(
-            user=user,
-            transaction_type='credit',
-            category=category,
-            amount_usd=extra_data.get("amount_usd", amount),
-            amount_local=extra_data.get("amount_local", amount),
-            currency=extra_data.get("currency", "USD"),
-            balance_before=wallet_balance,
-            balance_after=wallet_balance + amount,
-            status='success',
-            reference=reference or str(uuid.uuid4()),
-            description=description,
-            task=task,
-            payment_transaction=payment_transaction,
-        )
-
-
-        # Update real wallet model
-        wallet.balance = wallet_balance + amount
-        wallet.save(update_fields=["balance", "updated_at"])
-        return txn
-    
     @transaction.atomic
-    @staticmethod
-    def debit_wallet(user, amount, category, description="", reference=None, task=None, payment_transaction=None, extra_data=None):
+    def credit_wallet(user, amount, category, description="", reference=None, task=None, extra_data=None, payment_transaction=None):
+        """
+        Credit wallet - ONLY updates balance, does NOT create new PaymentTransaction.
+        If payment_transaction is provided, updates its balance_before/balance_after fields.
+        """
+        
         if amount is None:
             raise ValueError("Amount must be provided and greater than zero")
 
@@ -134,47 +271,103 @@ class WalletService:
         if amount <= 0:
             raise ValueError("Amount must be greater than zero")
 
+        extra_data = extra_data or {}
+        
+        from wallets.models import Wallet
+
+        try:
+            wallet = Wallet.objects.select_for_update().get(user=user)
+        except ObjectDoesNotExist:
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                user=user, 
+                defaults={"balance": Decimal("0.00")}
+            )
+
+        try:
+            wallet_balance = Decimal(wallet.balance)
+        except Exception:
+            wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
+
+        # Update payment_transaction if provided (for funding transactions)
+        if payment_transaction:
+            payment_transaction.balance_before = wallet_balance
+            payment_transaction.balance_after = wallet_balance + amount
+            payment_transaction.description = description   
+            payment_transaction.save(update_fields=['balance_before', 'balance_after', 'description'])
+
+
+        # Update wallet balance
+        wallet.balance = wallet_balance + amount
+        wallet.updated_at = timezone.now()
+        wallet.save(update_fields=["balance", "updated_at"])
+        
+        logger.info(
+            "Wallet credited: user=%s amount=%s new_balance=%s ref=%s", 
+            user.id if hasattr(user, 'id') else user, 
+            amount,
+            wallet.balance,
+            reference or 'N/A'
+        )
+
+        return wallet
+
+    @staticmethod
+    @transaction.atomic
+    def debit_wallet(user, amount, category, description="", reference=None, task=None, extra_data=None, payment_transaction=None):
+        """
+        Debit wallet - ONLY updates balance, does NOT create new PaymentTransaction.
+        If payment_transaction is provided, updates its balance_before/balance_after fields.
+        """
+        if amount is None:
+            raise ValueError("Amount must be provided and greater than zero")
+
+        try:
+            amount = Decimal(amount)
+        except (InvalidOperation, TypeError):
+            raise ValueError("Amount must be a number")
+
+        if amount <= 0:
+            raise ValueError("Amount must be greater than zero")
+
+        extra_data = extra_data or {}
         wallet = WalletService.get_or_create_wallet(user)
 
-        # compute available balance (handle TaskWallet-like available balance if necessary)
+        # Compute available balance
         try:
             current_balance = Decimal(wallet.balance)
         except Exception:
-            if isinstance(getattr(wallet, "balance", None), Mock):
-                try:
-                    current_balance = wallet.balance
-                except Exception:
-                    current_balance = Decimal('0.00')
-            else:
-                current_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
+            current_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
 
         available_balance = wallet.get_available_balance() if category == 'escrow' else current_balance
         if available_balance < amount:
             raise ValueError(f"Insufficient balance. Available: ${available_balance}, Required: ${amount}")
 
-        txn = Transaction.objects.create(
-            user=user,
-            transaction_type='debit',
-            category=category,
-            amount_usd=amount,
-            amount_local=extra_data.get("amount_local", amount),
-            currency=extra_data.get("currency", "USD"),
-            balance_before=current_balance,
-            balance_after=current_balance - amount,
-            status='success',
-            reference=reference or str(uuid.uuid4()),
-            description=description,
-            task=task,
-            payment_transaction=payment_transaction,
-        )
+        # Update payment_transaction if provided (for withdrawal transactions)
+        # if payment_transaction:
+        #     payment_transaction.balance_before = current_balance
+        #     payment_transaction.balance_after = current_balance - amount
+        #     payment_transaction.save(update_fields=['balance_before', 'balance_after'])
 
+        if payment_transaction:
+            payment_transaction.balance_before = current_balance
+            payment_transaction.balance_after = current_balance - amount
+            payment_transaction.description = description   # ✅ add this
+            payment_transaction.save(update_fields=['balance_before', 'balance_after', 'description'])
 
+        # Update wallet balance
         wallet.balance = current_balance - amount
+        wallet.updated_at = timezone.now()
         wallet.save(update_fields=["balance", "updated_at"])
-        return txn
-
-
-   # ---------- Escrow (Task) ----------
+        
+        logger.info(
+            "Wallet debited: user=%s amount=%s new_balance=%s ref=%s", 
+            user.id if hasattr(user, 'id') else user, 
+            amount,
+            wallet.balance,
+            reference or 'N/A'
+        )
+        
+        return wallet
 
     @transaction.atomic
     @staticmethod
@@ -419,7 +612,7 @@ class WalletService:
         # 4) Debit wallet (link to payment transaction)
         debit_txn = WalletService.debit_wallet(
             user=withdrawal.user,
-            amount=withdrawal.amount,
+            amount=withdrawal.amount_usd,
             category="withdrawal",
             description=f"Withdrawal request #{withdrawal.id}",
             reference=payment_txn.internal_reference,

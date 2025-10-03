@@ -25,7 +25,6 @@ from django.views.generic import (
     View,
 )
 
-from django.db.models import Sum
 
 from .forms import (
     CustomUserCreationForm,
@@ -41,8 +40,9 @@ from .models import User, UserProfile, EmailVerificationToken, PhoneVerification
 from tasks.models import Task, Submission
 from referrals.models import ReferralCode, Referral
 from core.services import send_verification_email
-from wallets.models import WithdrawalRequest, Transaction
 from wallets.services import WalletService
+from payments.models import PaymentTransaction
+
 
 logger = logging.getLogger(__name__)
 
@@ -325,12 +325,9 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
 
         # Wallets and balances
         wallet = WalletService.get_or_create_wallet(user)
-        pending_withdrawals = (
-            WithdrawalRequest.objects.filter(user=user, status="pending").aggregate(total=Sum("amount_usd"))["total"]
-            or Decimal("0.00")
-        )
+        # pending_withdrawals = wallet.get_pending_withdrawals
         try:
-            available_balance = wallet.get_available_balance() - pending_withdrawals
+            available_balance = wallet.get_available_balance()
 
         except Exception:
             logger.exception("Error computing available balance for user %s", user.pk)
@@ -338,7 +335,7 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
 
 
         # Recent transactions (deterministic order)
-        recent_transactions = Transaction.objects.filter(user=user).order_by("-created_at")[:10]
+        recent_transactions = PaymentTransaction.objects.filter(user=user).order_by("-created_at")[:10]
 
         # Wallet balances (fall back to 0.00 if missing)
         main_wallet_balance = getattr(getattr(user, "wallet", None), "balance", Decimal("0.00"))
@@ -550,3 +547,7 @@ class ValidateReferralCodeView(View):
 #   users/register.html, users/login.html, users/profile.html, users/profile_setup.html, etc.
 # NOTE: Consider adding db_index=True on frequently queried fields such as:
 #   User.email, User.phone, ReferralCode.code (adjust models accordingly).
+
+
+def landing_page(request):
+    return render(request, "users/landing.html")

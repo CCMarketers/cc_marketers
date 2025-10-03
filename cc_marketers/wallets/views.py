@@ -13,10 +13,11 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.views.generic.edit import FormView
 
 from .forms import WithdrawalRequestForm, FundWalletForm
-from .models import Wallet, Transaction, WithdrawalRequest, EscrowTransaction
+from .models import Wallet, WithdrawalRequest, EscrowTransaction
 from .services import WalletService
 from subscriptions.decorators import subscription_required, plan_required
 from payments.services import CurrencyService
+from payments.models import PaymentTransaction
 
 
 
@@ -37,39 +38,36 @@ class WalletDashboardView(LoginRequiredMixin, DetailView):
 
         # Recent transactions (last 10)
         context['recent_transactions'] = (
-            Transaction.objects.filter(user=user)
+            PaymentTransaction.objects.filter(user=user)
             .select_related('user')
             .order_by('-created_at')[:10]
         )
 
         # Stats
-        context['total_earned'] = Transaction.objects.filter(
+        context['total_earned'] = PaymentTransaction.objects.filter(
             user=user,
             transaction_type='credit',
             category__in=[
                 'task_earning', 'referral_bonus',
-                'escrow_release', 'task_payment', 'task_completion'
+                'escrow_release', 'task_payment'
             ]
         ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
 
-        context['total_withdrawn'] = Transaction.objects.filter(
+        context['total_withdrawn'] = PaymentTransaction.objects.filter(
             user=user,
             transaction_type='debit',
             category='withdrawal',
             status='success'
         ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
 
-        # Pending withdrawals
-        pending_withdrawals = WithdrawalRequest.objects.filter(
-            user=user, status='pending'
-        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
+        
         balance_local = CurrencyService.convert_usd_to_local(wallet.balance, user.preferred_currency)
 
-        context['pending_withdrawals'] = pending_withdrawals
+        context['pending_withdrawals'] = wallet.get_pending_withdrawals
         context['wallet_balance'] = wallet.balance
         context['balance_local'] = balance_local
         # Available = wallet.available - pending withdrawals already reserved inside get_available_balance
-        context['available_balance'] = wallet.get_available_balance()
+        context['available_balance'] = wallet.get_available_balance() 
 
         return context
 
@@ -77,13 +75,13 @@ class WalletDashboardView(LoginRequiredMixin, DetailView):
 @method_decorator(subscription_required, name='dispatch')
 class TransactionListView(LoginRequiredMixin, ListView):
     """List all user transactions with filters."""
-    model = Transaction
+    model = PaymentTransaction
     template_name = 'wallets/transactions.html'
     context_object_name = 'transactions'
     paginate_by = 20
 
     def get_queryset(self):
-        qs = Transaction.objects.filter(user=self.request.user).select_related('user')
+        qs = PaymentTransaction.objects.filter(user=self.request.user).select_related('user')
 
         # Filters
         tx_type = self.request.GET.get('type')
@@ -102,9 +100,9 @@ class TransactionListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['transaction_types'] = Transaction.TRANSACTION_TYPES
-        context['transaction_categories'] = Transaction.TRANSACTION_CATEGORIES
-        context['transaction_status'] = Transaction.TRANSACTION_STATUS
+        context['transaction_types'] = PaymentTransaction.TransactionType.choices
+        context['transaction_categories'] = PaymentTransaction.Category.choices
+        context['transaction_status'] = PaymentTransaction.Status.choices
         return context
 
 
@@ -143,13 +141,9 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         wallet = WalletService.get_or_create_wallet(self.request.user)
-        pending_withdrawals = WithdrawalRequest.objects.filter(
-            user=self.request.user, status='pending'
-        ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
-
         context['wallet'] = wallet
         context['available_balance'] = wallet.get_available_balance()
-        context['pending_withdrawals'] = pending_withdrawals
+        context['pending_withdrawals'] = wallet.get_pending_withdrawals
         return context
 
 
@@ -235,13 +229,13 @@ class AdminEscrowListView(ListView):
 @method_decorator(staff_member_required, name='dispatch')
 class AdminTransactionListView(ListView):
     """Admin view to monitor all transactions."""
-    model = Transaction
+    model = PaymentTransaction
     template_name = 'wallets/admin/transaction_list.html'
     context_object_name = 'transactions'
     paginate_by = 50
 
     def get_queryset(self):
-        qs = Transaction.objects.all().select_related('user')
+        qs = PaymentTransaction.objects.all().select_related('user')
         search = self.request.GET.get('search')
         if search:
             qs = qs.filter(
@@ -256,7 +250,7 @@ class AdminTransactionListView(ListView):
 def wallet_transaction_detail(request, transaction_id):
     """Display detailed view of a wallet transaction."""
     transaction = get_object_or_404(
-        Transaction,
+        PaymentTransaction,
         id=transaction_id,
         user=request.user
     )

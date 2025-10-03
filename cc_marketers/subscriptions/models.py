@@ -6,7 +6,6 @@ from django.utils import timezone
 
 
 class ActiveSubscriptionManager(models.Manager):
-    """Custom manager to get only active & non-expired subscriptions."""
     def get_queryset(self):
         return super().get_queryset().filter(
             status="active",
@@ -15,29 +14,54 @@ class ActiveSubscriptionManager(models.Manager):
 
 
 class SubscriptionPlan(models.Model):
-    name = models.CharField(max_length=100)
+    PLAN_TRIAL = "trial"
+    PLAN_BUSINESS = "business"
+
+    PLAN_TYPE_CHOICES = [
+        (PLAN_TRIAL, "Demo/Trial"),
+        (PLAN_BUSINESS, "Business Member"),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    plan_type = models.CharField(
+        max_length=20,
+        choices=PLAN_TYPE_CHOICES,
+        # default="Business Member",
+
+        
+
+    )
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration_days = models.PositiveIntegerField(default=30)  # e.g. 30 for monthly, 365 for yearly
-    business_volume = models.PositiveIntegerField(default=0)
+    duration_days = models.PositiveIntegerField(default=30)
+
+    # Features
+    own_store = models.BooleanField(default=False)
+    hire_marketers = models.BooleanField(default=False)
+    affiliate_marketing = models.BooleanField(default=False)
+
+    # Referrals
     referral_commission = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0.00")
+        max_digits=10, decimal_places=2, default=Decimal("0.00")
     )
     commission_to_tree = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0.00")
+        max_digits=10, decimal_places=2, default=Decimal("0.00")
     )
-    daily_ad_limit = models.PositiveIntegerField(default=0)  # 0 means unlimited
+
+    # Tasks
+    daily_ad_limit = models.PositiveIntegerField(default=0, help_text="0 = unlimited")
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.name} - ${self.price}"
-
     class Meta:
         ordering = ["price", "created_at"]
+
+    def __str__(self):
+        return f"{self.name} (${self.price})"
+
+    def is_unlimited_tasks(self):
+        return self.daily_ad_limit == 0
+
 
 
 class UserSubscription(models.Model):

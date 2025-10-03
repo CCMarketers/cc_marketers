@@ -70,7 +70,7 @@ class PaystackService:
     # ------------------------
     # Initialize funding (checkout)
     # ------------------------
-    def initialize_payment(self, user, amount, currency="NGN", callback_url=None):
+    def initialize_payment(self, user, amount_usd, amount_local, currency="NGN", callback_url=None):
         """
         Initialize a payment transaction with Paystack.
 
@@ -84,20 +84,23 @@ class PaystackService:
 
             # Normalise amount to Decimal
             try:
-                amount_dec = Decimal(amount)
+                amount_dec = Decimal(amount_local)
             except (InvalidOperation, TypeError):
                 return {"success": False, "data": {}, "error": "Invalid amount"}
-
+            import uuid
             with transaction.atomic():
                 # Create local pending PaymentTransaction
                 payment_transaction = PaymentTransaction.objects.create(
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.FUNDING,
-                    amount=amount_dec,
                     currency=currency,
-                    gateway_reference=f"PS_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    amount_usd=amount_usd,          # ✅ Store original USD
+                    amount_local=amount_local,      # ✅ Add this field if missing
+                    gateway_reference=f"PS_{timezone.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
                     status=PaymentTransaction.Status.PENDING,
+                    description=f"Wallet funding via Paystack {amount_usd} USD"
+                    
                 )
 
                 url = f"{self.base_url}/transaction/initialize"
@@ -139,7 +142,8 @@ class PaystackService:
                     )
 
                     payment_transaction.gateway_response = resp_data
-                    payment_transaction.save(update_fields=["gateway_response", "updated_at"])
+                    payment_transaction.description=f"Wallet funding via Paystack {payment_transaction.amount_usd} USD"
+                    payment_transaction.save(update_fields=["gateway_response", "updated_at","description"])
 
                     return {
                         "success": True,
@@ -249,7 +253,8 @@ class PaystackService:
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
-                    amount=amount_ngn,         # store local amount for gateway
+                    amount_usd=amount_usd,      # ✅ USD amount
+                    amount_local=amount_ngn,    # ✅ NGN amount      # store local amount for gateway
                     currency="NGN",
                     gateway_reference=f"WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
@@ -390,12 +395,15 @@ class WebhookService:
             reference=reference,
             defaults={"event_type": event_type, "payload": event_data},
         )
-
+        
         if webhook_event.processed:
             # Already handled; idempotent behavior
             logger.info("Duplicate webhook ignored for reference %s", reference)
             return {"success": True, "message": "Duplicate event ignored", "data": {}}
-
+        
+        # Now mark as processing (prevents race conditions)
+        webhook_event.processing_started = timezone.now()
+        webhook_event.save()
         try:
             if event_type == "charge.success":
                 result = WebhookService._handle_successful_charge(data, webhook_event)
@@ -417,14 +425,13 @@ class WebhookService:
 
     # -----------------
     # Paystack event handlers
-    # -----------------
+    # # -----------------
+
     @staticmethod
     @transaction.atomic
     def _handle_successful_charge(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
         reference = data.get("reference")
-        # Paystack sends amount in kobo; convert to naira
-        amount = Decimal(str(data.get("amount", 0))) / Decimal("100")
-
+        
         try:
             payment_txn = PaymentTransaction.objects.select_for_update().get(
                 gateway_reference=reference,
@@ -437,53 +444,51 @@ class WebhookService:
         if payment_txn.status == PaymentTransaction.Status.SUCCESS:
             webhook_event.processed = True
             webhook_event.save(update_fields=["processed"])
+            logger.info("Transaction already SUCCESS, skipping for reference %s", reference)
             return {"success": True, "message": "Already processed", "data": {}}
 
-        # Mark success on payment transaction
-        payment_txn.status = PaymentTransaction.Status.SUCCESS
-        payment_txn.completed_at = timezone.now()
-        payment_txn.gateway_response = data
-        payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
-
-        # Credit wallet
-        # from wallets.services import WalletService
-
-        # WalletService.credit_wallet(
-        #     user=payment_txn.user,
-        #     amount=amount,
-        #     category="funding",
-        #     description=f"Wallet funding via paystack (Ref: {reference})",
-        #     reference=payment_txn.internal_reference,
-        #     payment_transaction=payment_txn,
-        # )
-        from payments.services import CurrencyService
         from wallets.services import WalletService
 
-        currency = payment_txn.currency   # e.g. "NGN"
-        amount_local = amount             # NGN from gateway
-        amount_usd = CurrencyService.convert_local_to_usd(amount_local, currency).quantize(Decimal("0.01"))
+        try:
+            # Credit wallet - just updates balance, no new transaction created
+            WalletService.credit_wallet(
+                user=payment_txn.user,
+                amount=payment_txn.amount_usd,
+                category="funding",
+                description=f"Wallet funding via Paystack {payment_txn.amount_usd} USD",
+                payment_transaction=payment_txn,  # ✅ Pass existing transaction
+                extra_data={
+                    "gateway_reference": payment_txn.gateway_reference,
+                    "amount_usd": payment_txn.amount_usd,
+                    "amount_local": payment_txn.amount_local,
+                    "currency": payment_txn.currency,
+                }
+            )
 
-        WalletService.credit_wallet(
-            user=payment_txn.user,
-            amount_usd=amount_usd,  # wallet always in USD
-            category="funding",
-            description=f"Wallet funding via Paystack {amount_local} {currency} → {amount_usd} USD (Ref: {reference})",
-            reference=payment_txn.internal_reference,
-            payment_transaction=payment_txn,
-            extra_data={   # 👈 pass this dict
-                "amount_usd": amount_usd,
-                "amount_local": amount_local,
-                "currency": currency,
-            }
-        )
+            # Mark transaction as successful
+            payment_txn.status = PaymentTransaction.Status.SUCCESS
+            payment_txn.completed_at = timezone.now()
+            payment_txn.gateway_response = data
+            payment_txn.description = f"Wallet funding via Paystack {payment_txn.amount_usd} USD"
+            payment_txn.save(update_fields=[
+                "status", "completed_at", "gateway_response",
+                "balance_before", "balance_after", "description"
+            ])
 
-        # Mark webhook processed
-        webhook_event.processed = True
-        webhook_event.processed_at = timezone.now()
-        webhook_event.payload = data
-        webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+            # Mark webhook as processed
+            webhook_event.processed = True
+            webhook_event.processed_at = timezone.now()
+            webhook_event.payload = data
+            webhook_event.save(update_fields=["processed", "processed_at", "payload"])
 
-        return {"success": True, "message": "Wallet funded successfully", "data": {"reference": reference}}
+            logger.info("Successfully processed webhook for reference %s", reference)
+            return {"success": True, "message": "Wallet funded successfully", "data": {"reference": reference}}
+
+        except Exception as e:
+            logger.error("Failed to credit wallet for reference %s: %s", reference, str(e))
+            return {"success": False, "error": f"Wallet credit failed: {str(e)}", "data": {}}
+        
+
 
     @staticmethod
     def _handle_successful_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
@@ -545,11 +550,11 @@ class WebhookService:
                     # Refund the user's wallet
                     WalletService.credit_wallet(
                         user=payment_txn.user,
-                        amount=payment_txn.amount,
+                        amount=payment_txn.amount_usd,
                         category="withdrawal_refund",
                         description=f"Refund for failed withdrawal (Ref: {reference})",
                         reference=payment_txn.internal_reference,
-                        payment_transaction=payment_txn,
+                        # payment_transaction=payment_txn,
                     )
 
                     withdrawal = WithdrawalRequest.objects.filter(gateway_reference=reference).first()
@@ -626,7 +631,10 @@ class WebhookService:
         if webhook_event.processed:
             logger.info("Duplicate Flutterwave webhook ignored for reference %s", tx_ref)
             return {"success": True, "message": "Duplicate event ignored", "data": {}}
-
+                
+        # Now mark as processing (prevents race conditions)
+        webhook_event.processing_started = timezone.now()
+        webhook_event.save()
         try:
             status = data.get("status", "").lower()
 
@@ -671,12 +679,9 @@ class WebhookService:
             or data.get("orderRef")
         )
 
-
         if not tx_ref:
             logger.error("No reference found in Flutterwave webhook: %s", data)
             return {"success": False, "error": "Missing transaction reference", "data": {}}
-
-        amount = Decimal(str(data.get("amount", 0)))
 
         try:
             payment_txn = PaymentTransaction.objects.select_for_update().get(
@@ -693,48 +698,46 @@ class WebhookService:
             webhook_event.save(update_fields=["processed"])
             return {"success": True, "message": "Already processed", "data": {}}
 
-        # Mark transaction as success
+        # Mark transaction as success FIRST
         payment_txn.status = PaymentTransaction.Status.SUCCESS
         payment_txn.completed_at = timezone.now()
         payment_txn.gateway_response = data
-        payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
+        
+
+        payment_txn.description=f"Wallet funding via Flutterwave {payment_txn.amount_usd} USD",
+
+        payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "description"])
 
         # Credit wallet
-        # from wallets.services import WalletService
-        # WalletService.credit_wallet(
-        #     user=payment_txn.user,
-        #     amount=amount,
-        #     category="funding",
-        #     description=f"Wallet funding via Flutterwave (Ref: {tx_ref})",
-        #     reference=payment_txn.internal_reference,
-        #     payment_transaction=payment_txn,
-        # )
         from wallets.services import WalletService
 
-        currency = payment_txn.currency   # e.g. "NGN"
-        amount_local = amount             # NGN from gateway
-        amount_usd = CurrencyService.convert_local_to_usd(amount_local, currency).quantize(Decimal("0.01"))
+        amount_usd = payment_txn.amount_usd
+
+        # ✅ KEY FIX: Use internal_reference + unique suffix for wallet credit
+        wallet_credit_ref = f"{payment_txn.internal_reference}_CREDIT"
 
         WalletService.credit_wallet(
             user=payment_txn.user,
-            amount_usd=amount_usd,  # wallet always in USD
+            amount=amount_usd,
             category="funding",
-            description=f"Wallet funding via Flutterwave  {amount_local} {currency} → {amount_usd} USD (Ref: {tx_ref})",
-            reference=payment_txn.internal_reference,
-            payment_transaction=payment_txn,
-            extra_data={   # 👈 pass this dict
+            description=f"Wallet funding via Flutterwave {amount_usd} USD → {payment_txn.amount_local} {payment_txn.currency} (Ref: {tx_ref})",
+            reference=wallet_credit_ref,  # ✅ Different from gateway_reference
+            extra_data={
+                "gateway_reference": payment_txn.gateway_reference,
                 "amount_usd": amount_usd,
-                "amount_local": amount_local,
-                "currency": currency,
+                "amount_local": payment_txn.amount_local,
+                "currency": payment_txn.currency,
             }
         )
-
 
         # Mark webhook processed
         webhook_event.processed = True
         webhook_event.processed_at = timezone.now()
         webhook_event.payload = data
         webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+
+        logger.info("Wallet credited successfully for user %s, amount %s USD, ref %s", 
+                    payment_txn.user.id, amount_usd, tx_ref)
 
         return {"success": True, "message": "Wallet funded successfully", "data": {"reference": tx_ref}}
 
@@ -748,12 +751,16 @@ class WebhookService:
                     PaymentTransaction.objects.select_for_update()
                     .get(gateway_reference=reference, transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL)
                 )
-
+ 
                 if payment_txn.status == PaymentTransaction.Status.PENDING:
                     payment_txn.status = PaymentTransaction.Status.SUCCESS
                     payment_txn.completed_at = timezone.now()
                     payment_txn.gateway_response = data
-                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
+                    payment_txn.description = f"Wallet funding via Flutterwave {payment_txn.amount_usd} USD"
+                    payment_txn.save(update_fields=[
+                        "status", "completed_at", "gateway_response",
+                        "balance_before", "balance_after", "description"
+                    ])
 
                     # Mark any matching WithdrawalRequest as approved (if present)
                     from wallets.models import WithdrawalRequest
@@ -798,11 +805,11 @@ class WebhookService:
                     # Refund the user's wallet
                     WalletService.credit_wallet(
                         user=payment_txn.user,
-                        amount=payment_txn.amount,
+                        amount=payment_txn.amount_usd,
                         category="withdrawal_refund",
                         description=f"Refund for failed Flutterwave withdrawal (Ref: {reference})",
                         reference=payment_txn.internal_reference,
-                        payment_transaction=payment_txn,
+                        # payment_transaction=payment_txn,
                     )
 
                     withdrawal = WithdrawalRequest.objects.filter(gateway_reference=reference).first()
@@ -854,7 +861,7 @@ class FlutterwaveService:
     # ------------------------
     # Initialize funding (payment)
     # ------------------------
-    def initialize_payment(self, user, amount, currency="NGN", callback_url=None):
+    def initialize_payment(self, user, amount_usd, amount_local, currency="NGN", callback_url=None):
         """
         Initialize a payment transaction with Flutterwave.
 
@@ -868,7 +875,7 @@ class FlutterwaveService:
 
             # Normalize amount to Decimal
             try:
-                amount_dec = Decimal(amount)
+                amount_dec = Decimal(amount_local)
             except (InvalidOperation, TypeError):
                 return {"success": False, "data": {}, "error": "Invalid amount"}
 
@@ -878,10 +885,12 @@ class FlutterwaveService:
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.FUNDING,
-                    amount=amount_dec,
+                    amount_usd=amount_usd,          # ✅ Store original USD
+                    amount_local=amount_local,      # ✅ Add this field if missing
                     currency=currency,
                     gateway_reference=f"FLW_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
+                    description=f"Wallet funding via Flutterwave {amount_usd} USD ",
                 )
 
                 url = f"{self.base_url}/payments"
@@ -949,6 +958,7 @@ class FlutterwaveService:
                 # Failure path: mark txn failed
                 payment_transaction.status = PaymentTransaction.Status.FAILED
                 payment_transaction.gateway_response = resp_data
+                payment_transaction.description=f"Wallet funding via Flutterwave {payment_transaction.amount_usd} USD ",
                 payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
 
                 err_msg = resp_data.get("message") or "Payment initialization failed"
@@ -1054,15 +1064,16 @@ class FlutterwaveService:
             # amount_usd = CurrencyService.convert_local_to_usd(amount_local, currency).quantize(Decimal("0.01")) 
             # Convert USD → NGN for Flutterwave
             amount_ngn = CurrencyService.convert_usd_to_local(amount_usd, currency).quantize(Decimal("0.01"))
-
+            import uuid
             with transaction.atomic():
                 payment_transaction = PaymentTransaction.objects.create(
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
-                    amount=amount_ngn,
-                    currency="NGN",
-                    gateway_reference=f"FLW_WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    amount_usd=amount_usd,      # ✅ USD amount
+                    amount_local=amount_ngn,    # ✅ NGN amount                    
+                    currency=currency,
+                    gateway_reference=f"FW_{timezone.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
                     status=PaymentTransaction.Status.PENDING,
                 )
                 from wallets.services import WalletService
@@ -1170,8 +1181,11 @@ class CurrencyService:
     """Handles currency conversion and rate management"""
 
     @classmethod
-    def get_exchange_rate(cls, from_currency='USD', to_currency='NGN'):
+    def get_exchange_rate(cls, from_currency="USD", to_currency="NGN"):
         """Get exchange rate with caching"""
+        from_currency = str(from_currency).upper()
+        to_currency = str(to_currency).upper()
+
         cache_key = f"rate_{from_currency}_{to_currency}"
         rate = cache.get(cache_key)
 
@@ -1179,51 +1193,56 @@ class CurrencyService:
             try:
                 currency_rate = CurrencyRate.objects.get(
                     base_currency=from_currency,
-                    target_currency=to_currency
+                    target_currency=to_currency,
                 )
                 rate = currency_rate.rate
             except CurrencyRate.DoesNotExist:
                 rate = cls._fetch_rate_from_api(from_currency, to_currency)
 
-            cache.set(cache_key, rate, 3600)  # cache for 1 hour
+            cache.set(cache_key, str(rate), 3600)  # store as string for safety
 
         return Decimal(str(rate))
 
     @classmethod
     def _fetch_rate_from_api(cls, from_currency, to_currency):
-        """Fetch rate from external API"""
+        """Fetch rate from external API with fallback"""
         try:
             url = f"https://api.exchangerate-api.com/v4/latest/{from_currency}"
             response = requests.get(url, timeout=10)
             data = response.json()
 
-            rate = data['rates'].get(to_currency, 1)
+            rate = data["rates"].get(to_currency)
+            if not rate:
+                raise ValueError(f"Rate for {to_currency} not found")
 
             CurrencyRate.objects.update_or_create(
                 base_currency=from_currency,
                 target_currency=to_currency,
-                defaults={'rate': Decimal(str(rate))}
+                defaults={"rate": Decimal(str(rate))},
             )
 
-            return rate
-        except Exception:
+            return Decimal(str(rate))
+        except Exception as e:
+            logger.warning("Falling back to hardcoded rate: %s", e)
             fallback_rates = {
-                'NGN': 1600,
-                'GHS': 15.5,
-                'KES': 155,
+                "NGN": Decimal("1600"),
+                "GHS": Decimal("15.5"),
+                "KES": Decimal("155"),
             }
-            return fallback_rates.get(to_currency, 1)
+            return fallback_rates.get(to_currency, Decimal("1"))
 
     @classmethod
     def convert_usd_to_local(cls, amount_usd, target_currency):
-        if target_currency == 'USD':
+        target_currency = str(target_currency).upper()
+        if target_currency == "USD":
             return amount_usd
-        rate = cls.get_exchange_rate('USD', target_currency)
-        return amount_usd * rate
+        rate = cls.get_exchange_rate("USD", target_currency)
+        return (Decimal(amount_usd) * rate).quantize(Decimal("0.01"))
 
     @classmethod
     def convert_local_to_usd(cls, amount_local, from_currency):
-        if from_currency == 'USD':
+        from_currency = str(from_currency).upper()
+        if from_currency == "USD":
             return amount_local
-        rate = cls.get_exchange_rate('USD', from_currency)
-        return amount_local / rate
+        rate = cls.get_exchange_rate("USD", from_currency)
+        return (Decimal(amount_local) / rate).quantize(Decimal("0.01"))

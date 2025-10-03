@@ -113,7 +113,7 @@
                     <tr class="hover:bg-red-50">
                         <td class="px-6 py-4 text-sm text-red-900">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
                         <td class="px-6 py-4">
-                            {% if transaction.transaction_type == 'credit' %}
+                            {% if transaction.transaction_type == 'funding' %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                     <i class="fas fa-arrow-up mr-1"></i>Credit
                                 </span>
@@ -125,7 +125,7 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-red-600">{{ transaction.get_category_display }}</td>
                         <td class="px-6 py-4 text-sm font-medium">
-                            {% if transaction.transaction_type == 'credit' %}
+                            {% if transaction.transaction_type == 'funding' %}
                                 <span class="text-green-600">+${{ transaction.amount_usd |floatformat:2 }}</span>
                             {% else %}
                                 <span class="text-red-600">-${{ transaction.amount_usd |floatformat:2 }}</span>

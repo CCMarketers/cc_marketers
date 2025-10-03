@@ -9,7 +9,8 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from wallets.models import Wallet, Transaction
+from wallets.models import Wallet
+from payments.models import PaymentTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ class ReferralEarning(models.Model):
     def _credit_wallet(self):
         """Credit referral bonus into wallet."""
         ref = f"REFERRAL_{self.id}"
-        if Transaction.objects.filter(reference=ref).exists():
+        if PaymentTransaction.objects.filter(reference=ref).exists():
             logger.debug("Referral %s already credited", self.id)
             return
 
@@ -132,11 +133,11 @@ class ReferralEarning(models.Model):
         balance_before = wallet.balance
         balance_after = balance_before + Decimal(self.amount)
 
-        tx = Transaction.objects.create(
+        tx = PaymentTransaction.objects.create(
             user=self.referrer,
             transaction_type="credit",
             category="referral_bonus",
-            amount=self.amount,
+            amount_usd=self.amount,
             balance_before=balance_before,
             balance_after=balance_after,
             status="success",

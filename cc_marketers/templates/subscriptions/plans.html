@@ -52,70 +52,83 @@
                 </div>
             </div>
             
-            <!-- Plan Features -->
-            <div class="p-6">
-                <ul class="space-y-4 mb-8">
-                    <li class="flex items-center">
-                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        <span><strong>Business Volume (BV):</strong> {{ plan.business_volume }}</span>
-                    </li>
-                    <li class="flex items-center">
-                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        <span><strong>Referral Commission:</strong> ${{ plan.referral_commission }} USD</span>
-                    </li>
-                    <li class="flex items-center">
-                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        <span><strong>Commission To Tree:</strong> ${{ plan.commission_to_tree }} USD</span>
-                    </li>
-                    <li class="flex items-center">
-                        <svg class="h-5 w-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
-                        <span><strong>Daily Ad Limit:</strong> 
-                            {% if plan.daily_ad_limit == 0 %}
-                                Unlimited
-                            {% else %}
-                                {{ plan.daily_ad_limit }}
-                            {% endif %}
-                        </span>
-                    </li>
-                </ul>
-                
-                <!-- Subscribe Button -->
-                {% if user.is_authenticated %}
-                    {% if active_subscription and active_subscription.plan.id == plan.id %}
-                        <button class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold" disabled>
-                            Current Plan
-                        </button>
-                    {% else %}
-                        {% if user_wallet_balance >= plan.price %}
-                            <form method="post" action="{% url 'subscriptions:subscribe' plan.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200">
-                                    Subscribe Now
-                                </button>
-                            </form>
-                        {% else %}
-                            <button class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed" disabled>
-                                Insufficient Balance
-                            </button>
-                            <p class="text-red-600 text-sm mt-2 text-center">
-                                Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }})
-                            </p>
-                        {% endif %}
-                    {% endif %}
+<!-- Plan Features -->
+<div class="p-6">
+    <ul class="space-y-4 mb-8">
+        <li class="flex items-center">
+            <svg class="h-5 w-5 {{ plan.own_store|yesno:'text-green-600,text-red-600' }} mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Own an Online Store:</strong> {{ plan.own_store|yesno:"Yes,No" }}   (Coming soon) </span>
+        </li>
+        <li class="flex items-center">
+            <svg class="h-5 w-5 {{ plan.hire_marketers|yesno:'text-green-600,text-red-600' }} mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Hire Marketers:</strong> {{ plan.hire_marketers|yesno:"Yes,No" }}</span>
+        </li>
+        <li class="flex items-center">
+            <svg class="h-5 w-5 {{ plan.affiliate_marketing|yesno:'text-green-600,text-red-600' }} mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Affiliate Marketing:</strong> {{ plan.affiliate_marketing|yesno:"Yes,No" }}   (Coming soon)</span>
+        </li>
+        <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Recurring Direct Referral:</strong> $5</span>
+        </li>
+        <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Recurring Indirect Referral:</strong> $3</span>
+        </li>
+        <li class="flex items-center">
+            <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span><strong>Daily Tasks:</strong> 
+                {% if plan.daily_ad_limit == 0 %}
+                    Unlimited
                 {% else %}
-                    <a href="/login/" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold text-center transition-colors duration-200">
-                        Login to Subscribe
-                    </a>
+                    {{ plan.daily_ad_limit }}
                 {% endif %}
-            </div>
+            </span>
+        </li>
+    </ul>
+
+    <!-- Subscribe Button (same as before) -->
+    {% if user.is_authenticated %}
+        {% if active_subscription and active_subscription.plan.id == plan.id %}
+            <button class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold" disabled>
+                Current Plan
+            </button>
+        {% else %}
+            {% if user_wallet_balance >= plan.price %}
+                <form method="post" action="{% url 'subscriptions:subscribe' plan.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200">
+                        Subscribe Now
+                    </button>
+                </form>
+            {% else %}
+                <button class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed" disabled>
+                    Insufficient Balance
+                </button>
+                <p class="text-red-600 text-sm mt-2 text-center">
+                    Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }})
+                </p>
+            {% endif %}
+        {% endif %}
+    {% else %}
+        <a href="/login/" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold text-center transition-colors duration-200">
+            Login to Subscribe
+        </a>
+    {% endif %}
+</div>
+
         </div>
     {% empty %}
         <div class="col-span-full text-center py-12">

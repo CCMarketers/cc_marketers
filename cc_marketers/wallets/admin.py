@@ -3,8 +3,10 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Sum
-from .models import Wallet, Transaction, EscrowTransaction, WithdrawalRequest
-\
+from .models import Wallet, EscrowTransaction, WithdrawalRequest
+from payments.models import PaymentTransaction
+
+
 @admin.register(Wallet)
 class WalletAdmin(admin.ModelAdmin):
     list_display = ['user', 'balance', 'available_balance_display', 'total_earned', 'created_at']
@@ -26,7 +28,7 @@ class WalletAdmin(admin.ModelAdmin):
 
     
     def total_earned(self, obj):
-        total = Transaction.objects.filter(
+        total = PaymentTransaction.objects.filter(
             user=obj.user,
             transaction_type='credit',
             category__in=['task_earning', 'referral_bonus'],
@@ -35,46 +37,46 @@ class WalletAdmin(admin.ModelAdmin):
         return f'${total:.2f}'
     total_earned.short_description = 'Total Earned'
 
-@admin.register(Transaction)
-class TransactionAdmin(admin.ModelAdmin):
-    list_display = [
-        'reference_short', 'user', 'transaction_type', 'category', 
-        'amount_display', 'status', 'task_link', 'created_at'
-    ]
-    list_filter = ['transaction_type', 'category', 'status', 'created_at']
-    search_fields = ['user__username', 'reference', 'description']
-    readonly_fields = ['id', 'created_at', 'updated_at']
-    date_hierarchy = 'created_at'
+# @admin.register(Transaction)
+# class TransactionAdmin(admin.ModelAdmin):
+#     list_display = [
+#         'reference_short', 'user', 'transaction_type', 'category', 
+#         'amount_display', 'status', 'task_link', 'created_at'
+#     ]
+#     list_filter = ['transaction_type', 'category', 'status', 'created_at']
+#     search_fields = ['user__username', 'reference', 'description']
+#     readonly_fields = ['id', 'created_at', 'updated_at']
+#     date_hierarchy = 'created_at'
     
-    def reference_short(self, obj):
-        if not obj.reference:  # handle None or empty string
-            return "-"
-        return obj.reference[:14] + "..." if len(obj.reference) > 14 else obj.reference
+#     def reference_short(self, obj):
+#         if not obj.reference:  # handle None or empty string
+#             return "-"
+#         return obj.reference[:14] + "..." if len(obj.reference) > 14 else obj.reference
 
-    reference_short.short_description = 'Reference'
+#     reference_short.short_description = 'Reference'
     
-    def amount_display(self, obj):
-        color = 'green' if obj.transaction_type == 'credit' else 'red'
-        symbol = '+' if obj.transaction_type == 'credit' else '-'
-        formatted = f"{obj.amount:.2f}"
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} ${}</span>',
-            color,
-            symbol,
-            formatted
-        )
-    amount_display.short_description = 'Amount'
+#     def amount_display(self, obj):
+#         color = 'green' if obj.transaction_type == 'credit' else 'red'
+#         symbol = '+' if obj.transaction_type == 'credit' else '-'
+#         formatted = f"{obj.amount:.2f}"
+#         return format_html(
+#             '<span style="color: {}; font-weight: bold;">{} ${}</span>',
+#             color,
+#             symbol,
+#             formatted
+#         )
+#     amount_display.short_description = 'Amount'
     
-    def task_link(self, obj):
-        if getattr(obj, "task_id", None):  # safer than obj.task
-            url = reverse('admin:tasks_task_change', args=[obj.task.id])
-            return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
-        return '-'
-    task_link.short_description = 'Related Task'
+#     def task_link(self, obj):
+#         if getattr(obj, "task_id", None):  # safer than obj.task
+#             url = reverse('admin:tasks_task_change', args=[obj.task.id])
+#             return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
+#         return '-'
+#     task_link.short_description = 'Related Task'
 
 @admin.register(EscrowTransaction)
 class EscrowTransactionAdmin(admin.ModelAdmin):
-    list_display = ['task_link', 'advertiser', 'amount', 'status', 'created_at', 'released_at']
+    list_display = ['task_link', 'advertiser', 'amount_usd', 'status', 'created_at', 'released_at']
     list_filter = ['status', 'created_at']
     search_fields = ['task__title', 'advertiser__username']
     readonly_fields = ['created_at']

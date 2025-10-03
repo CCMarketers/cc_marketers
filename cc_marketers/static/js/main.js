@@ -349,7 +349,7 @@ function hideLoading(element) {
 }
 
 // Export functions for global use
-window.TriLinkers = {
+window.CC_Marketers = {
     showToast,
     showLoading,
     hideLoading,

@@ -51,7 +51,17 @@ class UserManager(BaseUserManager):
 
         return self._create_user(email, password, **extra_fields)
 
+class Skill(models.Model):
+    """A reusable skill object that can be linked to many profiles."""
+    name = models.CharField(max_length=100, unique=True)
 
+    class Meta:
+        db_table = "skills"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+    
 # ---------- USER MODEL ----------
 class User(AbstractBaseUser, PermissionsMixin):
     """Primary user model.
@@ -71,10 +81,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
 
     CURRENCY_CHOICES = [
-        ('NGN', 'Nigerian Naira'),
-        ('GHS', 'Ghanaian Cedi'),
-        ('KES', 'Kenyan Shilling'),
-        ('USD', 'US Dollar'),
+        ('NGN', 'NGN'),
+        ('GHS', 'GHS'),
+        ('KES', 'KES'),
+        ('USD', 'USD'),
     ]
     
     COUNTRY_CHOICES = [
@@ -155,8 +165,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name = _("user")
         verbose_name_plural = _("users")
         indexes = [
-            models.Index(fields=["email"]),
-            models.Index(fields=["phone"]),
             models.Index(fields=["role"]),
             models.Index(fields=["email_verified"]),
         ]
@@ -217,6 +225,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def subscription_plan(self):
         sub = self.active_subscription
         return getattr(sub, "plan", None) if sub else None
+    
 
 
 # ---------- USER PROFILE ----------
@@ -233,10 +242,17 @@ class UserProfile(models.Model):
     twitter_url = models.URLField(blank=True)
     linkedin_url = models.URLField(blank=True)
     facebook_url = models.URLField(blank=True)
-    skills = models.TextField(blank=True, help_text=_("Comma-separated skills"))
+     # ✅ Normalized skills
+    skills = models.ManyToManyField(Skill, blank=True, related_name="profiles")
     experience_years = models.PositiveIntegerField(null=True, blank=True)
-    success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
-    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=Decimal("0.00"))
+    # Store as 0.00 - 100.00 (%) max
+    success_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"),
+                                    help_text=_("Percentage success rate (0–100)"))
+
+    # Store as 0.00 - 5.00
+    average_rating = models.DecimalField(max_digits=2, decimal_places=2, default=Decimal("0.00"),
+                                     help_text=_("Average rating (0–5 scale)"))
+
     total_reviews = models.PositiveIntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -309,7 +325,7 @@ class PhoneVerificationToken(models.Model):
     """Short numeric token for phone verification."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="phone_tokens")
-    token = models.CharField(max_length=6, db_index=True)
+    token = models.CharField(max_length=6,unique=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     used = models.BooleanField(default=False, db_index=True)

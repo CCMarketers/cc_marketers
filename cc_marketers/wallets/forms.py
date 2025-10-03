@@ -40,13 +40,29 @@ class WithdrawalRequestForm(forms.ModelForm):
             }),
         }
 
-    def clean_amount(self):
-        amount_usd = self.cleaned_data['amount']
-        if amount_usd < Decimal('1.00'):
-            raise forms.ValidationError("Minimum withdrawal amount is $1.00")
+    def clean_amount_usd(self):
+        amount_usd = self.cleaned_data['amount_usd']
+        if amount_usd < Decimal('10.00'):  # match service minimum
+            raise forms.ValidationError("Minimum withdrawal amount is $10.00")
         if amount_usd > Decimal('10000.00'):
             raise forms.ValidationError("Maximum withdrawal amount is $10,000.00")
         return amount_usd
+
+    def clean(self):
+        cleaned_data = super().clean()
+        method = cleaned_data.get("withdrawal_method")
+
+        if method == "bank_transfer":
+            for field in ["account_number", "account_name", "bank_name"]:
+                if not cleaned_data.get(field):
+                    raise forms.ValidationError(f"{field.replace('_', ' ').title()} is required for bank transfer.")
+
+        elif method == "crypto":
+            if not cleaned_data.get("account_number"):
+                raise forms.ValidationError("Wallet address is required for crypto withdrawals.")
+
+        return cleaned_data
+
 
 
 class FundWalletForm(forms.Form):

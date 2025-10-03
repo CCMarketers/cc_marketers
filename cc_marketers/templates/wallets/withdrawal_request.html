@@ -36,12 +36,12 @@
             
             <!-- Amount -->
             <div class="mb-6">
-                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
+                <label for="{{ form.amount_usd.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
                     Withdrawal Amount <span class="text-red-500">*</span>
                 </label>
-                {{ form.amount }}
-                {% if form.amount.errors %}
-                    <p class="mt-2 text-sm text-red-600">{{ form.amount.errors.0 }}</p>
+                {{ form.amount_usd }}
+                {% if form.amount_usd.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.amount_usd.errors.0 }}</p>
                 {% endif %}
                 <p class="mt-1 text-sm text-red-500">Minimum: $1.00 | Maximum: $10,000.00</p>
             </div>
@@ -141,7 +141,7 @@
 <script>
     // Auto-calculate fees or validation
     document.addEventListener('DOMContentLoaded', function() {
-        const amountInput = document.getElementById('{{ form.amount.id_for_label }}');
+        const amountInput = document.getElementById('{{ form.amount_usd.id_for_label }}');
         const availableBalance = {{ available_balance }};
         
         amountInput.addEventListener('input', function() {

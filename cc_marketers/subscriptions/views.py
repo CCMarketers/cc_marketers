@@ -85,7 +85,7 @@ def my_subscription(request):
     if wallet:
         pending_withdrawals = WithdrawalRequest.objects.filter(
             user=request.user, status="pending"
-        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0.00")
         wallet_balance = wallet.balance - pending_withdrawals
     else:
         wallet_balance = Decimal("0.00")
@@ -191,7 +191,7 @@ def cancel_subscription(request):
     if refund_allowed and time_diff <= timedelta(hours=6) and refund_amount > 0:
         WalletService.credit_wallet(
             user=request.user,
-            amount=refund_amount,
+            amount_usd=refund_amount,
             category="subscription_refund",
             description=f"Refund for {active_subscription.plan.name} (cancelled within 6 hours)",
             reference=f"REFUND_{request.user.id}_{active_subscription.id}",

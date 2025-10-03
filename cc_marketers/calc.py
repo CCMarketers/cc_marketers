@@ -8,10 +8,10 @@ from django.db import models
 
 class User(AbstractUser):
     CURRENCY_CHOICES = [
-        ('NGN', 'Nigerian Naira'),
-        ('GHS', 'Ghanaian Cedi'),
-        ('KES', 'Kenyan Shilling'),
-        ('USD', 'US Dollar'),
+        ('NGN', 'NGN'),
+        ('GHS', 'GHS'),
+        ('KES', 'KES'),
+        ('USD', 'KES'),
     ]
     
     COUNTRY_CHOICES = [

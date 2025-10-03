@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard - TriLinkers{% endblock %}
+{% block title %}Dashboard - CC_Marketers{% endblock %}
 
 {% block content %}
 <div class="fade-in-up">
@@ -11,7 +11,7 @@
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-3xl font-bold mb-2">Welcome back, {{ request.user.get_display_name }}!</h1>
-                <p class="text-red-100">Here's your TriLinkers overview</p>
+                <p class="text-red-100">Here's your CC_Marketers overview</p>
             </div>
             <div class="text-right">
                 <p class="text-red-100 text-sm">Member since</p>
@@ -28,8 +28,6 @@
                 <div>
                     <p class="text-gray-600 text-sm">Available Balance</p>
                     <p class="text-2xl font-bold text-red-600">${{ available_balance|floatformat:2 }}</p>
-                    <p>{{ txn.amount_usd }} USD ({{ txn.amount_local }} {{ txn.currency }})</p>
-
                 </div>
                 <div class="bg-red-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +88,7 @@
         <div class="bg-white rounded-lg p-6 border border-red-100 shadow-sm card-hover">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-600 text-sm">Referral Earnings</p>
+                    <p class="text-gray-600 text-sm">Connection Earnings</p>
                     <p class="text-2xl font-bold text-red-600">${{ user.referral_earnings|floatformat:2|default:"0.00" }}</p>
                 </div>
                 <div class="bg-purple-100 p-3 rounded-lg">
@@ -196,10 +194,10 @@
 
         <!-- Referral Section -->
         <div class="bg-white rounded-lg border border-red-100 shadow-sm p-6">
-            <h3 class="text-lg font-semibold text-red-600 mb-4">Referral Program</h3>
+            <h3 class="text-lg font-semibold text-red-600 mb-4">Connection Program</h3>
             <div class="bg-gradient-red-light p-4 rounded-lg mb-4">
-                <p class="text-red-800 font-medium mb-2">Earn $500 per referral!</p>
-                <p class="text-red-700 text-sm">Share your referral link and earn money when friends join.</p>
+                <p class="text-red-800 font-medium mb-2">Earn $500 per Connection!</p>
+                <p class="text-red-700 text-sm">Share your Connection link and earn money when friends join.</p>
             </div>
             
             <!-- Referral Link -->
@@ -221,7 +219,7 @@
             <!-- Fixed Button -->
             <a href="{% url 'referrals:dashboard' %}" 
             class="mt-4 block w-full bg-red-600 hover:bg-red-700 text-white text-center px-4 py-2 rounded-md text-sm font-medium transition">
-                View Referral Dashboard
+                View Connection Dashboard
             </a>
         </div>
 
@@ -287,8 +285,8 @@
                 {% for transaction in recent_transactions %}
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-center">
-                        <div class="{% if transaction.transaction_type == 'credit' %}bg-green-100 text-green-600{% else %}bg-red-100 text-red-600{% endif %} p-2 rounded-lg mr-3">
-                            {% if transaction.transaction_type == 'credit' %}
+                        <div class="{% if transaction.transaction_type == 'funding' %}bg-green-100 text-green-600{% else %}bg-red-100 text-red-600{% endif %} p-2 rounded-lg mr-3">
+                            {% if transaction.transaction_type == 'funding' %}
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                 </svg>
@@ -299,12 +297,12 @@
                             {% endif %}
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900">{{ transaction.description }}</p>
+                            <p class="font-medium text-gray-900">{{ transaction.get_category_display }}</p>
                             <p class="text-sm text-gray-600">{{ transaction.created_at|date:"M j, Y" }}</p>
                         </div>
                     </div>
-                    <span class="font-semibold {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
-                        {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                    <span class="font-semibold {% if transaction.transaction_type == 'funding' %}text-green-600{% else %}text-red-600{% endif %}">
+                        {% if transaction.transaction_type == 'funding' %}+{% else %}-{% endif %}${{ transaction.amount_usd|floatformat:2 }}
                     </span>
                 </div>
                 {% empty %}

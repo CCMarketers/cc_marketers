@@ -21,7 +21,7 @@ class PaystackTransactionInline(admin.StackedInline):
 
 @admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
-    list_display = ['internal_reference', 'user', 'transaction_type', 'amount', 
+    list_display = ['internal_reference', 'user', 'transaction_type', 'amount_usd', 
                    'currency', 'status', 'gateway', 'created_at']
     list_filter = ['transaction_type', 'status', 'gateway', 'currency', 'created_at']
     search_fields = ['user__username', 'user__email', 'gateway_reference', 'internal_reference']

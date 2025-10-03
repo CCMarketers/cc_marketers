@@ -13,13 +13,13 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods        
+from payments.services import CurrencyService
 
-from .models import PaymentTransaction
 from .services import PaystackService, WebhookService, FlutterwaveService
-from payments.forms import FundingForm  # existing form
-from wallets.models import Wallet, Transaction
-from payments.models import PaymentGateway
+from payments.forms import FundingForm  
+from wallets.models import Wallet
+from payments.models import PaymentGateway, PaymentTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +75,18 @@ def initiate_funding(request):
     if request.method == "POST":
         form = FundingForm(request.POST)
         if form.is_valid():
-            amount: Decimal = form.cleaned_data["amount"]
+            amount_usd: Decimal = form.cleaned_data["amount"]
+            currency = request.user.preferred_currency
             gateway_choice: str = form.cleaned_data.get("gateway", "paystack").lower()
+            # Convert USD → local currency
+            try:
+                amount_local = CurrencyService.convert_usd_to_local(amount_usd, currency).quantize(Decimal("0.01"))
+            except Exception as exc:
+                logger.exception("Conversion error: %s", exc)
+                messages.error(request, "Unable to convert amount. Please try again later.")
+                return render(request, "wallets/fund_wallet.html", {"form": form, "show_gateway_choice": True})
 
+            callback_url = None
             callback_url = None
             service = None
             try:
@@ -88,7 +97,14 @@ def initiate_funding(request):
                     service = PaystackService()
                     callback_url = request.build_absolute_uri(reverse("payments:payment_callback"))
 
-                result = service.initialize_payment(user=request.user, amount=amount, callback_url=callback_url)
+                result = service.initialize_payment(
+                    user=request.user,
+                    amount_local=amount_local,     # converted to NGN, KES, etc.
+                    amount_usd=amount_usd,
+                    currency=currency,       # match user preference
+                    callback_url=callback_url
+                )
+
             except Exception as exc:
                 logger.exception("Error initializing payment for user %s via %s: %s", request.user.id, gateway_choice, exc)
                 messages.error(request, "Unable to initialize payment. Please try again later.")
@@ -122,37 +138,32 @@ def initiate_funding(request):
 # -------------------------
 @login_required
 def payment_callback(request):
-    """
-    Paystack callback after authorization.
-    Only verifies reference and lets webhook complete wallet crediting.
-    """
+    """Paystack callback - check DB status only, webhook does the real work."""
     reference = request.GET.get("reference")
     if not reference:
         messages.error(request, "Invalid payment reference.")
         return redirect("wallets:dashboard")
 
     try:
-        PaymentTransaction.objects.get(gateway_reference=reference, user=request.user)
+        txn = PaymentTransaction.objects.get(
+            gateway_reference=reference, 
+            user=request.user
+        )
+        
+        # Just check what webhook has done
+        if txn.status == PaymentTransaction.Status.SUCCESS:
+            messages.success(request, "Payment completed successfully!")
+        elif txn.status == PaymentTransaction.Status.FAILED:
+            messages.error(request, "Payment failed.")
+        else:
+            # Still pending - webhook hasn't processed yet
+            messages.info(request, "Payment is being verified. Please refresh in a moment.")
+            
     except PaymentTransaction.DoesNotExist:
         messages.error(request, "Transaction not found.")
-        return redirect("wallets:dashboard")
     except Exception as exc:
-        logger.exception("Error fetching transaction for reference %s: %s", reference, exc)
-        messages.error(request, "An internal error occurred.")
-        return redirect("wallets:dashboard")
-
-    try:
-        paystack_service = PaystackService()
-        verification = paystack_service.verify_payment(reference)
-        status = (verification.get("success") and verification.get("data", {}).get("data", {}).get("status"))
-        if status == "success":
-            messages.success(request, "Payment successful! Wallet will be credited shortly.")
-        else:
-            logger.info("Paystack verification returned non-success for ref=%s: %s", reference, verification)
-            messages.error(request, "Payment verification failed.")
-    except Exception as exc:
-        logger.exception("Error verifying paystack payment for ref %s: %s", reference, exc)
-        messages.error(request, "An error occurred during payment verification.")
+        logger.exception("Error in callback for reference %s: %s", reference, exc)
+        messages.error(request, "An error occurred.")
 
     return redirect("wallets:dashboard")
 
@@ -256,7 +267,7 @@ def withdraw_funds(request):
         wallet.balance -= amount
         wallet.save(update_fields=["balance"])
 
-        txn = Transaction.objects.create(
+        txn = PaymentTransaction.objects.create(
             wallet=wallet,
             amount=amount,
             txn_type="withdrawal",

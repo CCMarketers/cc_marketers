@@ -17,10 +17,13 @@ class CustomUserCreationForm(UserCreationForm):
     )
     phone = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-input',
-            'placeholder': '+234XXXXXXXXXX'
-        })
+        max_length=15,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '+234XXXXXXXXXX'})
+    )
+    referral_code = forms.CharField(
+        required=True,
+        max_length=10,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Referral code'})
     )
     first_name = forms.CharField(
         required=True,
@@ -38,14 +41,7 @@ class CustomUserCreationForm(UserCreationForm):
             'placeholder': 'Last name'
         })
     )
-    referral_code = forms.CharField(
-        required=False,
-        max_length=10,
-        widget=forms.TextInput(attrs={
-            'class': 'form-input',
-            'placeholder': 'Referral code (optional)'
-        })
-    )
+   
     role = forms.ChoiceField(
         choices=User.ROLE_CHOICES,
         initial=User.MEMBER,
@@ -79,10 +75,11 @@ class CustomUserCreationForm(UserCreationForm):
     
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
-        if phone and User.objects.filter(phone=phone).exists():
-            raise ValidationError('A user with this phone number already exists.')
+        if phone:
+            if User.objects.filter(phone=phone, phone_verified=True).exclude(pk=self.instance.pk).exists():
+                raise ValidationError("This phone number is already verified by another account.")
         return phone
-    
+
     def clean_referral_code(self):
         code = self.cleaned_data.get("referral_code")
         if code and not ReferralCode.objects.filter(code=code).exists():
@@ -97,6 +94,7 @@ class CustomUserCreationForm(UserCreationForm):
         user.last_name = self.cleaned_data['last_name']
         user.phone = self.cleaned_data['phone']
         user.role = self.cleaned_data['role']
+        user.preferred_currency = self.cleaned_data['preferred_currency']
         
         if commit:
             user.save()
@@ -175,11 +173,9 @@ class ExtendedProfileForm(forms.ModelForm):
 
 class PhoneVerificationForm(forms.Form):
     phone = forms.CharField(
-        max_length=17,
-        widget=forms.TextInput(attrs={
-            'class': 'form-input',
-            'placeholder': '+234XXXXXXXXXX'
-        })
+        required=False,
+        max_length=15,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '+234XXXXXXXXXX'})
     )
 
 class PhoneVerificationCodeForm(forms.Form):
