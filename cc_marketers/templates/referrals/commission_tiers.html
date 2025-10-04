@@ -12,7 +12,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-3xl font-bold">Commission Rates</h1>
-                    <p class="text-red-100 mt-2">Earn more with our multi-tier referral system</p>
+                    <p class="text-red-100 mt-2">Earn more with our multi-tier Connection system</p>
                 </div>
                 <a href="{% url 'referrals:dashboard' %}" 
                    class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
@@ -25,32 +25,26 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <!-- How It Works Section -->
         <div class="bg-white rounded-lg shadow-lg p-8 mb-10">
-            <h2 class="text-2xl font-semibold text-gray-900 mb-6">How Multi-Tier Referrals Work</h2>
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6">How Multi-Tier Connections Work</h2>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="text-center">
                     <div class="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                         <span class="text-2xl font-bold text-red-600">1</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Direct Referrals (Level 1)</h3>
-                    <p class="text-gray-600">Users who sign up directly with your referral link. You earn the highest commission from their activities.</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Direct Connections (Level 1)</h3>
+                    <p class="text-gray-600">Users who sign up directly with your Connection link. You earn the highest commission from their activities.</p>
                 </div>
                 
                 <div class="text-center">
                     <div class="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                         <span class="text-2xl font-bold text-orange-600">2</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Indirect Referrals (Level 2)</h3>
-                    <p class="text-gray-600">Users referred by your direct referrals. You earn a smaller but still significant commission.</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Indirect Connections (Level 2)</h3>
+                    <p class="text-gray-600">Users referred by your direct Connections. You earn a smaller but still significant commission.</p>
                 </div>
                 
-                <div class="text-center">
-                    <div class="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <span class="text-2xl font-bold text-yellow-600">3</span>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Third Level</h3>
-                    <p class="text-gray-600">Users referred by your Level 2 referrals. Build a network and earn passive income.</p>
-                </div>
+            
             </div>
         </div>
 
@@ -96,14 +90,14 @@
                                             </td>
                                             <td class="px-6 py-4">
                                                 <div class="text-sm font-medium text-gray-900">
-                                                    {% if tier.level == 1 %} Direct Referral
-                                                    {% elif tier.level == 2 %} Indirect Referral
-                                                    {% else %} Third Level Referral {% endif %}
+                                                    {% if tier.level == 1 %} Direct Connection
+                                                    {% elif tier.level == 2 %} Indirect Connection
+                                                    
                                                 </div>
                                                 <div class="text-sm text-gray-500">
                                                     {% if tier.level == 1 %} Users who sign up with your link
-                                                    {% elif tier.level == 2 %} Users referred by your direct referrals
-                                                    {% else %} Users referred by level 2 referrals {% endif %}
+                                                    {% elif tier.level == 2 %} Users referred by your direct Connections
+                                                   
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
@@ -144,7 +138,7 @@
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 mb-3">Build Your Network</h3>
                     <ul class="space-y-2 text-sm text-gray-600">
-                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Help your referrals succeed</li>
+                        <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Help your Connections succeed</li>
                         <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Provide ongoing support</li>
                         <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Encourage them to refer others</li>
                         <li class="flex items-start"><span class="text-red-500 mr-2">✔</span> Focus on quality over quantity</li>
@@ -158,7 +152,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-medium text-gray-900">Ready to Start Earning?</h3>
-                    <p class="text-sm text-gray-600 mt-1">Share your referral link and start building your network today.</p>
+                    <p class="text-sm text-gray-600 mt-1">Share your Connection link and start building your network today.</p>
                 </div>
                 <a href="{% url 'referrals:dashboard' %}" 
                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors">

@@ -33,7 +33,7 @@ class WalletAdmin(admin.ModelAdmin):
             transaction_type='credit',
             category__in=['task_earning', 'referral_bonus'],
             status='success'
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        ).aggregate(total=Sum('amount_usd'))['total'] or 0
         return f'${total:.2f}'
     total_earned.short_description = 'Total Earned'
 
@@ -41,7 +41,7 @@ class WalletAdmin(admin.ModelAdmin):
 # class TransactionAdmin(admin.ModelAdmin):
 #     list_display = [
 #         'reference_short', 'user', 'transaction_type', 'category', 
-#         'amount_display', 'status', 'task_link', 'created_at'
+#         'amount_usd_display', 'status', 'task_link', 'created_at'
 #     ]
 #     list_filter = ['transaction_type', 'category', 'status', 'created_at']
 #     search_fields = ['user__username', 'reference', 'description']

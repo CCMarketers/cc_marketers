@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}My Referrals{% endblock %}
+{% block title %}My Connections{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
 <div class="bg-red-600 text-white py-8 shadow-md">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold">My Referrals</h1>
+      <h1 class="text-3xl font-bold">My Connections</h1>
       <p class="text-red-100 mt-2">All users you’ve referred</p>
     </div>
     <a href="{% url 'referrals:dashboard' %}" 
@@ -150,15 +150,15 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
       </svg>
-      <h3 class="mt-3 text-lg font-medium text-gray-900">No referrals yet</h3>
-      <p class="mt-1 text-sm text-gray-500">Get started by sharing your referral link with friends and family.</p>
+      <h3 class="mt-3 text-lg font-medium text-gray-900">No Connections yet</h3>
+      <p class="mt-1 text-sm text-gray-500">Get started by sharing your Connection link with friends and family.</p>
       <div class="mt-6">
-        <a href="{% url 'referrals:dashboard' %}"
+        <a href="{% url 'Connections:dashboard' %}"
            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
           <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
           </svg>
-          Get Your Referral Link
+          Get Your Connection Link
         </a>
       </div>
     </div>

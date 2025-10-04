@@ -14,7 +14,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-3xl font-bold">Earnings Management</h1>
-                    <p class="text-red-100 mt-2">Review and manage referral earnings</p>
+                    <p class="text-red-100 mt-2">Review and manage Connection earnings</p>
                 </div>
                 <a href="{% url 'referrals:admin_dashboard' %}" 
                    class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
@@ -53,7 +53,7 @@
             <!-- Earnings Table -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h2 class="text-lg font-semibold text-gray-900">Referral Earnings</h2>
+                    <h2 class="text-lg font-semibold text-gray-900">Connection Earnings</h2>
                 </div>
                 
                 <div class="overflow-x-auto">
@@ -270,7 +270,7 @@
                     {% if status_filter %}
                         No earnings with {{ status_filter }} status.
                     {% else %}
-                        No referral earnings have been generated yet.
+                        No Connection earnings have been generated yet.
                     {% endif %}
                 </p>
             </div>

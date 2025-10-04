@@ -4,13 +4,13 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+# from django.db.models import Sum
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from .models import SubscriptionPlan, UserSubscription
 from .services import SubscriptionService
-from wallets.models import Wallet, WithdrawalRequest
+from wallets.models import Wallet
 from wallets.services import WalletService
 from referrals.services import credit_signup_bonus_on_subscription
 from tasks.services import TaskWalletService
@@ -83,10 +83,10 @@ def my_subscription(request):
 
     wallet = Wallet.objects.filter(user=request.user).first()
     if wallet:
-        pending_withdrawals = WithdrawalRequest.objects.filter(
-            user=request.user, status="pending"
-        ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0.00")
-        wallet_balance = wallet.balance - pending_withdrawals
+        # pending_withdrawals = WithdrawalRequest.objects.filter(
+        #     user=request.user, status="pending"
+        # ).aggregate(total=Sum("amount_usd"))["total"] or Decimal("0.00")
+        wallet_balance = wallet.get_available_balance
     else:
         wallet_balance = Decimal("0.00")
 
@@ -191,7 +191,7 @@ def cancel_subscription(request):
     if refund_allowed and time_diff <= timedelta(hours=6) and refund_amount > 0:
         WalletService.credit_wallet(
             user=request.user,
-            amount_usd=refund_amount,
+            amount=refund_amount,
             category="subscription_refund",
             description=f"Refund for {active_subscription.plan.name} (cancelled within 6 hours)",
             reference=f"REFUND_{request.user.id}_{active_subscription.id}",

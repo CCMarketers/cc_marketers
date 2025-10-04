@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Join via Referral - CC_Marketers{% endblock %}
+{% block title %}Join via Connection - CC_Marketers{% endblock %}
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gradient-red-light py-12 px-4 sm:px-6 lg:px-8">
@@ -30,7 +30,7 @@
                         </svg>
                     </div>
                 </div>
-                <h3 class="text-lg font-bold text-green-800 mb-2">🎉 Special Referral Bonus!</h3>
+                <h3 class="text-lg font-bold text-green-800 mb-2">🎉 Special Connection Bonus!</h3>
                 <div class="space-y-1 text-sm">
                     <p class="text-green-700">✅ <strong>$1,000 Welcome Bonus</strong> after verification</p>
                     <p class="text-green-700">✅ <strong>$500 First Task Bonus</strong> on completion</p>
@@ -50,7 +50,7 @@
             <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <div class="flex items-center justify-center">
                     <div class="text-center">
-                        <p class="text-red-600 text-sm font-medium mb-1">Referral Code</p>
+                        <p class="text-red-600 text-sm font-medium mb-1">Connection Code</p>
                         <p class="text-red-800 font-mono font-bold text-lg">{{ referral_code }}</p>
                         <p class="text-red-600 text-xs mt-1">This code will be automatically applied</p>
                     </div>
@@ -189,7 +189,7 @@
                                class="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-green-300 rounded"
                                required>
                         <label for="agree_referral" class="ml-2 text-sm text-gray-600">
-                            I understand that by signing up with this referral code, both my referrer and I will receive bonuses as described above.
+                            I understand that by signing up with this Connection code, both my referrer and I will receive bonuses as described above.
                         </label>
                     </div>
                 </div>
@@ -235,7 +235,7 @@
         <!-- Regular Signup Link -->
         <div class="text-center">
             <p class="text-gray-500 text-sm">
-                Want to sign up without referral? 
+                Want to sign up without Connection? 
                 <a href="{% url 'users:register' %}" class="text-gray-700 hover:text-gray-900 underline">
                     Regular signup
                 </a>
