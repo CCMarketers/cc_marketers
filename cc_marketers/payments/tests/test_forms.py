@@ -377,7 +377,7 @@ class WithdrawalFormTestCase(TestCase):
         """Test that form fields have appropriate help texts"""
         form = WithdrawalForm()
         
-        self.assertEqual(form.fields['amount'].help_text, 'Minimum withdrawal amount is ₦100')
+        self.assertEqual(form.fields['amount'].help_text, 'Minimum withdrawal amount is $100')
         self.assertEqual(form.fields['bank_code'].help_text, 'Select your bank')
         self.assertEqual(form.fields['account_number'].help_text, 'Your 10-digit account number')
     

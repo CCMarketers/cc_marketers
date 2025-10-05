@@ -188,20 +188,21 @@ def delete_task(request, task_id):
 @subscription_required
 def edit_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, advertiser=request.user)
+
     if task.submissions.exists():
         messages.error(request, "You cannot edit this task because it already has submissions.")
         return redirect("tasks:my_tasks")
 
     if request.method == "POST":
-        form = TaskForm(request.POST, instance=task)
+        form = TaskForm(request.POST, request.FILES, instance=task)  # ✅ include request.FILES
         if form.is_valid():
             form.save()
             messages.success(request, "Task updated successfully.")
             return redirect("tasks:my_tasks")
     else:
         form = TaskForm(instance=task)
-    return render(request, "tasks/edit_task.html", {"form": form, "task": task})
 
+    return render(request, "tasks/edit_task.html", {"form": form, "task": task})
 
 @login_required
 @subscription_required

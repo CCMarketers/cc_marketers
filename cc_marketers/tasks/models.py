@@ -5,8 +5,6 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 import uuid
-from django.db.models.expressions import Combinable
-
 
 class Task(models.Model):
     TASK_STATUS_CHOICES = [
@@ -33,6 +31,25 @@ class Task(models.Model):
     deadline = models.DateTimeField()
     proof_instructions = models.TextField()
     status = models.CharField(max_length=20, choices=TASK_STATUS_CHOICES, default='active')
+
+    # ✅ New fields for media
+    sample_image = models.ImageField(
+        upload_to="task_samples/images/",
+        blank=True,
+        null=True,
+        help_text="Optional sample image for the task"
+    )
+    sample_link = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional link (e.g., website, Google Doc, etc.)"
+    )
+    youtube_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional YouTube video link"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,7 +64,7 @@ class Task(models.Model):
         if not self.pk:  # new task
             self.remaining_slots = self.total_slots
         else:
-            # only clamp if remaining_slots is a real int, not an F() expression
+            from django.db.models.expressions import Combinable
             if not isinstance(self.remaining_slots, Combinable):
                 if self.remaining_slots > self.total_slots:
                     self.remaining_slots = self.total_slots
@@ -71,7 +88,6 @@ class Task(models.Model):
     @property
     def filled_slots(self):
         return self.total_slots - self.remaining_slots
-
 
 class Submission(models.Model):
     SUBMISSION_STATUS_CHOICES = [

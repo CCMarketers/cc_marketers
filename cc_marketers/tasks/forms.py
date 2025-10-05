@@ -4,7 +4,6 @@ from .models import Task, Submission, Dispute
 from decimal import Decimal
 from django.utils import timezone
 
-
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
@@ -15,6 +14,9 @@ class TaskForm(forms.ModelForm):
             'total_slots',
             'deadline',
             'proof_instructions',
+            'sample_image',     # ✅ new
+            'sample_link',      # ✅ new
+            'youtube_url',      # ✅ new
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
@@ -23,18 +25,22 @@ class TaskForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'payout_per_slot': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
             'total_slots': forms.NumberInput(),
+            'sample_link': forms.URLInput(attrs={'placeholder': 'https://example.com'}),
+            'youtube_url': forms.URLInput(attrs={'placeholder': 'https://youtube.com/watch?v=xxxx'}),
+            "sample_image": forms.ClearableFileInput(attrs={"class": "file-input"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Force the min attribute to 1
+        # Force min slots
         self.fields['total_slots'].widget.attrs['min'] = '1'
-        
+
     def clean_deadline(self):
         deadline = self.cleaned_data.get("deadline")
         if deadline and deadline <= timezone.now():
             raise forms.ValidationError("Deadline must be in the future.")
         return deadline
+
 
 class SubmissionForm(forms.ModelForm):
     class Meta:

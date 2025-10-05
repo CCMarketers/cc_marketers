@@ -70,7 +70,7 @@ class WithdrawFundsViewTestCase(
         self.assertContains(response, 'withdraw.html')
         
         messages_list = list(get_messages(response.wsgi_request))
-        self.assertTrue(any('Minimum withdrawal amount is ₦100' in str(m) for m in messages_list))
+        self.assertTrue(any('Minimum withdrawal amount is $100' in str(m) for m in messages_list))
     
     @patch('payments.views.PaystackService')
     @patch('wallets.services.WalletService.get_or_create_wallet')
@@ -237,7 +237,7 @@ class WithdrawFundsViewTestCase(
         
         messages_list = list(get_messages(response.wsgi_request))
         self.assertTrue(
-            any('Withdrawal of ₦200.00' in str(m) and 'initiated successfully' in str(m) 
+            any('Withdrawal of $200.00' in str(m) and 'initiated successfully' in str(m) 
                 for m in messages_list)
         )
         

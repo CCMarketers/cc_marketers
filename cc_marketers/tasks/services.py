@@ -226,14 +226,14 @@ class TaskWalletService:
         wallet = TaskWalletService.get_or_create_wallet(escrow.advertiser)
 
         before = wallet.balance
-        wallet.balance += escrow.amount
+        wallet.balance += escrow.amount_usd
         wallet.save(update_fields=['balance'])
 
         TaskWalletTransaction.objects.create(
             user=escrow.advertiser,
             transaction_type="credit",
             category="task_posting",
-            amount=escrow.amount,
+            amount=escrow.amount_usd,
             balance_before=before,
             balance_after=wallet.balance,
             description=f"Refund for task: {escrow.task.title}",
