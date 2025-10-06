@@ -205,7 +205,7 @@ env/
 db.sqlite3
 media/
 staticfiles/
-static/
+
 local_settings.py
 
 # VSCode / PyCharm / IDEs
