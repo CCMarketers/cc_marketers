@@ -15,8 +15,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = True
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', '').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = ['*']
 
 BACKEND_URL = config('BACKEND_URL')
