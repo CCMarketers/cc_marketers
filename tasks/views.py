@@ -106,7 +106,7 @@ def task_detail(request, task_id):
 @subscription_required
 def create_task(request):
     """Advertiser creates a new task; funds locked in escrow."""
-    if request.user.role != User.ADVERTISER and not request.user.is_staff:
+    if request.user.account_type != User.ADVERTISER and not request.user.is_staff:
         messages.error(request, "Only advertisers can create tasks.")
         return redirect("tasks:task_list")
 
