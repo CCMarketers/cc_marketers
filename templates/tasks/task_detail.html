@@ -99,22 +99,45 @@
         {{ existing_submission.get_status_display }}
       </span>
 
-      {% if existing_submission.status == 'rejected' %}
+{% if existing_submission.status == 'rejected' %}
       <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mt-4 text-sm">
         <strong>Rejection Reason:</strong><br>
         {{ existing_submission.rejection_reason }}
       </div>
 
-      {% if not existing_submission.dispute %}
-      <a href="{% url 'tasks:create_dispute' existing_submission.id %}" 
-         class="mt-4 inline-flex items-center px-4 py-2 rounded-md border border-red-200 bg-white hover:bg-red-50 text-red-600 text-sm font-medium transition-colors">
-        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-        </svg>
-        File Dispute
-      </a>
+      <div class="mt-4 space-y-2">
+        <!-- Primary Action: Resubmit -->
+        <a href="{% url 'tasks:resubmit_submission' existing_submission.id %}"
+           class="w-full inline-flex justify-center items-center px-4 py-2.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow transition-colors">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+          </svg>
+          Edit & Resubmit Work
+        </a>
+
+        <!-- Secondary Action: Dispute (if applicable) -->
+        {% if not existing_submission.dispute %}
+        <a href="{% url 'tasks:create_dispute' existing_submission.id %}" 
+           class="w-full inline-flex justify-center items-center px-4 py-2 rounded-md border border-red-200 bg-white hover:bg-red-50 text-red-600 text-sm font-medium transition-colors">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+          </svg>
+          File Dispute
+        </a>
+        {% endif %}
+      </div>
       {% endif %}
-      {% endif %}
+
+      {% comment %} <!-- Resubmit Button -->
+  <a href="{% url 'tasks:resubmit_submission' existing_submission.id %}"
+     class="mt-3 inline-flex items-center px-4 py-2 rounded-md border border-green-200 bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition-colors">
+    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11V5l-3 3 3 3V9h4V7h-4z" clip-rule="evenodd"></path>
+    </svg>
+    Resubmit Work
+  </a>
+{% endif %} {% endcomment %}
+
 
       <!-- Submission Info -->
       <div class="mt-6 text-sm text-gray-600 space-y-3">

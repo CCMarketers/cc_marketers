@@ -71,7 +71,7 @@ class EscrowTransaction(models.Model):
         ]
 
     def __str__(self):
-        return f"Escrow for Task #{self.task.id} - ${self.amount:,.2f}"
+        return f"Escrow for Task #{self.task.id} - ${self.amount_usd:,.2f}"
 
 
 class WithdrawalRequest(models.Model):
@@ -134,4 +134,4 @@ class WithdrawalRequest(models.Model):
         ]
 
     def __str__(self):
-        return f"{getattr(self.user, 'username', self.user.id)} - ${self.amount:,.2f} ({self.status})"
+        return f"{getattr(self.user, 'username', self.user.id)} - ${self.amount_usd:,.2f} ({self.status})"

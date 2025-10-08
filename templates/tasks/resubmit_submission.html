@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %} 
+
+{% block title %}Resubmit - {{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+  
+  <!-- Left: Task details (collapsed/summary view) -->
+  <div class="md:col-span-2 space-y-6">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-3xl font-bold text-gray-900">{{ task.title }}</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Posted by <span class="font-medium text-gray-700">{{ task.advertiser.username }}</span>
+          </p>
+        </div>
+        <span class="inline-flex px-4 py-1.5 rounded-full bg-green-100 text-green-800 text-sm font-semibold shadow-sm">
+          ${{ task.payout_per_slot }}
+        </span>
+      </div>
+
+      <!-- Rejection Notice -->
+      <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+        <div class="flex items-start">
+          <svg class="w-5 h-5 text-red-600 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <div>
+            <h3 class="text-sm font-semibold text-red-800">Your submission was rejected</h3>
+            <p class="text-sm text-red-700 mt-1">{{ submission.rejection_reason }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Previous Submission Info -->
+      <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Previous Submission</h3>
+        <div class="space-y-3 text-sm text-gray-600">
+          <p><strong>Submitted:</strong> {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
+          {% if submission.proof_text %}
+          <div>
+            <strong>Proof Text:</strong>
+            <p class="mt-1 text-gray-700">{{ submission.proof_text }}</p>
+          </div>
+          {% endif %}
+          {% if submission.proof_file %}
+          <p><strong>File:</strong> 
+            <a href="{{ submission.proof_file.url }}" target="_blank" class="text-red-600 hover:underline">View Previous File</a>
+          </p>
+          {% endif %}
+          {% if submission.screenshot %}
+          <div>
+            <strong>Screenshot:</strong><br>
+            <img src="{{ submission.screenshot.url }}" class="rounded-lg border mt-2 max-w-xs shadow-sm">
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Task Details (Expandable) -->
+      <details class="border border-gray-200 rounded-lg">
+        <summary class="px-4 py-3 cursor-pointer font-medium text-gray-900 hover:bg-gray-50 transition-colors">
+          View Task Details
+        </summary>
+        <div class="px-4 py-4 space-y-4 border-t border-gray-200">
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-1">Description</h4>
+            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ task.description }}</p>
+          </div>
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-1">Proof Instructions</h4>
+            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ task.proof_instructions }}</p>
+          </div>
+          
+          {% if task.sample_image %}
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-1">Sample Image</h4>
+            <img src="{{ task.sample_image.url }}" alt="Sample" class="rounded-lg border max-w-xs shadow-sm">
+          </div>
+          {% endif %}
+          
+          {% if task.sample_link %}
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 mb-1">Reference Link</h4>
+            <a href="{{ task.sample_link }}" target="_blank" class="text-red-600 hover:underline text-sm break-all">
+              {{ task.sample_link }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Right: Edit/Resubmit Form -->
+  <div>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold text-gray-900">Edit & Resubmit</h3>
+        <a href="{% url 'tasks:task_detail' task.id %}" 
+           class="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+          Cancel
+        </a>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        {% with field_class="w-full px-3 py-2 rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm transition-all duration-200" %}
+        
+        <!-- Display form errors -->
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          <strong>Please correct the following errors:</strong>
+          <ul class="mt-2 ml-4 list-disc">
+            {% for field in form %}
+              {% for error in field.errors %}
+                <li>{{ field.label }}: {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div>
+          <label for="{{ form.proof_text.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            Proof Description <span class="text-red-600">*</span>
+          </label>
+          {{ form.proof_text|add_class:field_class|add_class:"resize-none min-h-[120px]" }}
+          <p class="text-xs text-gray-500 mt-1">Update your proof description based on the rejection feedback</p>
+        </div>
+
+        <div>
+          <label for="{{ form.proof_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            Upload New File (Optional)
+          </label>
+          {{ form.proof_file|add_class:field_class }}
+          <p class="text-xs text-gray-500 mt-1">Upload a new file or leave blank to keep the current one</p>
+        </div>
+
+        <div>
+          <label for="{{ form.screenshot.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            Screenshot (Optional)
+          </label>
+          {{ form.screenshot|add_class:field_class }}
+          <p class="text-xs text-gray-500 mt-1">Upload a new screenshot or leave blank to keep the current one</p>
+        </div>
+
+        {% endwith %}
+        
+        <button type="submit" 
+                class="w-full inline-flex justify-center items-center px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium shadow transition">
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+          </svg>
+          Resubmit Work
+        </button>
+
+        <a href="{% url 'tasks:task_detail' task.id %}" 
+           class="block w-full text-center px-4 py-2 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+          Go Back
+        </a>
+      </form>
+    </div>
+
+    <!-- Help Tips -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <h4 class="text-sm font-semibold text-blue-900 mb-2">Tips for Resubmission</h4>
+      <ul class="text-xs text-blue-800 space-y-1 list-disc list-inside">
+        <li>Carefully read the rejection reason above</li>
+        <li>Address all issues mentioned by the reviewer</li>
+        <li>Provide clearer proof if requested</li>
+        <li>Double-check your work before resubmitting</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

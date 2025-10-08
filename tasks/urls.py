@@ -19,6 +19,8 @@ urlpatterns = [
     # Review URLs
     path('<int:task_id>/review/', views.review_submissions, name='review_submissions'),
     path('submission/<int:submission_id>/review/', views.review_submission, name='review_submission'),
+    path("resubmit/<int:submission_id>/", views.resubmit_submission, name="resubmit_submission"),
+
     
     # Task wallet
     path("task-wallet/", views.TaskWalletDashboardView.as_view(), name="task_wallet_dashboard"),

@@ -365,6 +365,54 @@ def resolve_dispute(request, dispute_id):
     return render(request, "tasks/resolve_dispute.html", {"dispute": dispute})
 
 
+
+@login_required
+@subscription_required
+def resubmit_submission(request, submission_id):
+    """Allow member to edit and resubmit a previously rejected submission."""
+    submission = get_object_or_404(
+        Submission.objects.select_related("task"),
+        id=submission_id,
+        member=request.user,
+        status="rejected",
+    )
+    task = submission.task
+
+    if request.method == "POST":
+        form = SubmissionForm(request.POST, request.FILES, instance=submission)
+        
+        if task.is_expired:
+            messages.error(request, "You cannot resubmit — this task has expired.")
+            return redirect("tasks:task_detail", task_id=task.id)
+        elif task.is_full and submission.task.remaining_slots <= 0:
+            messages.error(request, "You cannot resubmit — task slots are full.")
+            return redirect("tasks:task_detail", task_id=task.id)
+        elif form.is_valid():
+            with transaction.atomic():
+                updated_submission = form.save(commit=False)
+                updated_submission.status = "pending"
+                updated_submission.rejection_reason = ""
+                updated_submission.reviewed_at = None
+                updated_submission.submitted_at = timezone.now()
+                updated_submission.save()
+
+            messages.success(request, "Your submission has been resubmitted for review.")
+            return redirect("tasks:task_detail", task_id=task.id)
+    else:
+        form = SubmissionForm(instance=submission)
+
+    # Use a dedicated resubmit template
+    return render(
+        request,
+        "tasks/resubmit_submission.html",
+        {
+            "task": task,
+            "form": form,
+            "submission": submission,
+        },
+    )
+
+
 class TaskWalletDashboardView(LoginRequiredMixin, DetailView):
     model = TaskWallet
     template_name = "tasks/task_wallet_dashboard.html"
