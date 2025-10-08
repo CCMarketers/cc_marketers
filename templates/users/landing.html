@@ -101,14 +101,16 @@
             width: 100%;
         }
         
-        .menu-slide {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-out;
-        }
-        
-        .menu-slide.active {
-            transform: translateX(0);
-        }
+/* Add this to your main CSS file */
+.menu-slide {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+}
+
+.menu-slide.active {
+  max-height: 30rem; /* A value larger than the menu's max possible height */
+}
         
         .blob {
             position: absolute;
@@ -126,11 +128,12 @@
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border-left: 4px solid #f59e0b;
         }
+        
     </style>
 </head>
 <body class="bg-gray-50 overflow-x-hidden">
     <!-- Header -->
-    <header class="bg-white shadow-lg sticky top-0 z-50 backdrop-blur-sm bg-opacity-95">
+    <header class="bg-white shadow-lg sticky top-0 z-30 backdrop-blur-sm bg-opacity-95">
         <nav class="container mx-auto px-4 py-5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
