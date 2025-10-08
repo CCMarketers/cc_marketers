@@ -22,15 +22,15 @@ class UserProfileInline(admin.StackedInline):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('email', 'get_full_name', 'role', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
-    list_filter = ('role', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
+    list_display = ('email', 'get_full_name', 'account_type', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
+    list_filter = ('account_type', 'is_active', 'email_verified', 'phone_verified', 'date_joined')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('-date_joined',)
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'phone', 'preferred_currency')}),
-        ('Role & Permissions', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Role & Permissions', {'fields': ('account_type', 'is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Verification', {'fields': ('email_verified', 'phone_verified')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -38,7 +38,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2', 'role'),
+            'fields': ('email', 'password1', 'password2', 'account_type'),
         }),
     )
 

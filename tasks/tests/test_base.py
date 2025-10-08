@@ -122,7 +122,7 @@ class BaseTaskTestCase(TestCase):
             if not plan:
                 # Create a default test plan if none exists
                 plan = SubscriptionPlan.objects.create(
-                    name="Business Member Plan",
+                    name="Business Member Account",
                     price=0,
                     duration_days=30,
                     business_volume=0,

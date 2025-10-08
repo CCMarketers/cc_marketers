@@ -107,7 +107,7 @@ class TransactionListView(LoginRequiredMixin, ListView):
 
 
 @method_decorator(subscription_required, name='dispatch')
-@method_decorator(plan_required("Business Member Plan"), name="dispatch")
+@method_decorator(plan_required("Business Member Account"), name="dispatch")
 class WithdrawalRequestView(LoginRequiredMixin, CreateView):
     """Create withdrawal request."""
     model = WithdrawalRequest
@@ -148,7 +148,7 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
 
 
 @method_decorator(subscription_required, name='dispatch')
-@method_decorator(plan_required("Business Member Plan"), name="dispatch")
+@method_decorator(plan_required("Business Member Account"), name="dispatch")
 class WithdrawalListView(LoginRequiredMixin, ListView):
     """List user's withdrawal requests."""
     model = WithdrawalRequest

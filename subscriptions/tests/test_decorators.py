@@ -254,9 +254,9 @@ class PlanRequiredDecoratorTest(BaseTestMixin, TestCase):
         self.assertIn('need the Basic Plan', str(messages[0]))
 
     def test_plan_required_business_plan(self):
-        """Test plan_required with Business Member Plan"""
+        """Test plan_required with Business Member Account"""
         self.create_subscription(plan=self.business_plan)
-        decorated_view = plan_required('Business Member Plan')(dummy_view)
+        decorated_view = plan_required('Business Member Account')(dummy_view)
         
         request = self.factory.get('/')
         request.user = self.user

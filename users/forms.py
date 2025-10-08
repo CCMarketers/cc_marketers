@@ -42,9 +42,9 @@ class CustomUserCreationForm(UserCreationForm):
         })
     )
    
-    role = forms.ChoiceField(
+    account_type = forms.ChoiceField(
         choices=User.ROLE_CHOICES,
-        initial=User.MEMBER,
+        initial=User.MEMBERS,
         widget=forms.Select(attrs={'class': 'form-input'})
     )
     preferred_currency = forms.ChoiceField(
@@ -54,7 +54,7 @@ class CustomUserCreationForm(UserCreationForm):
     )
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'role')
+        fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'account_type')
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -93,12 +93,13 @@ class CustomUserCreationForm(UserCreationForm):
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         user.phone = self.cleaned_data['phone']
-        user.role = self.cleaned_data['role']
+        user.account_type = self.cleaned_data['account_type']
         user.preferred_currency = self.cleaned_data['preferred_currency']
         
         if commit:
             user.save()
         return user
+
 
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(
@@ -114,11 +115,11 @@ class CustomAuthenticationForm(AuthenticationForm):
         })
     )
 
-    def clean_username(self):
+    def clean(self):
         username = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
 
-        # Try to find user by email or phone
-        user = None
+        # Handle both email and phone input
         if '@' in username:
             user = User.objects.filter(email=username).first()
         else:
@@ -127,8 +128,21 @@ class CustomAuthenticationForm(AuthenticationForm):
         if not user:
             raise forms.ValidationError("Invalid email or phone number.")
 
-        # Always return email for authentication
-        return user.email
+        # Attempt authentication
+        from django.contrib.auth import authenticate
+        self.user_cache = authenticate(
+            self.request,
+            username=user.email,
+            password=password
+        )
+
+        if self.user_cache is None:
+            raise forms.ValidationError("Invalid password. Please try again.")
+
+        return self.cleaned_data
+
+    def get_user(self):
+        return self.user_cache
 
 
 class UserProfileForm(forms.ModelForm):

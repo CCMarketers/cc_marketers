@@ -12,9 +12,9 @@ class Command(BaseCommand):
             plan_type__in=[SubscriptionPlan.PLAN_BUSINESS, SubscriptionPlan.PLAN_TRIAL]
         ).delete()
 
-        # Demo/Trial Plan ($3)
+        # Demo Account ($3)
         trial_plan, created = SubscriptionPlan.objects.get_or_create(
-            name="Demo/Trial Plan",
+            name="Demo Account",
             defaults={
                 'plan_type': SubscriptionPlan.PLAN_TRIAL,
                 'price': 3.00,
@@ -35,9 +35,9 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f'Already exists: {trial_plan.name}')
 
-        # Business Member Plan ($25)
+        # Business Member Account ($25)
         business_plan, created = SubscriptionPlan.objects.get_or_create(
-            name="Business Member Plan",
+            name="Business Member Account",
             defaults={
                 'plan_type': SubscriptionPlan.PLAN_BUSINESS,
                 'price': 25.00,

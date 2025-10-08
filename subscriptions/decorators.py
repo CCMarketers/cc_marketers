@@ -41,7 +41,7 @@ def plan_required(plan_name):
     Decorator to require a specific subscription plan by name.
 
     Usage:
-        @plan_required("Business Member Plan")
+        @plan_required("Business Member Account")
         def my_view(request): ...
     """
 

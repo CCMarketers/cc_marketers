@@ -127,15 +127,15 @@ class CustomLoginView(LoginView):
         if next_url:
             return next_url
 
-        # 2. Role-based redirects
-        role = getattr(self.request.user, "role", None)
+        # 2. account_type-based redirects
+        account_type = getattr(self.request.user, "account_type", None)
 
         redirect_map = {
             User.ADMIN: reverse_lazy("users:dashboard"),
-            User.ADVERTISER: reverse_lazy("tasks:my_tasks"),
-            User.MEMBER: reverse_lazy("tasks:task_list"),
+            User.MEMBERS: reverse_lazy("tasks:my_tasks"),
+            User.DEMO: reverse_lazy("tasks:task_list"),
         }
-        return redirect_map.get(role, reverse_lazy("tasks:task_list"))
+        return redirect_map.get(account_type, reverse_lazy("tasks:task_list"))
 
     def form_valid(self, form):
         # welcome message and delegating to parent for auth flow
@@ -313,7 +313,7 @@ class UserDashboardView(LoginRequiredMixin, TemplateView):
         # Completed tasks count
         completed_tasks_count = Submission.objects.filter(member=user, status="approved").count()
 
-        # Active tasks count (determine role quickly)
+        # Active tasks count (determine account_type quickly)
         if Task.objects.filter(advertiser=user).exists():
             active_tasks_count = Task.objects.filter(advertiser=user, status="active").count()
         else:
@@ -538,15 +538,6 @@ class ValidateReferralCodeView(View):
                 "referrer": {"username": referrer.username, "email": referrer.email},
             }
         )
-
-# -------------------------
-# End of file
-# -------------------------
-
-# NOTE: Ensure all your templates include {% csrf_token %} in every POST form:
-#   users/register.html, users/login.html, users/profile.html, users/profile_setup.html, etc.
-# NOTE: Consider adding db_index=True on frequently queried fields such as:
-#   User.email, User.phone, ReferralCode.code (adjust models accordingly).
 
 
 def landing_page(request):

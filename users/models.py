@@ -42,7 +42,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email: str, password: str | None = None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("role", User.ADMIN)
+        extra_fields.setdefault("account_type", User.ADMIN)
 
         if not extra_fields.get("is_staff"):
             raise ValueError("Superuser must have is_staff=True.")
@@ -71,13 +71,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     - Some convenience helpers and lightweight properties.
     """
 
-    MEMBER = "member"
-    ADVERTISER = "advertiser"
+    DEMO = "Demo"
+    MEMBERS = "Members"
     ADMIN = "admin"
 
     ROLE_CHOICES = [
-        (MEMBER, "Member"),
-        (ADVERTISER, "Advertiser"),
+        (DEMO, "Demo"),
+        (MEMBERS, "Members"),
     ]
 
     CURRENCY_CHOICES = [
@@ -129,7 +129,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=MEMBER, db_index=True)
+    account_type = models.CharField(max_length=20, choices=ROLE_CHOICES, default=MEMBERS, db_index=True)
 
     # Status & verification
     is_active = models.BooleanField(default=True)
@@ -165,13 +165,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name = _("user")
         verbose_name_plural = _("users")
         indexes = [
-            models.Index(fields=["role"]),
+            models.Index(fields=["account_type"]),
             models.Index(fields=["email_verified"]),
         ]
 
     def save(self, *args, **kwargs):
-        # Ensure admin role always has staff access
-        if self.role == self.ADMIN:
+        # Ensure admin account_type always has staff access
+        if self.account_type == self.ADMIN:
             self.is_staff = True
 
         # Generate unique username if missing (best-effort; avoids race conditions but not guaranteed)
@@ -203,10 +203,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # ----- Permissions helpers -----
     def can_post_tasks(self) -> bool:
-        return self.role in [self.ADVERTISER, self.ADMIN] and self.is_active
+        return self.account_type in [self.MEMBERS, self.ADMIN] and self.is_active
 
     def can_moderate(self) -> bool:
-        return self.role == self.ADMIN and self.is_active
+        return self.account_type == self.ADMIN and self.is_active
 
     # ----- Lightweight subscription conveniences (non-blocking lookups) -----
     @property

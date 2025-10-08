@@ -40,7 +40,7 @@ class SubscriptionWorkflowIntegrationTest(BaseTestMixin, TransactionTestCase):
         mock_bonus.assert_called_once_with(self.user)
 
     def test_business_plan_subscription_with_task_wallet(self):
-        """Test Business Member Plan subscription allocates task wallet funds"""
+        """Test Business Member Account subscription allocates task wallet funds"""
         self.login_user()
         
         with patch('tasks.services.TaskWalletService.credit_wallet') as mock_credit:

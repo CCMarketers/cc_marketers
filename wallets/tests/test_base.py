@@ -55,7 +55,7 @@ class BaseWalletTestCase(TestCase):
             daily_ad_limit=5
         )
         cls.business_plan = SubscriptionPlan.objects.create(
-            name="Business Member Plan",
+            name="Business Member Account",
             price=Decimal('29.99'),
             duration_days=30,
             daily_ad_limit=20

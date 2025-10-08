@@ -31,7 +31,7 @@ class BaseTestMixin:
         )
         
         self.business_plan = self.create_subscription_plan(
-            name='Business Member Plan',
+            name='Business Member Account',
             price=Decimal('15.00'),
             business_volume=1000,
             referral_commission=Decimal('2.00'),

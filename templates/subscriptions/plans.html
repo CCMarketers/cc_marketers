@@ -109,9 +109,14 @@
             {% if user_wallet_balance >= plan.price %}
                 <form method="post" action="{% url 'subscriptions:subscribe' plan.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200">
+                    <button 
+                        type="submit" 
+                        class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-200"
+                        onclick="this.disabled=true; this.innerText='Processing...'; this.form.submit();"
+                    >
                         Subscribe Now
                     </button>
+
                 </form>
             {% else %}
                 <button class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg font-semibold cursor-not-allowed" disabled>

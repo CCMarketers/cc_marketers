@@ -117,7 +117,7 @@ class SubscriptionSignalsTest(BaseTestMixin, TestCase):
         """Test signal with different subscription plans"""
         plans_to_test = [
             (self.basic_plan, 'Basic Plan'),
-            (self.business_plan, 'Business Member Plan'),
+            (self.business_plan, 'Business Member Account'),
             (self.premium_plan, 'Premium Plan')
         ]
         

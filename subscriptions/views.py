@@ -143,8 +143,8 @@ def cancel_subscription(request):
     active_subscription.status = "cancelled"
     active_subscription.save(update_fields=["status"])
 
-    # Special handling for Business Member Plan allocation
-    if active_subscription.plan.name == "Business Member Plan":
+    # Special handling for Business Member Account allocation
+    if active_subscription.plan.name == "Business Member Account":
         allocation_amount = Decimal("10.00")
         task_wallet = TaskWalletService.get_or_create_wallet(user=request.user)
 
@@ -167,24 +167,6 @@ def cancel_subscription(request):
                     f"{active_subscription.plan.name}"
                 ),
             )
-
-    # # Refund only if within 6 hours & allowed
-    # if refund_allowed and time_diff <= timedelta(hours=6):
-    #     refund_amount = active_subscription.plan.price
-    #     WalletService.credit_wallet(
-    #         user=request.user,
-    #         amount=refund_amount,
-    #         category="subscription_refund",
-    #         description=f"Refund for {active_subscription.plan.name} (cancelled within 6 hours)",
-    #         reference=f"REFUND_{request.user.id}_{active_subscription.id}",
-    #     )
-    #     messages.success(
-    #         request, f"Subscription cancelled. ${refund_amount} refunded to your wallet."
-    #     )
-    # elif refund_allowed:
-    #     messages.success(
-    #         request, "Subscription cancelled successfully (no refund, beyond 6 hours)."
-    #     )
 
     refund_amount = active_subscription.plan.price
 

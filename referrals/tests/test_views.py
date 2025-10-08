@@ -24,7 +24,7 @@ class BaseTestCase(TestCase):
         plan = SubscriptionPlan.objects.first()
         if not plan:
             plan = SubscriptionPlan.objects.create(
-                name="Business Member Plan",
+                name="Business Member Account",
                 price=0,
                 duration_days=30,
                 business_volume=0,
@@ -130,7 +130,7 @@ class BaseTestCase(TestCase):
             plan = SubscriptionPlan.objects.first()
             if not plan:
                 plan = SubscriptionPlan.objects.create(
-                    name="Business Member Plan",
+                    name="Business Member Account",
                     price=0,
                     duration_days=30,
                     business_volume=0,
