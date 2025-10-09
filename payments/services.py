@@ -354,8 +354,6 @@ class PaystackService:
             return {"success": False, "data": {}, "error": str(exc)}
 
 
-
-
 class WebhookService:
     """Service for handling payment webhooks (Paystack & Flutterwave)."""
 
@@ -831,6 +829,189 @@ class WebhookService:
             return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
 
 
+    @staticmethod
+    def verify_monnify_signature(payload: bytes, signature: str) -> bool:
+        """Verify Monnify webhook signature using HMAC-SHA512."""
+        secret_key = getattr(settings, "MONNIFY_SECRET_KEY", "")
+        if not secret_key:
+            logger.error("MONNIFY_SECRET_KEY not set in settings")
+            return False
+
+        computed_signature = hmac.new(
+            secret_key.encode("utf-8"),
+            payload,
+            hashlib.sha512,
+        ).hexdigest()
+
+        return hmac.compare_digest(computed_signature, signature)
+
+    @staticmethod
+    def process_monnify_webhook(event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process incoming Monnify webhook JSON and handle idempotency."""
+        event_type = event_data.get("eventType")
+        data = event_data.get("eventData", {})
+        
+        # Monnify uses transactionReference
+        reference = data.get("paymentReference") or data.get("transactionReference")
+        
+        if not reference:
+            logger.warning("Monnify webhook missing reference: %s", event_data)
+            return {"success": False, "error": "No reference found", "data": {}}
+
+        gateway = PaymentGateway.objects.filter(name__iexact="monnify").first()
+        if not gateway:
+            logger.error("Webhook received but PaymentGateway 'monnify' not configured")
+            return {"success": False, "error": "Gateway not configured", "data": {}}
+
+        webhook_event, created = WebhookEvent.objects.get_or_create(
+            gateway=gateway,
+            reference=reference,
+            event_type=event_type,
+            defaults={"payload": event_data},
+        )
+        
+        if webhook_event.processed:
+            logger.info("Duplicate Monnify webhook ignored for reference %s", reference)
+            return {"success": True, "message": "Duplicate event ignored", "data": {}}
+        
+        try:
+            if event_type == "SUCCESSFUL_TRANSACTION":
+                result = WebhookService._handle_successful_monnify_payment(data, webhook_event)
+            elif event_type == "SUCCESSFUL_DISBURSEMENT":
+                result = WebhookService._handle_successful_monnify_transfer(data, webhook_event)
+            elif event_type == "FAILED_DISBURSEMENT":
+                result = WebhookService._handle_failed_monnify_transfer(data, webhook_event)
+            else:
+                webhook_event.event_type = WebhookEvent.EventType.OTHER
+                webhook_event.payload = event_data
+                webhook_event.save(update_fields=["event_type", "payload"])
+                result = {"success": True, "message": f"Unhandled Monnify event {event_type}", "data": data}
+
+            return result
+        except Exception as exc:
+            logger.exception("Error processing Monnify webhook for reference %s: %s", reference, exc)
+            return {"success": False, "error": str(exc), "data": {}}
+
+    @staticmethod
+    @transaction.atomic
+    def _handle_successful_monnify_payment(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle successful Monnify payment webhook."""
+        payment_reference = data.get("paymentReference")
+        
+        try:
+            payment_txn = PaymentTransaction.objects.select_for_update().get(
+                gateway_reference=payment_reference,
+                transaction_type=PaymentTransaction.TransactionType.FUNDING,
+            )
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("PaymentTransaction not found for Monnify reference %s", payment_reference)
+            return {"success": False, "error": "PaymentTransaction not found", "data": {}}
+
+        if payment_txn.status == PaymentTransaction.Status.SUCCESS:
+            webhook_event.processed = True
+            webhook_event.save(update_fields=["processed"])
+            return {"success": True, "message": "Already processed", "data": {}}
+
+        from wallets.services import WalletService
+
+        try:
+            # Credit wallet
+            WalletService.credit_wallet(
+                user=payment_txn.user,
+                amount=payment_txn.amount_usd,
+                category="funding",
+                description=f"Wallet funding via Monnify {payment_txn.amount_usd} USD",
+                payment_transaction=payment_txn,
+                extra_data={
+                    "gateway_reference": payment_txn.gateway_reference,
+                    "amount_usd": payment_txn.amount_usd,
+                    "amount_local": payment_txn.amount_local,
+                    "currency": payment_txn.currency,
+                }
+            )
+
+            payment_txn.status = PaymentTransaction.Status.SUCCESS
+            payment_txn.completed_at = timezone.now()
+            payment_txn.gateway_response = data
+            payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "balance_before", "balance_after"])
+
+            webhook_event.processed = True
+            webhook_event.processed_at = timezone.now()
+            webhook_event.payload = data
+            webhook_event.save(update_fields=["processed", "processed_at", "payload"])
+
+            return {"success": True, "message": "Wallet funded successfully", "data": {"reference": payment_reference}}
+
+        except Exception as e:
+            logger.error("Failed to credit wallet for Monnify reference %s: %s", payment_reference, str(e))
+            return {"success": False, "error": f"Wallet credit failed: {str(e)}", "data": {}}
+
+    @staticmethod
+    def _handle_successful_monnify_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle successful Monnify withdrawal webhook."""
+        reference = data.get("reference")
+        
+        try:
+            with transaction.atomic():
+                payment_txn = PaymentTransaction.objects.select_for_update().get(
+                    gateway_reference=reference,
+                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL
+                )
+
+                if payment_txn.status == PaymentTransaction.Status.PENDING:
+                    payment_txn.status = PaymentTransaction.Status.SUCCESS
+                    payment_txn.completed_at = timezone.now()
+                    payment_txn.gateway_response = data
+                    payment_txn.save(update_fields=["status", "completed_at", "gateway_response"])
+
+                    webhook_event.processed = True
+                    webhook_event.processed_at = timezone.now()
+                    webhook_event.save(update_fields=["processed", "processed_at"])
+                    return {"success": True, "message": "Transfer processed successfully", "data": {}}
+
+                return {"success": True, "message": "Transfer already processed", "data": {}}
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("Withdrawal transaction not found for Monnify reference %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
+
+    @staticmethod
+    def _handle_failed_monnify_transfer(data: Dict[str, Any], webhook_event: WebhookEvent) -> Dict[str, Any]:
+        """Handle failed Monnify withdrawal webhook; refund user."""
+        reference = data.get("reference")
+        from wallets.services import WalletService
+
+        try:
+            with transaction.atomic():
+                payment_txn = PaymentTransaction.objects.select_for_update().get(
+                    gateway_reference=reference,
+                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL
+                )
+
+                if payment_txn.status == PaymentTransaction.Status.PENDING:
+                    payment_txn.status = PaymentTransaction.Status.FAILED
+                    payment_txn.gateway_response = data
+                    payment_txn.save(update_fields=["status", "gateway_response"])
+
+                    # Refund wallet
+                    WalletService.credit_wallet(
+                        user=payment_txn.user,
+                        amount=payment_txn.amount_usd,
+                        category="withdrawal_refund",
+                        description=f"Refund for failed Monnify withdrawal (Ref: {reference})",
+                        reference=payment_txn.internal_reference,
+                    )
+
+                    webhook_event.processed = True
+                    webhook_event.processed_at = timezone.now()
+                    webhook_event.save(update_fields=["processed", "processed_at"])
+                    return {"success": True, "message": "Failed transfer processed (refund issued)", "data": {}}
+
+                return {"success": True, "message": "Failed transfer already processed", "data": {}}
+        except PaymentTransaction.DoesNotExist:
+            logger.warning("Withdrawal transaction not found for failed Monnify transfer %s", reference)
+            return {"success": False, "error": "Withdrawal transaction not found", "data": {}}
+
+
 class FlutterwaveService:
     """Service class for Flutterwave API integration.
 
@@ -1174,6 +1355,310 @@ class FlutterwaveService:
             return {"success": False, "data": {}, "error": str(exc)}
         except Exception as exc:
             logger.exception("Unexpected error resolving account: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+
+class MonnifyService:
+    """Service class for Monnify API integration.
+
+    Methods return a consistent structure:
+        {"success": bool, "data": {...}, "error": "message"}
+    """
+
+    def __init__(self):
+        self.api_key = settings.MONNIFY_API_KEY
+        self.secret_key = settings.MONNIFY_SECRET_KEY
+        self.contract_code = settings.MONNIFY_CONTRACT_CODE
+        self.base_url = getattr(settings, "MONNIFY_BASE_URL", "https://sandbox.monnify.com")
+        self.session = requests.Session()
+        self._access_token = None
+        self._token_expiry = None
+
+    def _get_access_token(self) -> str:
+        """Get or refresh access token using Basic Auth."""
+        # Check if token is still valid
+        if self._access_token and self._token_expiry and timezone.now() < self._token_expiry:
+            return self._access_token
+
+        try:
+            url = f"{self.base_url}/api/v1/auth/login"
+            auth = (self.api_key, self.secret_key)
+            
+            resp = requests.post(url, auth=auth, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            if resp_data.get("requestSuccessful"):
+                self._access_token = resp_data["responseBody"]["accessToken"]
+                # Token typically expires in 1 hour, set expiry to 55 mins to be safe
+                self._token_expiry = timezone.now() + timezone.timedelta(minutes=55)
+                return self._access_token
+            
+            logger.error("Monnify auth failed: %s", resp_data)
+            raise Exception("Failed to authenticate with Monnify")
+        except Exception as exc:
+            logger.exception("Error getting Monnify access token: %s", exc)
+            raise
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers with fresh access token."""
+        token = self._get_access_token()
+        return {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+    def _get_gateway(self):
+        try:
+            return PaymentGateway.objects.get(name__iexact="monnify")
+        except PaymentGateway.DoesNotExist:
+            logger.error("Monnify PaymentGateway not configured in DB")
+            return None
+
+    # ------------------------
+    # Initialize funding (payment)
+    # ------------------------
+    def initialize_payment(self, user, amount_usd, amount_local, currency="NGN", callback_url=None):
+        """
+        Initialize a payment transaction with Monnify.
+        Returns: {"success": bool, "data": {...}, "error": str}
+        """
+        try:
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            try:
+                amount_dec = Decimal(amount_local)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
+
+            with transaction.atomic():
+                # Create local pending PaymentTransaction
+                payment_transaction = PaymentTransaction.objects.create(
+                    user=user,
+                    gateway=gateway,
+                    transaction_type=PaymentTransaction.TransactionType.FUNDING,
+                    amount_usd=amount_usd,
+                    amount_local=amount_local,
+                    currency=currency,
+                    gateway_reference=f"MON_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    status=PaymentTransaction.Status.PENDING,
+                    description=f"Wallet funding via Monnify {amount_usd} USD",
+                )
+
+                url = f"{self.base_url}/api/v1/merchant/transactions/init-transaction"
+                payload = {
+                    "amount": float(amount_dec),
+                    "customerName": f"{user.first_name} {user.last_name}".strip() or getattr(user, 'username', str(user.id)),
+                    "customerEmail": user.email,
+                    "paymentReference": payment_transaction.gateway_reference,
+                    "paymentDescription": "Wallet Funding",
+                    "currencyCode": currency,
+                    "contractCode": self.contract_code,
+                    "redirectUrl": callback_url or "https://yourapp.com/callback",
+                    "paymentMethods": ["CARD", "ACCOUNT_TRANSFER"],
+                    "metaData": {
+                        "user_id": str(user.id),
+                        "transaction_id": str(payment_transaction.id),
+                        "internal_reference": payment_transaction.internal_reference,
+                    }
+                }
+
+                headers = self._get_headers()
+                resp = requests.post(url, json=payload, headers=headers, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
+
+                if resp_data.get("requestSuccessful") and resp_data.get("responseBody"):
+                    pay_data = resp_data["responseBody"]
+                    
+                    # Persist MonnifyTransaction
+                    MonnifyTransaction.objects.create(
+                        transaction=payment_transaction,
+                        checkout_url=pay_data.get("checkoutUrl", ""),
+                        transaction_reference=pay_data.get("transactionReference", ""),
+                        account_number=pay_data.get("accountNumber", ""),
+                        account_name=pay_data.get("accountName", ""),
+                        bank_name=pay_data.get("bankName", ""),
+                        bank_code=pay_data.get("bankCode", ""),
+                    )
+
+                    payment_transaction.gateway_response = resp_data
+                    payment_transaction.save(update_fields=["gateway_response", "updated_at"])
+
+                    return {
+                        "success": True,
+                        "data": {
+                            "transaction_id": str(payment_transaction.id),
+                            "internal_reference": payment_transaction.internal_reference,
+                            "gateway_reference": payment_transaction.gateway_reference,
+                            "checkout_url": pay_data.get("checkoutUrl"),
+                            "transaction_reference": pay_data.get("transactionReference"),
+                            "account_number": pay_data.get("accountNumber"),
+                            "bank_name": pay_data.get("bankName"),
+                            "raw": resp_data,
+                        },
+                        "error": None,
+                    }
+
+                # Failure path
+                payment_transaction.status = PaymentTransaction.Status.FAILED
+                payment_transaction.gateway_response = resp_data
+                payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+
+                err_msg = resp_data.get("responseMessage") or "Payment initialization failed"
+                logger.info("Monnify init failed: %s", err_msg)
+                return {"success": False, "data": resp_data, "error": err_msg}
+
+        except Exception as exc:
+            logger.exception("Unexpected error in Monnify initialize_payment: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Verify payment status
+    # ------------------------
+    def verify_payment(self, transaction_reference: str) -> Dict[str, Any]:
+        """
+        Verify a payment with Monnify.
+        Returns {"success": bool, "data": {...}, "error": str}
+        """
+        try:
+            # URL encode the transaction reference
+            encoded_ref = requests.utils.quote(transaction_reference)
+            url = f"{self.base_url}/api/v2/transactions/{encoded_ref}"
+            
+            headers = self._get_headers()
+            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            ok = resp_data.get("requestSuccessful", False)
+            return {
+                "success": ok,
+                "data": resp_data,
+                "error": None if ok else resp_data.get("responseMessage", "Verification failed")
+            }
+        except Exception as exc:
+            logger.exception("Error during Monnify payment verification: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Initiate transfer (withdrawal)
+    # ------------------------
+    def initiate_transfer(self, user, amount_usd, bank_code: str, account_number: str, narration: str = "Wallet withdrawal") -> Dict[str, Any]:
+        """
+        Initiate a transfer (withdrawal).
+        Creates a PENDING PaymentTransaction and MonnifyTransaction.
+        """
+        try:
+            gateway = self._get_gateway()
+            if not gateway:
+                return {"success": False, "data": {}, "error": "Payment gateway not configured"}
+
+            try:
+                amount_usd = Decimal(amount_usd)
+            except (InvalidOperation, TypeError):
+                return {"success": False, "data": {}, "error": "Invalid amount"}
+
+            currency = user.currency
+            amount_local = CurrencyService.convert_usd_to_local(amount_usd, currency).quantize(Decimal("0.01"))
+
+            with transaction.atomic():
+                payment_transaction = PaymentTransaction.objects.create(
+                    user=user,
+                    gateway=gateway,
+                    transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
+                    amount_usd=amount_usd,
+                    amount_local=amount_local,
+                    currency=currency,
+                    gateway_reference=f"MON_WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
+                    status=PaymentTransaction.Status.PENDING,
+                )
+
+                from wallets.services import WalletService
+
+                # Debit wallet in USD
+                WalletService.debit_wallet(
+                    user=user,
+                    amount=amount_usd,
+                    category="withdrawal",
+                    description=f"Withdrawal {amount_usd} USD → {amount_local} {currency}",
+                    reference=payment_transaction.internal_reference,
+                    payment_transaction=payment_transaction,
+                )
+
+                url = f"{self.base_url}/api/v2/disbursements/single"
+                payload = {
+                    "amount": float(amount_local),
+                    "reference": payment_transaction.gateway_reference,
+                    "narration": narration,
+                    "destinationBankCode": bank_code,
+                    "destinationAccountNumber": account_number,
+                    "currency": currency,
+                    "sourceAccountNumber": self.contract_code,  # Your Monnify wallet account
+                }
+
+                headers = self._get_headers()
+                resp = requests.post(url, json=payload, headers=headers, timeout=HTTP_TIMEOUT)
+                resp_data = _safe_json(resp)
+
+                if resp_data.get("requestSuccessful"):
+                    pay_data = resp_data.get("responseBody", {})
+                    MonnifyTransaction.objects.create(
+                        transaction=payment_transaction,
+                        transaction_reference=payment_transaction.gateway_reference,
+                        transfer_reference=pay_data.get("reference", ""),
+                        destination_account_number=account_number,
+                        destination_bank_code=bank_code,
+                        destination_account_name=pay_data.get("destinationAccountName", ""),
+                    )
+                    payment_transaction.gateway_response = resp_data
+                    payment_transaction.save(update_fields=["gateway_response", "updated_at"])
+                    return {"success": True, "data": pay_data, "error": None}
+
+                payment_transaction.status = PaymentTransaction.Status.FAILED
+                payment_transaction.gateway_response = resp_data
+                payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
+                return {"success": False, "data": resp_data, "error": resp_data.get("responseMessage", "Transfer failed")}
+
+        except Exception as exc:
+            logger.exception("Error initiating Monnify transfer: %s", exc)
+            return {"success": False, "data": {}, "error": str(exc)}
+
+    # ------------------------
+    # Get banks
+    # ------------------------
+    def get_banks(self) -> Dict[str, Any]:
+        """Return list of banks from Monnify."""
+        try:
+            url = f"{self.base_url}/api/v1/banks"
+            headers = self._get_headers()
+            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            if resp_data.get("requestSuccessful"):
+                return {"success": True, "data": resp_data.get("responseBody", []), "error": None}
+            return {"success": False, "data": [], "error": resp_data.get("responseMessage", "Failed to fetch banks")}
+        except Exception as exc:
+            logger.exception("Error fetching Monnify banks: %s", exc)
+            return {"success": False, "data": [], "error": str(exc)}
+
+    # ------------------------
+    # Resolve account number
+    # ------------------------
+    def resolve_account_number(self, account_number: str, bank_code: str) -> Dict[str, Any]:
+        """Resolve an account number to an account name."""
+        try:
+            url = f"{self.base_url}/api/v1/disbursements/account/validate"
+            params = {"accountNumber": account_number, "bankCode": bank_code}
+            headers = self._get_headers()
+            
+            resp = requests.get(url, params=params, headers=headers, timeout=HTTP_TIMEOUT)
+            resp_data = _safe_json(resp)
+
+            if resp_data.get("requestSuccessful"):
+                return {"success": True, "data": resp_data.get("responseBody", {}), "error": None}
+            return {"success": False, "data": {}, "error": resp_data.get("responseMessage", "Resolve failed")}
+        except Exception as exc:
+            logger.exception("Error resolving Monnify account: %s", exc)
             return {"success": False, "data": {}, "error": str(exc)}
 
 

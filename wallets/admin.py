@@ -30,49 +30,14 @@ class WalletAdmin(admin.ModelAdmin):
     def total_earned(self, obj):
         total = PaymentTransaction.objects.filter(
             user=obj.user,
-            transaction_type='credit',
+            transaction_type='funding',
             category__in=['task_earning', 'referral_bonus'],
             status='success'
         ).aggregate(total=Sum('amount_usd'))['total'] or 0
         return f'${total:.2f}'
     total_earned.short_description = 'Total Earned'
 
-# @admin.register(Transaction)
-# class TransactionAdmin(admin.ModelAdmin):
-#     list_display = [
-#         'reference_short', 'user', 'transaction_type', 'category', 
-#         'amount_usd_display', 'status', 'task_link', 'created_at'
-#     ]
-#     list_filter = ['transaction_type', 'category', 'status', 'created_at']
-#     search_fields = ['user__username', 'reference', 'description']
-#     readonly_fields = ['id', 'created_at', 'updated_at']
-#     date_hierarchy = 'created_at'
-    
-#     def reference_short(self, obj):
-#         if not obj.reference:  # handle None or empty string
-#             return "-"
-#         return obj.reference[:14] + "..." if len(obj.reference) > 14 else obj.reference
 
-#     reference_short.short_description = 'Reference'
-    
-#     def amount_display(self, obj):
-#         color = 'green' if obj.transaction_type == 'credit' else 'red'
-#         symbol = '+' if obj.transaction_type == 'credit' else '-'
-#         formatted = f"{obj.amount:.2f}"
-#         return format_html(
-#             '<span style="color: {}; font-weight: bold;">{} ${}</span>',
-#             color,
-#             symbol,
-#             formatted
-#         )
-#     amount_display.short_description = 'Amount'
-    
-#     def task_link(self, obj):
-#         if getattr(obj, "task_id", None):  # safer than obj.task
-#             url = reverse('admin:tasks_task_change', args=[obj.task.id])
-#             return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
-#         return '-'
-#     task_link.short_description = 'Related Task'
 
 @admin.register(EscrowTransaction)
 class EscrowTransactionAdmin(admin.ModelAdmin):

@@ -22,67 +22,6 @@ class PaymentGateway(models.Model):
     def __str__(self) -> str:
         return self.name
 
-
-# class PaymentTransaction(models.Model):
-#     """
-#     Tracks all inflow/outflow transactions, regardless of gateway.
-#     """
-
-#     class TransactionType(models.TextChoices):
-#         FUNDING = "funding", "Funding"
-#         WITHDRAWAL = "withdrawal", "Withdrawal"
-
-#     class Status(models.TextChoices):
-#         PENDING = "pending", "Pending"
-#         SUCCESS = "success", "Success"
-#         FAILED = "failed", "Failed"
-#         CANCELLED = "cancelled", "Cancelled"
-
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-#     user = models.ForeignKey(
-#         settings.AUTH_USER_MODEL,
-#         on_delete=models.CASCADE,
-#         related_name="payment_transactions",
-#     )
-#     gateway = models.ForeignKey(PaymentGateway, on_delete=models.CASCADE)
-
-#     transaction_type = models.CharField(max_length=20, choices=TransactionType.choices)
-#     amount = models.DecimalField(max_digits=12, decimal_places=2)
-#     currency = models.CharField(max_length=3, default="NGN")
-
-#     gateway_reference = models.CharField(max_length=255, unique=True, db_index=True)
-#     internal_reference = models.CharField(max_length=100, unique=True, blank=True, db_index=True)
-
-#     status = models.CharField(
-#         max_length=20, choices=Status.choices, default=Status.PENDING
-#     )
-
-#     # Raw gateway responses & arbitrary metadata
-#     gateway_response = models.JSONField(default=dict, blank=True)
-#     metadata = models.JSONField(default=dict, blank=True)
-
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
-#     completed_at = models.DateTimeField(null=True, blank=True)
-
-#     class Meta:
-#         db_table = "payment_transactions"
-#         ordering = ["-created_at"]
-#         verbose_name = "Payment Transaction"
-#         verbose_name_plural = "Payment Transactions"
-
-#     def __str__(self) -> str:
-#         return f"{self.transaction_type.title()} - {self.user} - {self.amount} {self.currency}"
-
-#     def _generate_internal_reference(self) -> str:
-#         """Generate a predictable internal reference once per transaction."""
-#         return f"TXN_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(self.id)[:8]}"
-
-#     def save(self, *args, **kwargs):
-#         if not self.internal_reference:
-#             self.internal_reference = self._generate_internal_reference()
-#         super().save(*args, **kwargs)
 def generate_internal_reference():
     return str(uuid.uuid4())
 
@@ -270,6 +209,45 @@ class FlutterwaveTransaction(models.Model):
 
     def __str__(self) -> str:
         return f"Flutterwave - {self.flutterwave_reference}"
+
+
+class MonnifyTransaction(models.Model):
+    """
+    Holds Monnify-specific fields linked to a generic PaymentTransaction.
+    """
+    transaction = models.OneToOneField(
+        PaymentTransaction,
+        on_delete=models.CASCADE,
+        related_name="monnify_details",
+    )
+
+    # Monnify payment data
+    checkout_url = models.URLField(blank=True)
+    transaction_reference = models.CharField(max_length=255, unique=True, db_index=True)  # MNFY|XX|...
+    
+    # Reserved account details (for bank transfer)
+    account_number = models.CharField(max_length=20, blank=True)
+    account_name = models.CharField(max_length=255, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    bank_code = models.CharField(max_length=10, blank=True)
+    
+    # Transfer/withdrawal data
+    transfer_reference = models.CharField(max_length=255, blank=True)
+    
+    # Withdrawal bank details
+    destination_account_number = models.CharField(max_length=20, blank=True)
+    destination_bank_code = models.CharField(max_length=10, blank=True)
+    destination_account_name = models.CharField(max_length=255, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "monnify_transactions"
+        verbose_name = "Monnify Transaction"
+        verbose_name_plural = "Monnify Transactions"
+
+    def __str__(self) -> str:
+        return f"Monnify - {self.transaction_reference}"
 
 
 class CurrencyRate(models.Model):

@@ -46,7 +46,7 @@ class WalletDashboardView(LoginRequiredMixin, DetailView):
         # Stats
         context['total_earned'] = PaymentTransaction.objects.filter(
             user=user,
-            transaction_type='credit',
+            transaction_type='funding',
             category__in=[
                 'task_earning', 'referral_bonus',
                 'escrow_release', 'task_payment'
@@ -55,7 +55,7 @@ class WalletDashboardView(LoginRequiredMixin, DetailView):
 
         context['total_withdrawn'] = PaymentTransaction.objects.filter(
             user=user,
-            transaction_type='debit',
+            transaction_type='withdrawal',
             category='withdrawal',
             status='success'
         ).aggregate(total=Sum('amount_usd'))['total'] or Decimal('0.00')
@@ -85,7 +85,7 @@ class TransactionListView(LoginRequiredMixin, ListView):
 
         # Filters
         tx_type = self.request.GET.get('type')
-        if tx_type in ['credit', 'debit']:
+        if tx_type in ['funding', 'withdrawal']:
             qs = qs.filter(transaction_type=tx_type)
 
         category = self.request.GET.get('category')

@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods        
 from payments.services import CurrencyService
 
-from .services import PaystackService, WebhookService, FlutterwaveService
+from .services import PaystackService, WebhookService, FlutterwaveService, MonnifyService
 from payments.forms import FundingForm  
 from wallets.models import Wallet
 from payments.models import PaymentGateway, PaymentTransaction
@@ -93,9 +93,15 @@ def initiate_funding(request):
                 if gateway_choice == "flutterwave":
                     service = FlutterwaveService()
                     callback_url = request.build_absolute_uri(reverse("payments:flutterwave_callback"))
-                else:  # default to paystack
+                elif gateway_choice == "paystack":
                     service = PaystackService()
                     callback_url = request.build_absolute_uri(reverse("payments:payment_callback"))
+                elif gateway_choice == "monnify":
+                    service = MonnifyService()
+                    callback_url = request.build_absolute_uri(reverse("payments:monnify_callback"))
+                else:
+                    return JsonResponse({"error": "Invalid payment gateway selected"}, status=400)
+
 
                 result = service.initialize_payment(
                     user=request.user,
@@ -452,6 +458,119 @@ def flutterwave_webhook(request):
         logger.exception("Internal error in Flutterwave webhook: %s", exc)
         return HttpResponse("Internal error", status=500)
 
+
+
+
+@login_required
+def get_monnify_banks(request):
+    """Get bank list (Monnify). Cached similarly."""
+    banks = _cache_bank_list("monnify_banks", lambda: MonnifyService().get_banks())
+    return JsonResponse({"success": bool(banks), "banks": banks})
+
+
+@login_required
+@require_http_methods(["POST"])
+def verify_monnify_account(request):
+    """Verify account via Monnify (expects JSON body)."""
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    account_number = data.get("account_number")
+    bank_code = data.get("bank_code")
+    if not account_number or not bank_code:
+        return JsonResponse({"success": False, "error": "Missing parameters"}, status=400)
+
+    try:
+        result = MonnifyService().resolve_account_number(account_number, bank_code)
+        if result and result.get("success"):
+            account_name = result["data"].get("accountName")
+            return JsonResponse({"success": True, "account_name": account_name})
+    except Exception as exc:
+        logger.exception("Error resolving account via Monnify: %s", exc)
+        return JsonResponse({"success": False, "error": "Internal error"}, status=500)
+
+    return JsonResponse({"success": False, "error": result.get("error", "Invalid account details")}, status=400)
+
+
+@login_required
+def monnify_callback(request):
+    """
+    Handle Monnify callback after payment.
+    Use webhook as source of truth, but verify here for user feedback.
+    """
+    payment_reference = request.GET.get("paymentReference")
+    transaction_reference = request.GET.get("transactionReference")
+
+    if not payment_reference:
+        messages.error(request, "Invalid payment reference")
+        return redirect("wallets:dashboard")
+
+    try:
+        txn = PaymentTransaction.objects.get(
+            gateway_reference=payment_reference,
+            user=request.user
+        )
+    except PaymentTransaction.DoesNotExist:
+        messages.error(request, "Transaction not found")
+        return redirect("wallets:dashboard")
+
+    # Check DB status (webhook may have updated it)
+    if txn.status == PaymentTransaction.Status.SUCCESS:
+        messages.success(request, "Payment completed successfully! Your wallet has been credited.")
+        return redirect("wallets:dashboard")
+
+    # If no transaction_reference, just inform the user
+    if not transaction_reference:
+        messages.warning(request, "Payment is still being verified. Please refresh shortly.")
+        return redirect("wallets:dashboard")
+
+    try:
+        monnify_service = MonnifyService()
+        verification = monnify_service.verify_payment(transaction_reference)
+
+        if verification.get("success"):
+            response_body = verification.get("data", {}).get("responseBody", {})
+            if response_body.get("paymentStatus") == "PAID":
+                messages.success(request, "Payment successful! Wallet will be credited shortly.")
+            else:
+                messages.warning(request, "Payment is being verified. Please check again in a moment.")
+        else:
+            messages.warning(request, "Payment verification in progress.")
+    except Exception as exc:
+        logger.exception("Error in Monnify callback: %s", exc)
+        messages.error(request, "An error occurred during payment verification")
+
+    return redirect("wallets:dashboard")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def monnify_webhook(request):
+    """Handle Monnify webhook with signature verification."""
+    signature = request.META.get("HTTP_MONNIFY_SIGNATURE")
+    if not signature:
+        logger.warning("Missing Monnify signature header")
+        return HttpResponse("No signature", status=400)
+
+    try:
+        if not WebhookService.verify_monnify_signature(request.body, signature):
+            logger.warning("Invalid Monnify signature")
+            return HttpResponse("Invalid signature", status=400)
+
+        event_data = json.loads(request.body)
+        result = WebhookService.process_monnify_webhook(event_data)
+        if result.get("success"):
+            return HttpResponse("OK", status=200)
+        logger.warning("Monnify webhook processing returned error: %s", result)
+        return HttpResponse(result.get("error", "Error"), status=400)
+    except json.JSONDecodeError:
+        logger.exception("Invalid JSON in Monnify webhook")
+        return HttpResponse("Invalid JSON", status=400)
+    except Exception as exc:
+        logger.exception("Internal error in Monnify webhook: %s", exc)
+        return HttpResponse("Internal error", status=500)
 
 # -------------------------
 # Transaction views (optimized)

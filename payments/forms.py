@@ -7,6 +7,7 @@ from .models import PaymentGateway
 GATEWAY_CHOICES = [
     ('paystack', 'Paystack'),
     ('flutterwave', 'Flutterwave'),
+    ('monnify', 'Monnify'),
 ]
 
 class FundingForm(forms.Form):
@@ -23,18 +24,10 @@ class FundingForm(forms.Form):
             'step': '0.01',
         })
     )
-    # currency = forms.ChoiceField(
-    #     choices=[("NGN", "Naira"), ("GHS", "Ghana Cedis"), ("KES", "Kenyan Shillings")],
-    #     label="Currency",
-    #     initial='Naira',
-    #     widget=forms.Select(attrs={
-    #         'class': 'w-full px-3 py-2 border border-red-300 rounded-md '
-    #                  'focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
-    #     })
-    # )
+
     gateway = forms.ChoiceField(
         choices=GATEWAY_CHOICES,
-        initial='paystack',
+        initial='monnify',
         widget=forms.Select(attrs={
             'class': 'w-full px-3 py-2 border border-red-300 rounded-md '
                      'focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',

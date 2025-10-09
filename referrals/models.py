@@ -135,7 +135,7 @@ class ReferralEarning(models.Model):
 
         tx = PaymentTransaction.objects.create(
             user=self.referrer,
-            transaction_type="credit",
+            transaction_type="funding",
             category="referral_bonus",
             amount_usd=self.amount,
             balance_before=balance_before,
