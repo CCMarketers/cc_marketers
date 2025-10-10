@@ -87,8 +87,8 @@ class WithdrawalForm(forms.Form):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
-        if amount and amount < Decimal('100'):
-            raise forms.ValidationError("Minimum withdrawal amount is $100")
+        if amount and amount < Decimal('1'):
+            raise forms.ValidationError("Minimum withdrawal amount is $1")
         return amount
 
 
