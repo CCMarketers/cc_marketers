@@ -1,5 +1,4 @@
 # tasks/views.py
-from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
@@ -7,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Q, F, Sum
+from django.db.models import Count, Q, F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -16,7 +15,7 @@ from django.views.generic.edit import FormView
 
 from subscriptions.decorators import subscription_required
 from users.models import User
-from wallets.models import WithdrawalRequest, EscrowTransaction
+from wallets.models import EscrowTransaction
 from wallets.services import WalletService
 
 from .forms import (
