@@ -106,11 +106,11 @@ class UserRegistrationView(CreateView):
 
         # --- Login user and send verification email ---
         login(self.request, user)
-        success = safe_send_verification_email(user)
-        if success:
-            messages.success(self.request, "Welcome! Please verify your email.")
-        else:
-            messages.warning(self.request, "Welcome! We couldn't send a verification email — please try resending it.")
+        # success = safe_send_verification_email(user)
+        # if success:
+        #     messages.success(self.request, "Welcome! Please verify your email.")
+        # else:
+        #     messages.warning(self.request, "Welcome! We couldn't send a verification email — please try resending it.")
 
         return response
 
@@ -400,11 +400,11 @@ class ResendVerificationView(LoginRequiredMixin, TemplateView):
 
         # Clean up existing tokens and send again
         EmailVerificationToken.objects.filter(user=user, used=False).delete()
-        success = safe_send_verification_email(user)
-        if success:
-            messages.success(request, "Verification email sent!")
-        else:
-            messages.error(request, "Failed to send verification email. Please try again later.")
+        # success = safe_send_verification_email(user)
+        # if success:
+        #     messages.success(request, "Verification email sent!")
+        # else:
+        #     messages.error(request, "Failed to send verification email. Please try again later.")
         return redirect("users:dashboard")
 
 

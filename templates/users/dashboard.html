@@ -326,7 +326,7 @@
             </svg>
             <div class="flex-1">
                 <h4 class="font-medium text-yellow-800">Account Verification Required</h4>
-                <div class="mt-2 space-y-2">
+                {% comment %} <div class="mt-2 space-y-2">
                     {% if not user.email_verified %}
                     <p class="text-yellow-700 text-sm">
                         ❌ Email not verified. 
@@ -339,7 +339,7 @@
                     {% endif %}
 
             
-                </div>
+                </div> {% endcomment %}
             </div>
         </div>
     </div>
