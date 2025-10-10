@@ -217,7 +217,7 @@ class WalletService:
 
         txn = TaskWalletTransaction.objects.create(
             user=user,
-            transaction_type="debit",
+            transaction_type="withdrawal",
             category="task_posting",
             amount=amount,
             balance_before=before,
@@ -349,7 +349,7 @@ class WalletService:
             raise ValueError("Amount must be a number")
 
         if amount < Decimal("10.00"):
-            raise ValueError("Minimum withdrawal amount is $10.")
+            raise ValueError("Minimum withdrawal amount is $1.")
 
         try:
             wallet_balance = Decimal(wallet.balance)
@@ -395,12 +395,13 @@ class WalletService:
         if not recipient_result.get("success"):
             raise ValueError(recipient_result.get("error", "Failed to create Paystack transfer recipient"))
 
-        recipient_code = recipient_result["data"]["data"]["recipient_code"]
+        recipient_code = recipient_result["data"]["recipient_code"]
+
 
         # 2) Initiate transfer
         transfer_result = paystack.initiate_transfer(
             user=withdrawal.user,
-            amount=withdrawal.amount,
+            amount_usd=withdrawal.amount_usd,
             recipient_code=recipient_code,
             reason=f"Withdrawal {withdrawal.id}"
         )

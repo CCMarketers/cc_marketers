@@ -9,6 +9,12 @@ app_name = 'users'
 urlpatterns = [
 
     path("", views.landing_page, name="landing"),
+    path("help/", views.help_center, name="help"),
+    path("contact/", views.contact, name="contact"),
+    path("terms-of-service/", views.contact, name="terms"),
+    path("privacy-policy/", views.contact, name="privacy"),
+    # Authentication
+    # Authentication
     # Authentication
     path('register/', views.UserRegistrationView.as_view(), name='register'),
     path('login/', views.CustomLoginView.as_view(), name='login'),

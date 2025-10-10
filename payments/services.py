@@ -18,6 +18,7 @@ from .models import (
     WebhookEvent,
     FlutterwaveTransaction,   
     CurrencyRate,
+    MonnifyTransaction,
 
 )
 logger = logging.getLogger(__name__)

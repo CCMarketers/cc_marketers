@@ -542,3 +542,16 @@ class ValidateReferralCodeView(View):
 
 def landing_page(request):
     return render(request, "users/landing.html")
+
+
+def help_center(request):
+    return render(request, "users/helpcenter.html")
+
+def contact(request):
+    return render(request, "users/contact.html")
+
+def terms(request):
+    return render(request, "users/terms.html")
+
+def privacy(request):
+    return render(request, "users/privacy.html")

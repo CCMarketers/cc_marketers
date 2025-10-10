@@ -1,0 +1,444 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - CC Marketers</title>
+    <link rel="icon" type="image/png" href="{% static 'images/logos.png' %}" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-card {
+            transition: all 0.3s ease;
+        }
+        
+        .section-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.1);
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-30">
+        <nav class="container mx-auto px-4 py-5">
+            <div class="flex items-center justify-between">
+                <a href="/" class="text-2xl font-bold gradient-text">CC Marketers</a>
+                <a href="/" class="text-red-600 hover:text-red-700 font-semibold">← Back to Home</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-12 max-w-4xl">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
+            <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">Terms of Service</h1>
+            <p class="text-gray-600 mb-8">Last Updated: October 10, 2025</p>
+
+            <div class="prose prose-lg max-w-none space-y-8">
+                <!-- Introduction -->
+                <div class="section-card bg-red-50 p-6 rounded-xl border-l-4 border-red-600">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Agreement to Terms</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        These Terms of Service ("Terms") constitute a legally binding agreement between you and CC Marketers ("Company," "we," "us," or "our") governing your access to and use of the CC Marketers platform, including our TriLink Commerce system, website, and all related services (collectively, the "Platform").
+                    </p>
+                    <p class="text-gray-700 leading-relaxed mt-4">
+                        By accessing or using our Platform, you agree to be bound by these Terms. If you do not agree to these Terms, you must not access or use our Platform.
+                    </p>
+                </div>
+
+                <!-- Important Disclaimer -->
+                <div class="warning-box p-6 rounded-xl">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">⚠️ Important Disclaimer</h2>
+                    <p class="text-gray-800 leading-relaxed font-semibold mb-3">
+                        PLEASE READ CAREFULLY:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-800 ml-4">
+                        <li>CC Marketers is currently in development and features may change without notice</li>
+                        <li>Earnings are NOT guaranteed and depend entirely on individual effort and market conditions</li>
+                        <li>This is NOT a get-rich-quick scheme or investment opportunity</li>
+                        <li>Success requires consistent work, dedication, and effective marketing</li>
+                        <li>Past performance or testimonials do not guarantee future results</li>
+                        <li>You should not rely on this platform as your sole source of income</li>
+                    </ul>
+                </div>
+
+                <!-- Eligibility -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">1. Eligibility</h2>
+                    <p class="text-gray-700 leading-relaxed mb-3">To use CC Marketers, you must:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Be at least 18 years of age</li>
+                        <li>Have the legal capacity to enter into binding contracts</li>
+                        <li>Not be prohibited from using the Platform under applicable laws</li>
+                        <li>Provide accurate and complete registration information</li>
+                        <li>Maintain the security of your account credentials</li>
+                        <li>Comply with all local laws and regulations in your jurisdiction</li>
+                    </ul>
+                    <p class="text-gray-700 leading-relaxed mt-4">
+                        We reserve the right to refuse service, terminate accounts, or cancel orders at our sole discretion.
+                    </p>
+                </div>
+
+                <!-- Account Registration -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">2. Account Registration and Security</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">2.1 Account Creation</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        You must create an account to access most Platform features. You agree to provide accurate, current, and complete information during registration and to update this information as necessary.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">2.2 Account Security</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">You are responsible for:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Maintaining the confidentiality of your password and account</li>
+                        <li>All activities that occur under your account</li>
+                        <li>Notifying us immediately of any unauthorized access or security breach</li>
+                        <li>Ensuring your contact information is current and accurate</li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">2.3 One Account Per Person</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Each user may maintain only one account. Creating multiple accounts to exploit promotions, referral programs, or circumvent restrictions is strictly prohibited and may result in permanent suspension.
+                    </p>
+                </div>
+
+                <!-- TriLink Commerce System -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">3. TriLink Commerce System</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">3.1 System Overview</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        Our TriLink Commerce system connects three parties: businesses seeking promotion, marketers promoting those businesses, and end consumers. The system facilitates verified connections and transparent transactions.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.2 For Business Owners</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">Businesses using our platform agree to:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Provide accurate information about products, services, and business operations</li>
+                        <li>Submit required documentation for verification (business licenses, tax information, etc.)</li>
+                        <li>Comply with all applicable laws, regulations, and industry standards</li>
+                        <li>Honor pricing and terms advertised through the Platform</li>
+                        <li>Respond promptly to customer inquiries and resolve disputes professionally</li>
+                        <li>Pay agreed-upon commissions to marketers in a timely manner</li>
+                        <li>Not engage in deceptive, fraudulent, or illegal business practices</li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.3 For Marketers and Earners</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">Marketers and earners agree to:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Complete tasks honestly and according to provided instructions</li>
+                        <li>Promote businesses truthfully without making false or misleading claims</li>
+                        <li>Not engage in spam, harassment, or unethical marketing practices</li>
+                        <li>Disclose their relationship with CC Marketers when required by law</li>
+                        <li>Not manipulate metrics, create fake engagement, or use bots</li>
+                        <li>Respect intellectual property rights of businesses and content creators</li>
+                        <li>Build their network through genuine connections, not coercion or deception</li>
+                    </ul>
+                </div>
+
+                <!-- Earnings and Payments -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">4. Earnings, Commissions, and Payments</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">4.1 Earning Opportunities</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        Users may earn money through task completion, successful referrals, network building, and affiliate marketing. Specific earning opportunities and rates are subject to change at our discretion.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4.2 No Guarantee of Earnings</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        <strong>IMPORTANT:</strong> We make no guarantees regarding earnings potential. Your success depends on factors including but not limited to: effort, time invested, marketing skills, network size, market conditions, and business performance. Any earnings examples or testimonials are not typical and do not guarantee you will achieve similar results.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4.3 Payment Terms</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Payments are processed according to our published payment schedule</li>
+                        <li>Minimum withdrawal thresholds apply</li>
+                        <li>Payment processing may take 3-14 business days depending on method</li>
+                        <li>You are responsible for any bank fees, transfer charges, or currency conversion costs</li>
+                        <li>We reserve the right to withhold payment if fraud or violation of Terms is suspected</li>
+                        <li>Tax reporting and compliance is your responsibility</li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">4.4 Chargebacks and Refunds</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Earnings from tasks or commissions are generally non-refundable. However, we may reverse payments if tasks were not completed according to specifications, fraud is detected, or businesses dispute the quality of services rendered.
+                    </p>
+                </div>
+
+                <!-- Business Verification -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">5. Business Verification and Compliance</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">5.1 Verification Process</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        All businesses must undergo verification before being listed on our Platform. We verify legal compliance, business legitimacy, and ethical standards. However, verification does not constitute an endorsement or guarantee of business success.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">5.2 Ongoing Compliance</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        Businesses must maintain compliance with all applicable laws and regulations. We reserve the right to re-verify businesses periodically and remove non-compliant businesses from the Platform.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">5.3 Prohibited Businesses</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">The following types of businesses are prohibited:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Illegal products or services</li>
+                        <li>Pyramid schemes, Ponzi schemes, or illegal multi-level marketing</li>
+                        <li>Adult content or services</li>
+                        <li>Gambling or betting (where prohibited by law)</li>
+                        <li>Weapons, explosives, or dangerous materials</li>
+                        <li>Counterfeit goods or intellectual property violations</li>
+                        <li>Cryptocurrency schemes or unregistered securities</li>
+                        <li>Hate speech, discrimination, or violence promotion</li>
+                        <li>Any business that violates our ethical standards or applicable laws</li>
+                    </ul>
+                </div>
+
+                <!-- Prohibited Activities -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">6. Prohibited Activities and Conduct</h2>
+                    <p class="text-gray-700 leading-relaxed mb-3">Users are strictly prohibited from:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Creating fake accounts, using bots, or automating tasks</li>
+                        <li>Engaging in fraudulent activities, manipulation, or deception</li>
+                        <li>Sharing account credentials or allowing unauthorized access</li>
+                        <li>Spamming, harassment, or sending unsolicited communications</li>
+                        <li>Violating intellectual property rights or terms of third-party platforms</li>
+                        <li>Attempting to hack, reverse engineer, or compromise Platform security</li>
+                        <li>Using the Platform for illegal activities or money laundering</li>
+                        <li>Manipulating referral systems or gaming commission structures</li>
+                        <li>Posting false reviews, testimonials, or misleading information</li>
+                        <li>Circumventing geographic restrictions or verification requirements</li>
+                        <li>Impersonating others or misrepresenting your identity</li>
+                        <li>Interfering with other users' ability to use the Platform</li>
+                    </ul>
+                    <p class="text-gray-700 leading-relaxed mt-4">
+                        Violation of these prohibitions may result in immediate account suspension, forfeiture of earnings, and legal action.
+                    </p>
+                </div>
+
+                <!-- Intellectual Property -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">7. Intellectual Property Rights</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">7.1 Platform Content</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        All content on the Platform, including but not limited to text, graphics, logos, images, software, and functionality, is owned by CC Marketers or our licensors and is protected by copyright, trademark, and other intellectual property laws.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">7.2 User Content</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        By submitting content to the Platform (including business listings, marketing materials, reviews, or feedback), you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and display such content for Platform operation and promotion.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">7.3 Trademark</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        "CC Marketers," our logo, and other marks are trademarks of our company. You may not use these marks without our prior written permission.
+                    </p>
+                </div>
+
+                <!-- Disclaimers -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">8. Disclaimers and Limitations of Liability</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">8.1 Platform "As Is"</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        THE PLATFORM IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. WE DO NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">8.2 No Business Guarantee</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        While we verify businesses for legal compliance, we do not guarantee the quality, safety, legality, or performance of any business, product, or service listed on the Platform. Users engage with businesses at their own risk.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">8.3 Third-Party Interactions</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        We are not responsible for your interactions with other users, businesses, or third parties. Any disputes should be resolved directly between the parties involved.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">8.4 Limitation of Liability</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        TO THE MAXIMUM EXTENT PERMITTED BY LAW, CC MARKETERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUE, DATA, OR BUSINESS OPPORTUNITIES ARISING FROM YOUR USE OF THE PLATFORM.
+                    </p>
+                    <p class="text-gray-700 leading-relaxed">
+                        OUR TOTAL LIABILITY TO YOU FOR ALL CLAIMS SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE TWELVE (12) MONTHS PRIOR TO THE CLAIM, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.
+                    </p>
+                </div>
+
+                <!-- Indemnification -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">9. Indemnification</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        You agree to indemnify, defend, and hold harmless CC Marketers, its officers, directors, employees, and agents from any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising from: (a) your use of the Platform; (b) your violation of these Terms; (c) your violation of any rights of third parties; or (d) your conduct in connection with the Platform.
+                    </p>
+                </div>
+
+                <!-- Termination -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">10. Termination and Suspension</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">10.1 By You</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        You may terminate your account at any time by contacting us at support@ccmarketers.com. Upon termination, you forfeit any pending earnings below the minimum withdrawal threshold.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">10.2 By Us</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        We may suspend or terminate your account immediately, without notice, for any reason including but not limited to:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
+                        <li>Violation of these Terms or our policies</li>
+                        <li>Fraudulent, illegal, or unethical conduct</li>
+                        <li>Failure to verify identity or business information</li>
+                        <li>Prolonged inactivity</li>
+                        <li>At our sole discretion for operational or legal reasons</li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">10.3 Effect of Termination</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Upon termination, your right to access the Platform ceases immediately. Provisions relating to intellectual property, disclaimers, indemnification, and dispute resolution survive termination.
+                    </p>
+                </div>
+
+                <!-- Dispute Resolution -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">11. Dispute Resolution and Governing Law</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">11.1 Informal Resolution</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        Before pursuing formal legal action, you agree to contact us at support@ccmarketers.com to seek informal resolution of any dispute. We will attempt to resolve disputes in good faith within 30 days.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">11.2 Governing Law</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        These Terms are governed by the laws of Nigeria, without regard to conflict of law principles. Any legal action or proceeding shall be brought exclusively in the courts located in Ogun State, Nigeria.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">11.3 Arbitration</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        If informal resolution fails, disputes shall be resolved through binding arbitration in accordance with the Arbitration and Conciliation Act of Nigeria, except where prohibited by law. You waive any right to participate in class action lawsuits.
+                    </p>
+                </div>
+
+                <!-- Changes to Terms -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">12. Changes to Terms</h2>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        We reserve the right to modify these Terms at any time. We will notify users of material changes by posting updated Terms on the Platform and updating the "Last Updated" date. Changes become effective immediately upon posting for new users, and 30 days after posting for existing users.
+                    </p>
+                    <p class="text-gray-700 leading-relaxed">
+                        Your continued use of the Platform after changes become effective constitutes acceptance of the modified Terms. If you do not agree to the changes, you must stop using the Platform and terminate your account.
+                    </p>
+                </div>
+
+                <!-- General Provisions -->
+                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">13. General Provisions</h2>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">13.1 Entire Agreement</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        These Terms, together with our Privacy Policy and any other policies referenced herein, constitute the entire agreement between you and CC Marketers regarding the Platform.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">13.2 Severability</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        If any provision of these Terms is found to be unenforceable, the remaining provisions will remain in full force and effect.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">13.3 No Waiver</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        Our failure to enforce any right or provision in these Terms does not constitute a waiver of such right or provision.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">13.4 Assignment</h3>
+                    <p class="text-gray-700 leading-relaxed mb-3">
+                        You may not assign or transfer these Terms or your account without our written consent. We may assign our rights and obligations without restriction.
+                    </p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">13.5 Force Majeure</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        We are not liable for delays or failures in performance resulting from causes beyond our reasonable control, including but not limited to acts of God, war, terrorism, natural disasters, government actions, or internet service provider failures.
+                    </p>
+                </div>
+
+                <!-- Platform Development Status -->
+                <div class="warning-box p-6 rounded-xl">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">14. Platform Development Status</h2>
+                    <p class="text-gray-800 leading-relaxed mb-3">
+                        <strong>IMPORTANT NOTICE:</strong> CC Marketers is currently under active development. By using the Platform during this development phase, you acknowledge and agree that:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-800 ml-4">
+                        <li>Features, functionality, and user interfaces may change without notice</li>
+                        <li>The Platform may experience downtime, bugs, or technical issues</li>
+                        <li>Earning structures and commission rates are subject to adjustment</li>
+                        <li>Not all advertised features may be currently available</li>
+                        <li>We may reset accounts, data, or earnings during testing phases with advance notice</li>
+                        <li>Service availability may be limited by geographic region</li>
+                    </ul>
+                    <p class="text-gray-800 leading-relaxed mt-4">
+                        We will make reasonable efforts to communicate significant changes, but you use the Platform at your own risk during the development period.
+                    </p>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="section-card bg-red-50 p-6 rounded-xl border-l-4 border-red-600">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">15. Contact Information</h2>
+                    <p class="text-gray-700 leading-relaxed mb-4">
+                        For questions, concerns, or notices regarding these Terms, please contact us:
+                    </p>
+                    <div class="space-y-2 text-gray-700">
+                        <p><strong>Company Name:</strong> CC Marketers</p>
+                        <p><strong>Email:</strong> <a href="mailto:support@ccmarketers.com" class="text-red-600 hover:text-red-700 font-semibold">support@ccmarketers.com</a></p>
+                        <p><strong>Address:</strong> Km 10, Idiroko Rd, Ota, Ogun State, Nigeria</p>
+                        <p><strong>Support Hours:</strong> 24/7 (response within 24-48 hours)</p>
+                    </div>
+                </div>
+
+                <!-- Acknowledgment -->
+                <div class="section-card bg-gray-100 p-6 rounded-xl border-2 border-gray-300">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Acknowledgment of Understanding</h2>
+                    <p class="text-gray-800 leading-relaxed font-semibold">
+                        BY USING THE CC MARKETERS PLATFORM, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE. YOU FURTHER ACKNOWLEDGE THAT:
+                    </p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-800 ml-4 mt-3">
+                        <li>You understand this is not a get-rich-quick opportunity</li>
+                        <li>Earnings are not guaranteed and require genuine effort</li>
+                        <li>You are responsible for complying with all applicable laws</li>
+                        <li>You have conducted your own due diligence before participating</li>
+                        <li>You accept all risks associated with using the Platform</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 px-4 mt-16">
+        <div class="container mx-auto text-center">
+            <p class="text-gray-400">Copyright © 2025 CC Marketers. All Rights Reserved.</p>
+            <div class="mt-4 space-x-4">
+                <a href="/" class="text-gray-400 hover:text-red-500">Home</a>
+                <a href="/privacy-policy/" class="text-gray-400 hover:text-red-500">Privacy Policy</a>
+                <a href="/contact/" class="text-gray-400 hover:text-red-500">Contact</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

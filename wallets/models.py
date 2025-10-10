@@ -83,9 +83,9 @@ class WithdrawalRequest(models.Model):
         ('failed', 'Failed'),
     ]
     WITHDRAWAL_METHODS = [
-        ('paystack', 'Paystack'),
-        ('flutterwave', 'Flutterwave'),
-        ('crypto', 'Crypto'),
+        # ('paystack', 'Paystack'),
+        # ('flutterwave', 'Flutterwave'),
+        # ('crypto', 'Crypto'),
         ('bank_transfer', 'Bank Transfer'),
     ]
 
