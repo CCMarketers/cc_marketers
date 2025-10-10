@@ -91,31 +91,59 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Action Buttons -->
-                <div class="mt-8 flex flex-wrap gap-4 justify-center">
-                    <form method="post" action="{% url 'subscriptions:toggle_auto_renewal' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200">
-                            {% if active_subscription.auto_renewal %}
-                                Disable Auto-Renewal
-                            {% else %}
-                                Enable Auto-Renewal
-                            {% endif %}
-                        </button>
-                    </form>
-                    
-                    <form method="post" action="{% url 'subscriptions:cancel_subscription' %}" onsubmit="return confirm('Are you sure you want to cancel your subscription?');">
-                        {% csrf_token %}
-                        <button type="submit" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors duration-200">
-                            Cancel Subscription
-                        </button>
-                    </form>
-                    
-                    <a href="{% url 'subscriptions:plans' %}" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors duration-200">
-                        View All Plans
-                    </a>
-                </div>
+<!-- Action Buttons -->
+<div class="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4">
+
+    <!-- Auto-Renewal Toggle -->
+    <form method="post" action="{% url 'subscriptions:toggle_auto_renewal' %}">
+        {% csrf_token %}
+        <button 
+            type="submit" 
+            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md transition duration-200"
+        >
+            {% if active_subscription.auto_renewal %}
+                Disable Auto-Renewal
+            {% else %}
+                Enable Auto-Renewal
+            {% endif %}
+        </button>
+    </form>
+
+    <!-- Cancel Subscription -->
+    {% if active_subscription %}
+        {% if active_subscription.plan.name == "Demo Account" %}
+            <form 
+                method="post" 
+                action="{% url 'subscriptions:cancel_subscription' %}" 
+                onsubmit="return confirm('Are you sure you want to cancel your subscription?');"
+            >
+                {% csrf_token %}
+                <button 
+                    type="submit" 
+                    class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-md transition duration-200"
+                >
+                    Cancel Subscription
+                </button>
+            </form>
+        {% else %}
+            <p class="text-gray-500 text-sm italic mt-2">
+            </p>
+        {% endif %}
+    {% else %}
+        <p class="text-gray-500 text-center text-sm italic">
+            You do not have an active subscription.
+        </p>
+    {% endif %}
+
+    <!-- View All Plans -->
+    <a 
+        href="{% url 'subscriptions:plans' %}" 
+        class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold shadow-md transition duration-200"
+    >
+        View All Plans
+    </a>
+</div>
+
             </div>
         </div>
     {% else %}
