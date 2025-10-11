@@ -150,7 +150,7 @@ class PaymentIntegrationTestCase(BaseTestCase, PaystackMockMixin, WalletServiceM
         
         messages_list = list(get_messages(response.wsgi_request))
         self.assertTrue(
-            any('Withdrawal of $300.00' in str(m) and 'initiated successfully' in str(m)
+            any('Withdrawal of $200.00' in str(m) and 'initiated successfully' in str(m)
                 for m in messages_list)
         )
         

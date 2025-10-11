@@ -20,7 +20,7 @@ class FundingForm(forms.Form):
         widget=forms.NumberInput(attrs={
             'class': 'w-full px-3 py-2 border border-red-300 rounded-md '
                      'focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
-            'placeholder': 'Enter amount (Min: $3)',
+            'placeholder': 'Enter amount (Min: $2)',
             'step': '0.10',
         })
     )
@@ -46,8 +46,8 @@ class FundingForm(forms.Form):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
-        if amount and amount < Decimal('3'):
-            raise forms.ValidationError("Minimum funding amount is $3")
+        if amount and amount < Decimal('2'):
+            raise forms.ValidationError("Minimum funding amount is $2")
         return amount
 
 

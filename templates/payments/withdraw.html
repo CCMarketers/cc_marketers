@@ -93,21 +93,12 @@
                 </div>
 
                 <!-- Notices -->
-                {% if debug %}
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                    <h3 class="text-sm font-medium text-yellow-800">Development/Testing Notice</h3>
-                    <p class="mt-2 text-sm text-yellow-700">
-                        Withdrawals are simulated in development. In production, funds are sent to your bank.
-                    </p>
-                </div>
-                {% else %}
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <h3 class="text-sm font-medium text-blue-800">Withdrawal Information</h3>
                     <p class="mt-2 text-sm text-blue-700">
-                        Minimum withdrawal: $100. Processing time: 5–15 minutes.
+                        Minimum withdrawal: $1. Processing time: 5–15 minutes.
                     </p>
                 </div>
-                {% endif %}
 
                 <!-- Submit -->
                 <button type="submit" id="submit-btn" class="w-full bg-gray-400 text-white py-3 px-4 rounded-lg font-semibold cursor-not-allowed" disabled>

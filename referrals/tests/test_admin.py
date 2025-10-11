@@ -81,7 +81,7 @@ class AdminTests(TestCase):
 
         total = admin.total_earnings(self.referral)
 
-        self.assertEqual(total, "$35.00")
+        self.assertEqual(total, "$25.00")
 
     
     def test_referral_earning_admin_display_methods(self):

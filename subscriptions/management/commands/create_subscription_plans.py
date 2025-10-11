@@ -12,7 +12,7 @@ class Command(BaseCommand):
             plan_type__in=[SubscriptionPlan.PLAN_BUSINESS, SubscriptionPlan.PLAN_TRIAL]
         ).delete()
 
-        # Demo Account ($3)
+        # Demo Account ($2)
         trial_plan, created = SubscriptionPlan.objects.get_or_create(
             name="Demo Account",
             defaults={

@@ -82,16 +82,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     CURRENCY_CHOICES = [
         ('NGN', 'NGN'),
-        ('GHS', 'GHS'),
-        ('KES', 'KES'),
-        ('USD', 'USD'),
+        # ('GHS', 'GHS'),
+        # ('KES', 'KES'),
+        # ('USD', 'USD'),
     ]
     
     COUNTRY_CHOICES = [
         ('NG', 'Nigeria'),
-        ('GH', 'Ghana'),
-        ('KE', 'Kenya'),
-        ('US', 'United States'),
+        # ('GH', 'Ghana'),
+        # ('KE', 'Kenya'),
+        # ('US', 'United States'),
     ]
     
     preferred_currency = models.CharField(
