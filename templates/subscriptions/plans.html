@@ -123,8 +123,13 @@
                     Insufficient Balance
                 </button>
                 <p class="text-red-600 text-sm mt-2 text-center">
-                    Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }})
+                    Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }}) 
                 </p>
+                <a href="{% url 'payments:initiate_funding' %}" class="text-red-600 text-sm mt-2 text-center block">
+                    Fund Wallet
+                </a>
+
+
             {% endif %}
         {% endif %}
     {% else %}
