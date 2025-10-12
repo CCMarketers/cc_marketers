@@ -1,5 +1,4 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,61 +7,50 @@
     <title>Help Center - CC Marketers</title>
     <link rel="icon" type="image/png" href="{% static 'images/logos.png' %}" />
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(40px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
-        
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        
-        .fade-in-up { animation: fadeInUp 1s ease-out forwards; }
+
+        .fade-in-up { animation: fadeInUp 0.9s ease-out forwards; }
         .float-animation { animation: float 4s ease-in-out infinite; }
-        
+
         .gradient-text {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 3s linear infinite;
-            background-size: 200% auto;
         }
-        
+
         .card-hover {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
         }
-        
         .card-hover:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(239, 68, 68, 0.3);
+            transform: translateY(-6px);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
         }
-        
+
         .nav-link {
             position: relative;
             transition: all 0.3s ease;
         }
-        
         .nav-link::after {
             content: '';
             position: absolute;
             width: 0;
-            height: 3px;
-            bottom: -8px;
+            height: 2px;
+            bottom: -6px;
             left: 50%;
             background: linear-gradient(90deg, #ef4444, #dc2626);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             transform: translateX(-50%);
-            border-radius: 2px;
         }
-        
         .nav-link:hover::after {
             width: 100%;
         }
@@ -70,221 +58,156 @@
         .menu-slide {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.4s ease-in-out;
+            transition: max-height 0.3s ease-in-out;
+        }
+        .menu-slide.active {
+            max-height: 20rem;
         }
 
-        .menu-slide.active {
-            max-height: 30rem;
-        }
-        
         .accordion-content {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.4s ease-in-out;
+            transition: max-height 0.3s ease-in-out;
         }
-        
         .accordion-content.active {
-            max-height: 500px;
+            max-height: 300px;
         }
-        
+
         .blob {
             position: absolute;
             border-radius: 50%;
             filter: blur(40px);
-            opacity: 0.2;
+            opacity: 0.15;
             animation: float 6s ease-in-out infinite;
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 text-gray-800">
+
     <!-- Header -->
-    <header class="bg-white shadow-lg sticky top-0 z-30 backdrop-blur-sm bg-opacity-95">
-        <nav class="container mx-auto px-4 py-5">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <a href="/" class="text-xl md:text-lg font-bold gradient-text float-animation">CC Marketers</a>
-                </div>
-                
-                <button onclick="toggleMobileMenu()" class="md:hidden text-gray-700 focus:outline-none hover:scale-110 transition-transform">
-                    <svg id="menuIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                
-                <div class="hidden md:flex space-x-8">
-                    <a href="/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Home</a>
-                    <a href="/blog/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Blog</a>
-                    <a href="/contact/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Contact</a>
-                    <a href="/help/" class="nav-link text-red-600 font-semibold text-lg">Help Center</a>
-                </div>
-            </div>
-            
-            <div id="mobileMenu" class="menu-slide md:hidden mt-4 space-y-3 pb-4">
-                <a href="/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Home</a>
-                <a href="/blog/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Blog</a>
-                <a href="/contact/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Contact</a>
-                <a href="/help/" class="block py-3 text-red-600 font-semibold text-lg hover:pl-2 transition-all">Help Center</a>
+    <header class="bg-white shadow-sm sticky top-0 z-30">
+        <nav class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold gradient-text float-animation">CC Marketers</a>
+
+            <button onclick="toggleMobileMenu()" class="md:hidden text-gray-600 hover:text-red-600">
+                <svg id="menuIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+
+            <div class="hidden md:flex space-x-6 font-semibold">
+                <a href="/" class="nav-link hover:text-red-600">Home</a>
+                <a href="/contact/" class="nav-link hover:text-red-600">Contact</a>
+                <a href="/help/" class="nav-link text-red-600">Help Center</a>
             </div>
         </nav>
+
+        <div id="mobileMenu" class="menu-slide md:hidden bg-white px-4 pb-4">
+            <a href="/" class="block py-2 font-semibold hover:text-red-600">Home</a>
+            <a href="/contact/" class="block py-2 font-semibold hover:text-red-600">Contact</a>
+            <a href="/help/" class="block py-2 font-semibold text-red-600">Help Center</a>
+        </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="relative bg-gradient-to-br from-red-50 via-white to-red-50 py-20 px-4 overflow-hidden">
-        <div class="blob" style="width: 300px; height: 300px; background: #ef4444; top: 10%; left: 10%;"></div>
-        <div class="blob" style="width: 250px; height: 250px; background: #dc2626; top: 60%; right: 15%; animation-delay: 2s;"></div>
-        
+    <!-- Hero -->
+    <section class="relative bg-gradient-to-br from-red-50 via-white to-red-50 py-16 px-4 overflow-hidden">
+        <div class="blob" style="width:250px;height:250px;background:#ef4444;top:10%;left:15%;"></div>
+        <div class="blob" style="width:220px;height:220px;background:#dc2626;top:65%;right:10%;"></div>
+
         <div class="container mx-auto text-center relative z-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-6 fade-in-up">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4 fade-in-up">
                 How Can We <span class="gradient-text">Help You?</span>
             </h1>
-            <p class="text-xl text-gray-700 max-w-3xl mx-auto mb-10 fade-in-up" style="animation-delay: 0.2s;">
-                Find answers to your questions and get the support you need
-            </p>
-            
-            <div class="max-w-2xl mx-auto fade-in-up" style="animation-delay: 0.3s;">
+            <p class="text-lg text-gray-700 mb-8 fade-in-up">Find answers to your questions and get the support you need</p>
+
+            <div class="max-w-xl mx-auto fade-in-up">
                 <div class="relative">
-                    <input type="text" placeholder="Search for help..." class="w-full px-6 py-4 rounded-full border-2 border-red-200 focus:border-red-600 focus:outline-none text-lg">
-                    <button class="absolute right-3 top-1/2 transform -translate-y-1/2 bg-red-600 text-white px-6 py-2 rounded-full hover:bg-red-700 transition-colors">
-                        Search
-                    </button>
+                    <input type="text" placeholder="Search for help..." class="w-full px-5 py-3 rounded-full border-2 border-red-200 focus:border-red-600 focus:outline-none">
+                    <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition">Search</button>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Quick Links -->
-    <section class="py-16 px-4 bg-white">
-        <div class="container mx-auto">
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-2xl shadow-lg card-hover border-2 border-red-100">
-                    <div class="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center mb-4">
-                        <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Getting Started</h3>
-                    <p class="text-gray-600 mb-4">Learn the basics of CC Marketers and how to begin earning</p>
-                    <a href="#getting-started" class="text-red-600 font-semibold hover:text-red-700">Learn More →</a>
+    <section class="py-14 px-4 bg-white">
+        <div class="container mx-auto grid md:grid-cols-3 gap-6">
+            <div class="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl shadow-md card-hover border border-red-100">
+                <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
                 </div>
-                
-                <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-2xl shadow-lg card-hover border-2 border-red-100">
-                    <div class="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center mb-4">
-                        <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-3">FAQs</h3>
-                    <p class="text-gray-600 mb-4">Quick answers to common questions</p>
-                    <a href="#faqs" class="text-red-600 font-semibold hover:text-red-700">View FAQs →</a>
+                <h3 class="text-xl font-bold mb-2">Getting Started</h3>
+                <p class="text-gray-600 mb-3 text-sm">Learn how to begin earning with CC Marketers.</p>
+                <a href="#getting-started" class="text-red-600 font-semibold hover:text-red-700 text-sm">Learn More →</a>
+            </div>
+
+            <div class="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl shadow-md card-hover border border-red-100">
+                <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM10 7a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
                 </div>
-                
-                <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-2xl shadow-lg card-hover border-2 border-red-100">
-                    <div class="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center mb-4">
-                        <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Contact Support</h3>
-                    <p class="text-gray-600 mb-4">Can't find what you need? We're here to help</p>
-                    <a href="/contact/" class="text-red-600 font-semibold hover:text-red-700">Get in Touch →</a>
+                <h3 class="text-xl font-bold mb-2">FAQs</h3>
+                <p class="text-gray-600 mb-3 text-sm">Quick answers to common questions.</p>
+                <a href="#faqs" class="text-red-600 font-semibold hover:text-red-700 text-sm">View FAQs →</a>
+            </div>
+
+            <div class="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl shadow-md card-hover border border-red-100">
+                <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5.88L10 9.88l8-4v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5.88z"/></svg>
                 </div>
+                <h3 class="text-xl font-bold mb-2">Contact Support</h3>
+                <p class="text-gray-600 mb-3 text-sm">Can’t find what you need? We’re here to help.</p>
+                <a href="/contact/" class="text-red-600 font-semibold hover:text-red-700 text-sm">Get in Touch →</a>
             </div>
         </div>
     </section>
+<!-- FAQ Section -->
+<section id="faqs" class="py-16 px-4 bg-gray-50">
+    <div class="container mx-auto max-w-3xl">
+        <h2 class="text-2xl md:text-3xl font-bold text-center mb-10 gradient-text">
+            Frequently Asked Questions
+        </h2>
 
-    <!-- FAQ Section -->
-    <section id="faqs" class="py-20 px-4 bg-gray-50">
-        <div class="container mx-auto max-w-4xl">
-            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12 gradient-text">Frequently Asked Questions</h2>
-            
-            <div class="space-y-4">
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <button onclick="toggleAccordion(0)" class="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <span class="text-lg font-semibold text-gray-800">What is CC Marketers?</span>
-                        <svg class="w-6 h-6 text-red-600 transform transition-transform accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="accordion-content px-6 pb-5">
-                        <p class="text-gray-600 leading-relaxed">CC Marketers is a platform connecting businesses with marketers through our TriLink Commerce system. We help businesses gain visibility while enabling individuals to earn income through task completion and network building.</p>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <button onclick="toggleAccordion(1)" class="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <span class="text-lg font-semibold text-gray-800">How do I start earning?</span>
-                        <svg class="w-6 h-6 text-red-600 transform transition-transform accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="accordion-content px-6 pb-5">
-                        <p class="text-gray-600 leading-relaxed">Register an account, complete your profile verification, and browse available tasks. Start with simple tasks to build your reputation, then explore more opportunities as you grow.</p>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <button onclick="toggleAccordion(2)" class="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <span class="text-lg font-semibold text-gray-800">How much can I earn?</span>
-                        <svg class="w-6 h-6 text-red-600 transform transition-transform accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="accordion-content px-6 pb-5">
-                        <p class="text-gray-600 leading-relaxed">Earnings vary based on your effort, consistency, and network size. This is not a get-rich-quick scheme. Income depends on task completion rates and your ability to build connections.</p>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <button onclick="toggleAccordion(3)" class="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <span class="text-lg font-semibold text-gray-800">How do withdrawals work?</span>
-                        <svg class="w-6 h-6 text-red-600 transform transition-transform accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="accordion-content px-6 pb-5">
-                        <p class="text-gray-600 leading-relaxed">Withdrawals are processed weekly once you meet the minimum threshold. You can withdraw to your bank account or mobile money wallet. Processing typically takes 3-5 business days.</p>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md overflow-hidden">
-                    <button onclick="toggleAccordion(4)" class="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
-                        <span class="text-lg font-semibold text-gray-800">Is CC Marketers legitimate?</span>
-                        <svg class="w-6 h-6 text-red-600 transform transition-transform accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="accordion-content px-6 pb-5">
-                        <p class="text-gray-600 leading-relaxed">Yes, we are a registered business operating legally. All businesses on our platform are verified for compliance. However, always conduct your own due diligence and never invest more than you can afford.</p>
-                    </div>
+        <div class="space-y-3">
+            {% for q in faqs %}
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <button onclick="toggleAccordion({{ forloop.counter0 }})"
+                        class="w-full px-5 py-4 flex justify-between items-center text-left hover:bg-gray-50">
+                    <span class="font-semibold">{{ q }}</span>
+                    <svg class="w-5 h-5 text-red-600 accordion-icon"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div class="accordion-content px-5 pb-4">
+                    <p class="text-gray-600 text-sm leading-relaxed">
+                        Answer content goes here — keep it short and clear for better UX.
+                    </p>
                 </div>
             </div>
+            {% endfor %}
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- Contact CTA -->
-    <section class="py-20 px-4 bg-gradient-to-br from-red-600 to-red-800 text-white">
-        <div class="container mx-auto text-center">
-            <h2 class="text-3xl md:text-4xl font-bold mb-6">Still Have Questions?</h2>
-            <p class="text-xl mb-8 text-red-100">Our support team is ready to help you</p>
-            <a href="/contact/" class="inline-block bg-white text-red-600 px-10 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition-all hover:scale-105 shadow-xl">
-                Contact Support
-            </a>
-        </div>
+
+    <!-- CTA -->
+    <section class="py-16 px-4 bg-gradient-to-br from-red-600 to-red-800 text-white text-center">
+        <h2 class="text-2xl md:text-3xl font-bold mb-3">Still Have Questions?</h2>
+        <p class="text-red-100 mb-6 text-sm md:text-base">Our support team is ready to help you anytime.</p>
+        <a href="/contact/" class="bg-white text-red-600 px-8 py-3 rounded-full font-semibold text-sm hover:bg-gray-100 transition-all hover:scale-105">Contact Support</a>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12 px-4">
-        <div class="container mx-auto text-center">
-            <div class="flex justify-center space-x-8 mb-6">
-                <a href="/" class="text-gray-400 hover:text-red-500 transition-colors">Home</a>
-                <a href="/contact/" class="text-gray-400 hover:text-red-500 transition-colors">Contact</a>
-                <a href="/privacy-policy/" class="text-gray-400 hover:text-red-500 transition-colors">Privacy</a>
-                <a href="/terms-of-service/" class="text-gray-400 hover:text-red-500 transition-colors">Terms</a>
-            </div>
-            <p class="text-gray-400">Copyright © 2025 CC Marketers. All Rights Reserved.</p>
+    <footer class="bg-gray-900 text-gray-400 py-10 text-center text-sm">
+        <div class="space-x-6 mb-4">
+            <a href="/" class="hover:text-red-500">Home</a>
+            <a href="/contact/" class="hover:text-red-500">Contact</a>
+            <a href="/privacy-policy/" class="hover:text-red-500">Privacy</a>
+            <a href="/terms-of-service/" class="hover:text-red-500">Terms</a>
         </div>
+        <p>© 2025 CC Marketers. All Rights Reserved.</p>
     </footer>
 
     <script>
@@ -292,24 +215,20 @@
             const menu = document.getElementById('mobileMenu');
             const icon = document.getElementById('menuIcon');
             menu.classList.toggle('active');
-            
-            if (menu.classList.contains('active')) {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-            } else {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
-            }
+            icon.innerHTML = menu.classList.contains('active')
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
         }
 
         function toggleAccordion(index) {
             const accordions = document.querySelectorAll('.accordion-content');
             const icons = document.querySelectorAll('.accordion-icon');
-            
-            accordions.forEach((accordion, i) => {
+            accordions.forEach((acc, i) => {
                 if (i === index) {
-                    accordion.classList.toggle('active');
+                    acc.classList.toggle('active');
                     icons[i].classList.toggle('rotate-180');
                 } else {
-                    accordion.classList.remove('active');
+                    acc.classList.remove('active');
                     icons[i].classList.remove('rotate-180');
                 }
             });

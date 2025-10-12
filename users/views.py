@@ -545,7 +545,15 @@ def landing_page(request):
 
 
 def help_center(request):
-    return render(request, "users/helpcenter.html")
+    faqs = [
+        "What is CC Marketers?",
+        "How do I start earning?",
+        "How much can I earn?",
+        "How do withdrawals work?",
+        "Is CC Marketers legitimate?",
+    ]
+    return render(request, "users/helpcenter.html", {"faqs": faqs})
+
 
 def contact(request):
     return render(request, "users/contact.html")

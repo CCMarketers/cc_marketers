@@ -10,240 +10,127 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        
+        @keyframes fadeInUp { from {opacity:0; transform:translateY(30px);} to {opacity:1; transform:translateY(0);} }
+        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+
         .fade-in-up { animation: fadeInUp 1s ease-out forwards; }
         .float-animation { animation: float 4s ease-in-out infinite; }
-        
+
         .gradient-text {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 3s linear infinite;
-            background-size: 200% auto;
-        }
-        
-        .card-hover {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(239, 68, 68, 0.3);
-        }
-        
-        .nav-link {
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 3px;
-            bottom: -8px;
-            left: 50%;
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateX(-50%);
-            border-radius: 2px;
-        }
-        
-        .nav-link:hover::after {
-            width: 100%;
         }
 
-        .menu-slide {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out;
-        }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-6px); box-shadow: 0 12px 25px rgba(239,68,68,0.25); }
 
-        .menu-slide.active {
-            max-height: 30rem;
-        }
-        
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(40px);
-            opacity: 0.2;
-            animation: float 6s ease-in-out infinite;
-        }
+        .input-field { transition: all 0.3s ease; }
+        .input-field:focus { border-color: #ef4444; box-shadow: 0 8px 20px rgba(239,68,68,0.1); }
 
-        .input-field {
-            transition: all 0.3s ease;
-        }
-
-        .input-field:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.1);
-        }
+        .menu-slide { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+        .menu-slide.active { max-height: 25rem; }
     </style>
 </head>
 <body class="bg-gray-50">
+
     <!-- Header -->
-    <header class="bg-white shadow-lg sticky top-0 z-30 backdrop-blur-sm bg-opacity-95">
-        <nav class="container mx-auto px-4 py-5">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <a href="/" class="text-xl md:text-lg font-bold gradient-text float-animation">CC Marketers</a>
-                </div>
-                
-                <button onclick="toggleMobileMenu()" class="md:hidden text-gray-700 focus:outline-none hover:scale-110 transition-transform">
-                    <svg id="menuIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                
-                <div class="hidden md:flex space-x-8">
-                    <a href="/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Home</a>
-                    <a href="/blog/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Blog</a>
-                    <a href="/contact/" class="nav-link text-red-600 font-semibold text-lg">Contact</a>
-                    <a href="/help/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Help Center</a>
-                </div>
-            </div>
-            
-            <div id="mobileMenu" class="menu-slide md:hidden mt-4 space-y-3 pb-4">
-                <a href="/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Home</a>
-                <a href="/blog/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Blog</a>
-                <a href="/contact/" class="block py-3 text-red-600 font-semibold text-lg hover:pl-2 transition-all">Contact</a>
-                <a href="/help/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Help Center</a>
+    <header class="bg-white shadow-sm sticky top-0 z-30">
+        <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <a href="/" class="text-lg font-bold gradient-text float-animation">CC Marketers</a>
+            <button onclick="toggleMobileMenu()" class="md:hidden text-gray-700">
+                <svg id="menuIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <div class="hidden md:flex space-x-6">
+                <a href="/" class="text-gray-700 hover:text-red-600 font-medium">Home</a>
+                {% comment %} <a href="/blog/" class="text-gray-700 hover:text-red-600 font-medium">Blog</a> {% endcomment %}
+                <a href="/contact/" class="text-red-600 font-semibold">Contact</a>
+                <a href="/help/" class="text-gray-700 hover:text-red-600 font-medium">Help</a>
             </div>
         </nav>
+        <div id="mobileMenu" class="menu-slide md:hidden space-y-2 px-4 pb-4">
+            <a href="/" class="block text-gray-700 hover:text-red-600 py-2">Home</a>
+            {% comment %} <a href="/blog/" class="block text-gray-700 hover:text-red-600 py-2">Blog</a> {% endcomment %}
+            <a href="/contact/" class="block text-red-600 font-semibold py-2">Contact</a>
+            <a href="/help/" class="block text-gray-700 hover:text-red-600 py-2">Help</a>
+        </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="relative bg-gradient-to-br from-red-50 via-white to-red-50 py-20 px-4 overflow-hidden">
-        <div class="blob" style="width: 300px; height: 300px; background: #ef4444; top: 10%; left: 10%;"></div>
-        <div class="blob" style="width: 250px; height: 250px; background: #dc2626; top: 60%; right: 15%; animation-delay: 2s;"></div>
-        
-        <div class="container mx-auto text-center relative z-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-6 fade-in-up">
+    <!-- Hero -->
+    <section class="relative py-16 px-4 bg-gradient-to-br from-red-50 via-white to-red-50 text-center">
+        <div class="container mx-auto relative z-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 fade-in-up">
                 Get in <span class="gradient-text">Touch</span>
             </h1>
-            <p class="text-xl text-gray-700 max-w-3xl mx-auto fade-in-up" style="animation-delay: 0.2s;">
+            <p class="text-gray-600 max-w-2xl mx-auto fade-in-up" style="animation-delay:0.2s;">
                 Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
             </p>
         </div>
     </section>
 
     <!-- Contact Section -->
-    <section class="py-20 px-4">
-        <div class="container mx-auto max-w-6xl">
-            <div class="grid md:grid-cols-2 gap-12">
-                <!-- Contact Form -->
-                <div class="bg-white p-8 rounded-3xl shadow-2xl">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6">Send Us a Message</h2>
-                    <form id="contactForm" class="space-y-6">
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">Full Name</label>
-                            <input type="text" name="name" required class="input-field w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-600 focus:outline-none transition-all" placeholder="John Doe">
+    <section class="py-16 px-4">
+        <div class="container mx-auto max-w-5xl grid md:grid-cols-2 gap-10">
+            <!-- Form -->
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Send Us a Message</h2>
+                <form id="contactForm" class="space-y-4">
+                    <input type="text" name="name" placeholder="Full Name" required 
+                        class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none">
+                    <input type="email" name="email" placeholder="Email Address" required 
+                        class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none">
+                    <input type="text" name="subject" placeholder="Subject" required 
+                        class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none">
+                    <textarea name="message" rows="5" placeholder="Your Message..." required
+                        class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none resize-none"></textarea>
+
+                    <button type="submit"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg font-semibold transition transform hover:scale-[1.02]">
+                        Send Message
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="space-y-5">
+                <div class="bg-white p-6 rounded-2xl border border-red-100 card-hover">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center">
+                            📧
                         </div>
-                        
                         <div>
-                            <label class="block text-gray-700 font-semibold mb-2">Email Address</label>
-                            <input type="email" name="email" required class="input-field w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-600 focus:outline-none transition-all" placeholder="john@example.com">
+                            <h3 class="font-bold text-gray-800">Email Us</h3>
+                            <p class="text-sm text-gray-600">For general inquiries & support</p>
+                            <a href="mailto:considerateclub@gmail.com" class="text-red-600 hover:underline text-sm">
+                                considerateclub@gmail.com
+                            </a>
                         </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">Subject</label>
-                            <input type="text" name="subject" required class="input-field w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-600 focus:outline-none transition-all" placeholder="How can we help?">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2">Message</label>
-                            <textarea name="message" required rows="5" class="input-field w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-600 focus:outline-none transition-all resize-none" placeholder="Tell us more about your inquiry..."></textarea>
-                        </div>
-                        
-                        <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-xl">
-                            Send Message
-                        </button>
-                    </form>
+                    </div>
                 </div>
 
-                <!-- Contact Information -->
-                <div class="space-y-8">
-                    <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-3xl shadow-lg card-hover border-2 border-red-100">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800 mb-2">Email Us</h3>
-                                <p class="text-gray-600 mb-2">For general inquiries and support</p>
-                                <a href="mailto:considerateclub@gmail.com" class="text-red-600 font-semibold hover:text-red-700">considerateclub@gmail.com</a>
-                            </div>
+                <div class="bg-white p-6 rounded-2xl border border-red-100 card-hover">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center">
+                            📍
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">Visit Us</h3>
+                            <p class="text-sm text-gray-600">Km 10, Idiroko Rd, Ota, Ogun State, Nigeria</p>
                         </div>
                     </div>
+                </div>
 
-                    <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-3xl shadow-lg card-hover border-2 border-red-100">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800 mb-2">Visit Us</h3>
-                                <p class="text-gray-600 mb-2">Our office location</p>
-                                <p class="text-gray-700">Km 10, Idiroko Rd<br>Ota, Ogun State<br>Nigeria</p>
-                            </div>
+                <div class="bg-white p-6 rounded-2xl border border-red-100 card-hover">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center">
+                            ⏰
                         </div>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-red-50 to-white p-8 rounded-3xl shadow-lg card-hover border-2 border-red-100">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-800 mb-2">Response Time</h3>
-                                <p class="text-gray-600 mb-2">We typically respond within</p>
-                                <p class="text-red-600 font-bold text-lg">24-48 hours</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-red-600 to-red-700 p-8 rounded-3xl shadow-xl text-white">
-                        <h3 class="text-2xl font-bold mb-4">Follow Us</h3>
-                        <p class="mb-6 text-red-100">Stay connected on social media</p>
-                        <div class="flex space-x-4">
-                            <a href="#" class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition-all hover:scale-110">
-                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition-all hover:scale-110">
-                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition-all hover:scale-110">
-                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/>
-                                </svg>
-                            </a>
+                        <div>
+                            <h3 class="font-bold text-gray-800">Response Time</h3>
+                            <p class="text-sm text-gray-600">We typically reply within <span class="text-red-600 font-medium">24–48 hours</span>.</p>
                         </div>
                     </div>
                 </div>
@@ -252,16 +139,14 @@
     </section>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12 px-4">
-        <div class="container mx-auto text-center">
-            <div class="flex justify-center space-x-8 mb-6">
-                <a href="/" class="text-gray-400 hover:text-red-500 transition-colors">Home</a>
-                <a href="/help/" class="text-gray-400 hover:text-red-500 transition-colors">Help Center</a>
-                <a href="/privacy-policy/" class="text-gray-400 hover:text-red-500 transition-colors">Privacy</a>
-                <a href="/terms-of-service/" class="text-gray-400 hover:text-red-500 transition-colors">Terms</a>
-            </div>
-            <p class="text-gray-400">Copyright © 2025 CC Marketers. All Rights Reserved.</p>
+    <footer class="bg-gray-900 text-gray-400 py-8 text-center">
+        <div class="space-x-6 mb-4">
+            <a href="/" class="hover:text-red-500 transition">Home</a>
+            <a href="/help/" class="hover:text-red-500 transition">Help</a>
+            <a href="/privacy-policy/" class="hover:text-red-500 transition">Privacy</a>
+            <a href="/terms-of-service/" class="hover:text-red-500 transition">Terms</a>
         </div>
+        <p class="text-sm">© 2025 CC Marketers. All Rights Reserved.</p>
     </footer>
 
     <script>
@@ -269,18 +154,15 @@
             const menu = document.getElementById('mobileMenu');
             const icon = document.getElementById('menuIcon');
             menu.classList.toggle('active');
-            
-            if (menu.classList.contains('active')) {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-            } else {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
-            }
+            icon.innerHTML = menu.classList.contains('active')
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>';
         }
 
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
+        document.getElementById('contactForm').addEventListener('submit', e => {
             e.preventDefault();
-            alert('Thank you for your message! We will get back to you soon.');
-            this.reset();
+            alert('✅ Thank you! Your message has been sent successfully.');
+            e.target.reset();
         });
     </script>
 </body>

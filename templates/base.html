@@ -1,65 +1,101 @@
-<!-- templates/base.html -->
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Basic Meta -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CC_Marketers{% endblock %}</title>
-     <!-- Favicon -->
+    <meta name="description" content="{% block meta_description %}Join CC_Marketers to earn money, complete online tasks, and grow your digital income.{% endblock %}">
+    <meta name="keywords" content="earn online, affiliate marketing, paid tasks, CC Marketers, make money online, referrals, digital jobs">
+    <meta name="author" content="CC_Marketers">
+
+    <!-- Title -->
+    <title>{% block title %}CC_Marketers — Earn, Connect, Grow{% endblock %}</title>
+
+    <!-- Canonical URL -->
+    {% if request %}
+    <link rel="canonical" href="{{ request.build_absolute_uri }}" />
+    {% endif %}
+
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="{% static 'images/logos.png' %}" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}CC_Marketers — Task Marketplace & Referral Platform{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Connect with marketers, complete digital tasks, and earn money online at CC_Marketers.{% endblock %}">
+    <meta property="og:image" content="{% static 'images/og-banner.png' %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:site_name" content="CC_Marketers">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CC_Marketers — Earn, Connect, Grow">
+    <meta name="twitter:description" content="Join thousands earning online through tasks and referrals.">
+    <meta name="twitter:image" content="{% static 'images/og-banner.png' %}">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
+    <script>
+      tailwind.config = {
         theme: {
-            extend: {
-                colors: {
-                    primary: {
-                        50: '#f9fafb',   /* light gray */
-                        100: '#f3f4f6',
-                        200: '#e5e7eb',
-                        300: '#d1d5db',
-                        400: '#9ca3af',
-                        500: '#6b7280',
-                        600: '#4b5563',
-                        700: '#374151',
-                        800: '#1f2937',
-                        900: '#111827',
-                    }
-                }
+          extend: {
+            colors: {
+              red: {
+                600: '#dc2626',
+                700: '#b91c1c'
+              }
             }
+          }
         }
-    }
-</script>
+      }
+    </script>
 
-    <!-- Custom CSS -->
-    <link href="{% load static %}{% static 'css/custom.css' %}" rel="stylesheet">
+    <!-- Styles -->
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+
+    <!-- Structured Data: Organization Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "CC_Marketers",
+      "url": "{{ request.build_absolute_uri|default:'https://cc-marketers.com' }}",
+      "logo": "{% static 'images/logos.png' %}",
+      "description": "Earn money online through digital marketing tasks and referrals on CC_Marketers.",
+      "sameAs": [
+        "https://facebook.com/ccmarketers",
+        "https://twitter.com/ccmarketers",
+        "https://instagram.com/ccmarketers"
+      ],
+      "contactPoint": [{
+        "@type": "ContactPoint",
+        "email": "support@cc-marketers.com",
+        "contactType": "customer support",
+        "areaServed": "NG"
+      }]
+    }
+    </script>
 </head>
-<body class="bg-white text-white-900 min-h-screen">
+
+<body class="bg-white text-gray-900 min-h-screen leading-relaxed">
     <!-- Navigation -->
     {% include 'components/navbar.html' %}
-    
-    <!-- Messages -->
+
+    <!-- Flash Messages -->
     {% if messages %}
         {% include 'components/messages.html' %}
     {% endif %}
-    
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
-        {% block content %}
-        {% endblock %}
-    </main>
-    
-    <!-- Footer -->
-    {% comment %} {% if request.user.is_authenticated %}
-    {% include 'components/footer.html' %}
-    {% endif %} {% endcomment %}
 
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8" role="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
     {% include 'components/footer.html' %}
-    <!-- Custom JS -->
-    <script src="{% load static %}{% static 'js/main.js' %}"></script>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/main.js' %}" defer></script>
 </body>
-</html></content>
-</invoke>
+</html>

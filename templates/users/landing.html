@@ -133,37 +133,83 @@
 </head>
 <body class="bg-gray-50 overflow-x-hidden">
     <!-- Header -->
-    <header class="bg-white shadow-lg sticky top-0 z-30 backdrop-blur-sm bg-opacity-95">
-        <nav class="container mx-auto px-4 py-5">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="text-xl md:text-lg font-bold gradient-text float-animation">CC Marketers</div>
-                </div>
-                
-                <button onclick="toggleMobileMenu()" class="md:hidden text-gray-700 focus:outline-none hover:scale-110 transition-transform">
-                    <svg id="menuIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                
-                <div class="hidden md:flex space-x-8">
-                    <a href="#home" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Home</a>
-                    {% comment %} <a href="/blog/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Blog</a> {% endcomment %}
-                    <a href="/contact/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Contact</a>
-                    <a href="/privacy-policy/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Privacy</a>
-                    <a href="/terms-of-service/" class="nav-link text-gray-700 hover:text-red-600 font-semibold text-lg">Terms</a>
-                </div>
-            </div>
-            
-            <div id="mobileMenu" class="menu-slide md:hidden mt-4 space-y-3 pb-4">
-                <a href="#home" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Home</a>
-                {% comment %} <a href="/blog/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Blog</a> {% endcomment %}
-                <a href="/contact/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Contact</a>
-                <a href="/privacy-policy/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Privacy Policy</a>
-                <a href="/terms-of-service/" class="block py-3 text-gray-700 hover:text-red-600 font-semibold text-lg hover:pl-2 transition-all">Terms of Service</a>
-            </div>
-        </nav>
-    </header>
+<!-- Header -->
+<header class="bg-white/95 backdrop-blur sticky top-0 z-50 shadow-sm">
+  <div class="container mx-auto px-4 md:px-6 lg:px-8">
+    <nav class="flex items-center justify-between py-4" aria-label="Primary navigation">
+      
+      <!-- Brand -->
+      <a href="{% url 'users:landing' %}" class="flex items-center gap-3" aria-label="CC Marketers home">
+        <img src="{% static 'images/logos.png' %}" alt="CC Marketers logo" class="w-9 h-9 rounded-md" loading="lazy">
+        <span class="text-xl font-extrabold gradient-text">CC Marketers</span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <div class="hidden md:flex items-center space-x-6 font-medium text-gray-700">
+        <a href="{% url 'users:landing' %}" class="hover:text-red-600 transition">Home</a>
+        <a href="{% url 'tasks:task_list' %}" class="hover:text-red-600 transition">Tasks</a>
+        <a href="{% url 'users:contact' %}" class="hover:text-red-600 transition">Contact</a>
+        <a href="{% url 'users:privacy' %}" class="hover:text-red-600 transition">Privacy</a>
+        <a href="{% url 'users:terms' %}" class="hover:text-red-600 transition">Terms</a>
+        {% if request.user.is_authenticated %}
+  <a href="{% url 'users:dashboard' %}" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">
+    Dashboard
+  </a>
+  <a href="{% url 'users:logout' %}" class="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition">
+    Logout
+  </a>
+{% else %}
+  <a href="{% url 'users:login' %}" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">
+    Login
+  </a>
+  <a href="{% url 'users:register' %}" class="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition">
+    Register
+  </a>
+{% endif %}
+
+      </div>
+
+      <!-- Mobile Toggle -->
+      <div class="md:hidden">
+        <button id="menu-btn" aria-expanded="false" aria-controls="mobile-menu" class="p-2 rounded-md focus-ring" aria-label="Toggle menu">
+          <svg id="menu-icon" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white shadow-inner rounded-b-lg px-5 pb-6 transition-all duration-300 ease-in-out" role="menu">
+      <div class="pt-4 flex flex-col space-y-3">
+        <a href="{% url 'users:landing' %}" class="py-2 text-gray-700 hover:text-red-600">Home</a>
+        <a href="{% url 'tasks:task_list' %}" class="py-2 text-gray-700 hover:text-red-600">Tasks</a>
+        <a href="{% url 'users:contact' %}" class="py-2 text-gray-700 hover:text-red-600">Contact</a>
+        <a href="{% url 'users:privacy' %}" class="py-2 text-gray-700 hover:text-red-600">Privacy</a>
+        <a href="{% url 'users:terms' %}" class="py-2 text-gray-700 hover:text-red-600">Terms</a>
+ {% if request.user.is_authenticated %}
+  <a href="{% url 'users:dashboard' %}" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">
+    Dashboard
+  </a>
+  <a href="{% url 'users:logout' %}" class="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition">
+    Logout
+  </a>
+{% else %}
+  <a href="{% url 'users:login' %}" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition">
+    Login
+  </a>
+  <a href="{% url 'users:register' %}" class="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 transition">
+    Register
+  </a>
+{% endif %}
+
+      </div>
+    </div>
+  </div>
+</header>
+
+
+
 
     <!-- Hero Section -->
     <section id="home" class="relative bg-gradient-to-br from-red-50 via-white to-red-50 py-24 px-4 overflow-hidden">
@@ -181,258 +227,292 @@
             <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-10 fade-in-up" style="animation-delay: 0.3s;">
                 <strong>TriLink Commerce</strong> creates verified connections between businesses seeking promotion and marketers ready to help them grow.
             </p>
-            <a href="{% url 'users:login' %}" 
-                class="btn-primary bg-gradient-to-r from-red-600 to-red-700 text-white px-12 py-5 rounded-full font-bold text-l pulse-glow fade-in-up shadow-2xl inline-block text-center" 
-                style="animation-delay: 0.4s;">
-                Register Or Sign In
-            </a>
+<div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+  {% if request.user.is_authenticated %}
+    <!-- Optional: You can add a “Dashboard” or “Profile” button for logged-in users -->
+    <a href="{% url 'users:dashboard' %}" class="inline-block px-8 py-3 rounded-full font-semibold bg-gradient-to-r from-red-600 to-red-700 text-white shadow hover:scale-[1.02] transition transform">
+      Go to Dashboard
+    </a>
+  {% else %}
+    <a href="{% url 'users:register' %}" class="inline-block px-8 py-3 rounded-full font-semibold bg-gradient-to-r from-red-600 to-red-700 text-white shadow hover:scale-[1.02] transition transform">
+      Register
+    </a>
+    <a href="{% url 'users:login' %}" class="inline-block px-6 py-3 rounded-full font-semibold border border-red-600 text-red-600 hover:bg-red-50 transition">
+      Sign In
+    </a>
+  {% endif %}
+</div>
 
-            {% comment %} <p class="text-sm text-gray-600 mt-4 fade-in-up" style="animation-delay: 0.5s;">Platform in development • Launching soon</p> {% endcomment %}
+
         </div>
     </section>
 
-    <!-- About Section -->
-    <section class="py-20 px-4 bg-white">
-        <div class="container mx-auto">
-            <h2 class="text-2xl md:text-3xl font-bold text-center mb-16 gradient-text scale-in">Trusted & Reliable Way to Earn</h2>
-            
-            <div class="grid md:grid-cols-2 gap-10">
-                <div class="bg-gradient-to-br from-red-50 to-white p-10 rounded-3xl shadow-2xl card-hover border-2 border-red-100 slide-in-left">
-                    <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-800 mb-6">For Business Owners</h3>
-                    <p class="text-gray-700 mb-6 text-sm leading-relaxed">
-                        Get your business, product, service, or content in front of thousands of real users. Our TriLink Commerce system helps you:
-                    </p>
-                    <ul class="space-y-3">
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">Get more visibility and reach</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">Target specific audiences by location</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">Only work with verified, vetted businesses</span>
-                        </li>
-                    </ul>
-                    <p class="text-sm text-gray-600 mt-6 italic">Every business is reviewed for legal compliance and ethical standards.</p>
-                </div>
-                
-                <div class="bg-gradient-to-br from-red-50 to-white p-10 rounded-3xl shadow-2xl card-hover border-2 border-red-100 slide-in-right">
-                    <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path>
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-3xl font-bold text-gray-800 mb-6">For Earners & Affiliates</h3>
-                    <p class="text-gray-700 mb-6 text-lg leading-relaxed">
-                        Make money online by promoting real businesses. Earn through completing tasks, sharing content, and building your network.
-                    </p>
-                    <ul class="space-y-3">
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">Earn commissions on tasks and Connections</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">Build income through network growth</span>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-800">No special skills needed—just consistency</span>
-                        </li>
-                    </ul>
-                    <div class="disclaimer-box p-4 rounded-lg mt-6">
-                        <p class="text-sm text-gray-800">
-                            <strong>Important:</strong> Earnings are not guaranteed and depend on individual effort. This is not a get-rich-quick scheme.
-                        </p>
-                    </div>
-                </div>
-            </div>
+<!-- About Section -->
+<section class="py-16 px-4 bg-white">
+  <div class="container mx-auto max-w-6xl">
+    <h2 class="text-2xl md:text-3xl font-bold text-center mb-12 gradient-text">Trusted & Reliable Way to Earn</h2>
+    
+    <div class="grid md:grid-cols-2 gap-8">
+      
+      <!-- Business Owners -->
+      <div class="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"></path>
+          </svg>
         </div>
-    </section>
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">For Business Owners</h3>
+        <p class="text-gray-600 mb-5 text-sm leading-relaxed">
+          Promote your business, product, or content to thousands of verified users with our TriLink Commerce system.
+        </p>
+        <ul class="space-y-2">
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">Reach more potential customers</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">Target audiences by location</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">Work only with verified businesses</span>
+          </li>
+        </ul>
+        <p class="text-xs text-gray-500 mt-5 italic">
+          All businesses are manually reviewed for compliance and authenticity.
+        </p>
+      </div>
 
-    <!-- Services Section -->
-    <section class="py-20 px-4 bg-gray-50">
-        <div class="container mx-auto">
-            <h2 class="text-2xl md:text-3xl font-bold text-center mb-16 gradient-text">Our Services</h2>
-            
-            <div class="grid md:grid-cols-3 gap-10">
-                <div class="bg-white p-10 rounded-3xl shadow-2xl card-hover border-4 border-red-600 scale-in">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-3xl font-bold text-gray-800">Tasks</h3>
-                        <span class="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold">Active</span>
-                    </div>
-                    <p class="text-gray-700 mb-8 text-lg">
-                        Complete simple tasks and earn rewards instantly!
-                    </p>
-                    <a href="/tasks/" class="btn-primary block text-center bg-red-600 text-white px-8 py-4 rounded-xl font-bold text-lg">
-                        Go to Tasks →
-                    </a>
-                </div>
-                <div class="bg-white p-10 rounded-3xl shadow-2xl card-hover border-4 border-red-600 scale-in">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-3xl font-bold text-gray-800">Physical Services</h3>
-                        <span class="bg-yellow-500 text-white px-5 py-2 rounded-full text-sm">Coming Soon</span>
-                    </div>
-                    <p class="text-gray-700 mb-8 text-lg">
-                        Connect with professionals offering physical services.
-                    </p>
-                    {% comment %} <a href="#" class="btn-primary block text-center bg-red-600 text-white px-8 py-4 rounded-xl font-bold text-lg cursor-not-allowed opacity-70">
-                        Explore Services
-                    </a> {% endcomment %}
-                    <a href="#" class="block text-center bg-gray-300 text-gray-600 px-8 py-4 rounded-xl font-bold text-lg Explore Services">
-                        Explore Services
-                    </a> 
-                </div>
+      <!-- Earners & Affiliates -->
+      <div class="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path>
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">For Earners & Affiliates</h3>
+        <p class="text-gray-600 mb-5 text-sm leading-relaxed">
+          Make money online by promoting verified businesses. Complete tasks, share content, and grow your income network.
+        </p>
+        <ul class="space-y-2">
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">Earn from tasks and referrals</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">Grow a network-based income</span>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-[2px]" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-gray-700">No special skills required — just consistency</span>
+          </li>
+        </ul>
+        <div class="bg-red-50 border border-red-100 p-3 rounded-lg mt-5">
+          <p class="text-xs text-gray-700">
+            <strong>Note:</strong> Earnings depend on effort and activity. Not a get-rich-quick scheme.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-                
-                <div class="bg-white p-10 rounded-3xl shadow-2xl card-hover scale-in" style="animation-delay: 0.2s;">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-3xl font-bold text-gray-800">Digital Services</h3>
-                        <span class="bg-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold">Coming Soon</span>
-                    </div>
-                    <p class="text-gray-700 mb-8 text-lg">
-                        Access top-tier digital services and solutions.
-                    </p>
-                    <a href="#" class="block text-center bg-gray-300 text-gray-600 px-8 py-4 rounded-xl font-bold text-lg cursor-not-allowed opacity-70">
-                        View Services
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- Stats Section -->
-    <section class="py-20 px-4 bg-gradient-to-br from-red-600 to-red-800 text-white relative overflow-hidden">
-        <div class="absolute inset-0 opacity-20">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-        </div>
-        
-        <div class="container mx-auto relative z-10">
-            <div class="grid md:grid-cols-3 gap-12 text-center">
-                <div class="fade-in-up">
-                    <div class="text-6xl md:text-7xl  mb-4">100%</div>
-                    <div class="text-2xl font-bold mb-2">Verified</div>
-                    <p class="text-red-100 text-lg">All businesses vetted for compliance</p>
-                </div>
-                <div class="fade-in-up" style="animation-delay: 0.2s;">
-                    <div class="text-6xl md:text-7xl  mb-4">3+</div>
-                    <div class="text-2xl font-bold mb-2">Countries</div>
-                    <p class="text-red-100 text-lg">Nigeria, Ghana, South Africa at launch</p>
-                </div>
-                <div class="fade-in-up" style="animation-delay: 0.4s;">
-                    <div class="text-6xl md:text-7xl mb-4">24/7</div>
-                    <div class="text-2xl font-bold mb-2">Support</div>
-                    <p class="text-red-100 text-lg">Always here to help</p>
-                </div>
-            </div>
-        </div>
-    </section>
+<!-- Services Section -->
+<section class="py-16 px-4 bg-gray-50">
+  <div class="container mx-auto max-w-6xl">
+    <h2 class="text-2xl md:text-3xl font-bold text-center mb-12 gradient-text">Our Services</h2>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-16 px-4">
-        <div class="container mx-auto">
-            <div class="grid md:grid-cols-3 gap-10 mb-10">
-                <div>
-                    <h3 class="text-2xl font-bold mb-6 gradient-text">Useful Links</h3>
-                    <ul class="space-y-3">
-                        <li><a href="#home" class="text-gray-400 hover:text-red-500 transition-colors text-lg">Home</a></li>
-                        {% comment %} <li><a href="/blog/" class="text-gray-400 hover:text-red-500 transition-colors text-lg">Blog</a></li> {% endcomment %}
-                        <li><a href="/contact/" class="text-gray-400 hover:text-red-500 transition-colors text-lg">Contact</a></li>
-                        <li><a href="/privacy-policy/" class="text-gray-400 hover:text-red-500 transition-colors text-lg">Privacy Policy</a></li>
-                        <li><a href="/terms-of-service/" class="text-gray-400 hover:text-red-500 transition-colors text-lg">Terms of Service</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="text-2xl font-bold mb-6 gradient-text">Contact Us</h3>
-                    <ul class="space-y-4">
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-                            </svg>
-                            <a href="mailto:considerateclub@gmail.com" class="text-gray-400 hover:text-red-500 transition-colors text-lg">considerateclub@gmail.com</a>
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-6 h-6 text-red-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <span class="text-gray-400 text-lg">Km 10, Idiroko Rd, Ota, Ogun State</span>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="text-2xl font-bold mb-6 gradient-text">CC Marketers</h3>
-                    <p class="text-gray-400 mb-6 text-lg leading-relaxed">
-                        Your trusted platform for earning online through affiliate marketing and network building.
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-red-500 transition-all hover:scale-125">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                            </svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-red-500 transition-all hover:scale-125">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                            </svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-red-500 transition-all hover:scale-125">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-800 pt-8">
-                <div class="text-center mb-4">
-                    <p class="text-sm text-gray-500 mb-2">
-                        <strong>Disclaimer:</strong> CC Marketers is currently in development. Earnings are not guaranteed and depend on individual effort. This is not a get-rich-quick scheme. We verify businesses for legal compliance but do not guarantee success. Always conduct your own due diligence.
-                    </p>
-                </div>
-                <p class="text-gray-400 text-center text-lg">Copyright © 2025 CC Marketers. All Rights Reserved.</p>
-            </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      
+      <!-- Tasks -->
+      <div class="bg-white p-6 rounded-2xl shadow-lg border border-red-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">Tasks</h3>
+          <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">Active</span>
         </div>
-    </footer>
+        <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+          Complete simple online tasks and earn instant rewards directly to your wallet.
+        </p>
+        <a href="/tasks/" class="block text-center bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+          Go to Tasks →
+        </a>
+      </div>
+
+      <!-- Physical Services -->
+      <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">Physical Services</h3>
+          <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+        </div>
+        <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+          Connect with verified professionals offering real-world services near you.
+        </p>
+        <a href="#" class="block text-center bg-gray-200 text-gray-600 px-6 py-3 rounded-lg font-semibold cursor-not-allowed">
+          Explore Services
+        </a>
+      </div>
+
+      <!-- Digital Services -->
+      <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold text-gray-800">Digital Services</h3>
+          <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium">Coming Soon</span>
+        </div>
+        <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+          Access expert-level digital services for business growth and automation.
+        </p>
+        <a href="#" class="block text-center bg-gray-200 text-gray-600 px-6 py-3 rounded-lg font-semibold cursor-not-allowed">
+          View Services
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- Stats Section -->
+<section class="py-16 px-4 bg-gradient-to-br from-red-600 to-red-700 text-white relative overflow-hidden">
+  <!-- Background blobs (decorative) -->
+  <div class="absolute inset-0 opacity-15">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <div class="container mx-auto relative z-10 max-w-5xl">
+    <div class="grid md:grid-cols-3 gap-10 text-center">
+
+      <!-- Stat 1 -->
+      <div class="fade-in-up">
+        <div class="text-4xl md:text-5xl font-extrabold mb-2">100%</div>
+        <div class="text-lg md:text-xl font-semibold mb-1">Verified Businesses</div>
+        <p class="text-red-100 text-sm md:text-base">Every partner is vetted for authenticity & compliance.</p>
+      </div>
+
+      <!-- Stat 2 -->
+      <div class="fade-in-up" style="animation-delay: 0.2s;">
+        <div class="text-4xl md:text-5xl font-extrabold mb-2">3+</div>
+        <div class="text-lg md:text-xl font-semibold mb-1">Countries</div>
+        <p class="text-red-100 text-sm md:text-base">Currently active in Nigeria, Ghana & South Africa.</p>
+      </div>
+
+      <!-- Stat 3 -->
+      <div class="fade-in-up" style="animation-delay: 0.4s;">
+        <div class="text-4xl md:text-5xl font-extrabold mb-2">24/7</div>
+        <div class="text-lg md:text-xl font-semibold mb-1">Customer Support</div>
+        <p class="text-red-100 text-sm md:text-base">We’re here whenever you need assistance.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-white py-12 px-4">
+  <div class="container mx-auto max-w-6xl">
+    <div class="grid md:grid-cols-3 gap-10 mb-10">
+
+      <!-- Useful Links -->
+      <div>
+        <h3 class="text-xl font-semibold mb-5 gradient-text">Useful Links</h3>
+        <ul class="space-y-2">
+          <li><a href="#home" class="text-gray-400 hover:text-red-500 transition text-base">Home</a></li>
+          <li><a href="/contact/" class="text-gray-400 hover:text-red-500 transition text-base">Contact</a></li>
+          <li><a href="/privacy-policy/" class="text-gray-400 hover:text-red-500 transition text-base">Privacy Policy</a></li>
+          <li><a href="/terms-of-service/" class="text-gray-400 hover:text-red-500 transition text-base">Terms of Service</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <h3 class="text-xl font-semibold mb-5 gradient-text">Contact Us</h3>
+        <ul class="space-y-3 text-base text-gray-400">
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+            </svg>
+            <a href="mailto:considerateclub@gmail.com" class="hover:text-red-500 transition">considerateclub@gmail.com</a>
+          </li>
+          <li class="flex items-start">
+            <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+            </svg>
+            <span>Kilometer 10, Idiroko Road, Ota, Ogun State</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- About -->
+      <div>
+        <h3 class="text-xl font-semibold mb-5 gradient-text">CC Marketers</h3>
+        <p class="text-gray-400 mb-5 text-base leading-relaxed">
+          Your trusted platform for earning online through affiliate marketing and network building.
+        </p>
+        <div class="flex space-x-4">
+          <!-- Facebook -->
+          <a href="#" class="text-gray-400 hover:text-red-500 hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.08v-3.47h3.045V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953h-1.412c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.61 23.027 24 18.062 24 12.073z" />
+            </svg>
+          </a>
+          <!-- Twitter -->
+          <a href="#" class="text-gray-400 hover:text-red-500 hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.954 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184A4.92 4.92 0 0012.01 9.03C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105A14.006 14.006 0 0012.01 24c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.054-.63A9.935 9.935 0 0024 4.59z" />
+            </svg>
+          </a>
+          <!-- Instagram -->
+          <a href="#" class="text-gray-400 hover:text-red-500 hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06zm0 3.678a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zm7.846-1.083a1.44 1.44 0 11-2.88 0 1.44 1.44 0 012.88 0z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Note -->
+    <div class="border-t border-gray-800 pt-6 text-center">
+      <p class="text-sm text-gray-500 max-w-3xl mx-auto mb-3 leading-relaxed">
+        <strong>Disclaimer:</strong> CC Marketers is currently in development. Earnings are not guaranteed and depend on individual effort. This is not a get-rich-quick scheme. Always conduct your own due diligence.
+      </p>
+      <p class="text-gray-400 text-sm">© 2025 CC Marketers. All Rights Reserved.</p>
+    </div>
+  </div>
+</footer>
+
 
     <script>
-        function toggleMobileMenu() {
-            const menu = document.getElementById('mobileMenu');
-            const icon = document.getElementById('menuIcon');
-            menu.classList.toggle('active');
-            
-            if (menu.classList.contains('active')) {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-            } else {
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>';
-            }
-        }
-        
+  const menuBtn = document.getElementById('menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+
+  menuBtn.addEventListener('click', () => {
+    const isOpen = mobileMenu.classList.toggle('hidden');
+    menuBtn.setAttribute('aria-expanded', !isOpen);
+    menuIcon.innerHTML = isOpen
+      ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>'
+      : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+  });
+
         // Intersection Observer for scroll animations
         const observerOptions = {
             threshold: 0.1,

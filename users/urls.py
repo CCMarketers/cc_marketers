@@ -11,8 +11,8 @@ urlpatterns = [
     path("", views.landing_page, name="landing"),
     path("help/", views.help_center, name="help"),
     path("contact/", views.contact, name="contact"),
-    path("terms-of-service/", views.contact, name="terms"),
-    path("privacy-policy/", views.contact, name="privacy"),
+    path("terms-of-service/", views.terms, name="terms"),
+    path("privacy-policy/", views.privacy, name="privacy"),
     # Authentication
     # Authentication
     # Authentication

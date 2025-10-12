@@ -1,242 +1,128 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - CC Marketers</title>
-    <link rel="icon" type="image/png" href="{% static 'images/logos.png' %}" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | CC Marketers</title>
+  <link rel="icon" type="image/png" href="{% static 'images/logos.png' %}" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Smooth fade-in + scroll reveal */
+    .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .gradient-text {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .section-card {
-            transition: all 0.3s ease;
-        }
-        
-        .section-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.1);
-        }
-    </style>
+    /* Subtle gradient text */
+    .gradient-text {
+      background: linear-gradient(to right, #dc2626, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white shadow-lg sticky top-0 z-30">
-        <nav class="container mx-auto px-4 py-5">
-            <div class="flex items-center justify-between">
-                <a href="/" class="text-2xl font-bold gradient-text">CC Marketers</a>
-                <a href="/" class="text-red-600 hover:text-red-700 font-semibold">← Back to Home</a>
-            </div>
-        </nav>
-    </header>
+<body class="bg-gray-50 text-gray-800">
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-12 max-w-4xl">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
-            <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">Privacy Policy</h1>
-            <p class="text-gray-600 mb-8">Last Updated: October 10, 2025</p>
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto flex justify-between items-center px-4 py-3">
+      <a href="/" class="text-xl font-bold gradient-text">CC Marketers</a>
+      <div class="flex space-x-6 text-sm font-semibold">
+        <a href="/" class="hover:text-red-600 transition">Home</a>
+        <a href="{% url 'users:contact' %}" class="hover:text-red-600 transition">Contact</a>
+        <a href="{% url 'users:help' %}" class="hover:text-red-600 transition">Help</a>
+      </div>
+    </div>
+  </nav>
 
-            <div class="prose prose-lg max-w-none space-y-8">
-                <!-- Introduction -->
-                <div class="section-card bg-red-50 p-6 rounded-xl border-l-4 border-red-600">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Introduction</h2>
-                    <p class="text-gray-700 leading-relaxed">
-                        Welcome to CC Marketers. We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform, including our TriLink Commerce system.
-                    </p>
-                    <p class="text-gray-700 leading-relaxed mt-4">
-                        By accessing or using CC Marketers, you agree to the terms of this Privacy Policy. If you do not agree with our policies and practices, please do not use our platform.
-                    </p>
-                </div>
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-red-600 to-red-700 text-white text-center py-16">
+    <h1 class="text-3xl md:text-4xl font-bold mb-2">Privacy Policy</h1>
+    <p class="text-red-100 text-sm md:text-base">Last updated: October 2025</p>
+  </header>
 
-                <!-- Information We Collect -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">1. Information We Collect</h2>
-                    
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">1.1 Personal Information</h3>
-                    <p class="text-gray-700 leading-relaxed mb-3">We may collect the following personal information:</p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li>Full name and contact information (email address, phone number)</li>
-                        <li>Physical address for service delivery and verification</li>
-                        <li>Date of birth and identification documents for age verification</li>
-                        <li>Bank account details and payment information for earnings withdrawal</li>
-                        <li>Government-issued identification for business verification (for business owners)</li>
-                        <li>Tax identification numbers where required by law</li>
-                    </ul>
+  <!-- Content -->
+  <main class="max-w-4xl mx-auto px-6 py-12 space-y-10 leading-relaxed">
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">1. Introduction</h2>
+      <p>
+        At sCC Marketers, we values your privacy. This policy explains how we collect, use, and protect your information when you use our platform and services.
+      </p>
+    </section>
 
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">1.2 Business Information</h3>
-                    <p class="text-gray-700 leading-relaxed mb-3">For business owners using our platform:</p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li>Company name, registration number, and tax information</li>
-                        <li>Business licenses and compliance documentation</li>
-                        <li>Business address and contact details</li>
-                        <li>Product or service information and pricing</li>
-                        <li>Marketing materials and promotional content</li>
-                    </ul>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">2. Information We Collect</h2>
+      <p>We may collect the following types of information:</p>
+      <ul class="list-disc list-inside mt-3 space-y-1">
+        <li>Personal details (name, email, phone number, payment info)</li>
+        <li>Account and login data</li>
+        <li>Usage data such as device info, browser type, and interactions</li>
+      </ul>
+    </section>
 
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">1.3 Usage Data</h3>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li>Tasks completed and earnings accumulated</li>
-                        <li>Network connections and referral activity</li>
-                        <li>Platform interaction data and feature usage</li>
-                        <li>Device information (IP address, browser type, operating system)</li>
-                        <li>Cookies and similar tracking technologies</li>
-                    </ul>
-                </div>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">3. How We Use Your Information</h2>
+      <ul class="list-disc list-inside mt-3 space-y-1">
+        <li>To operate and improve our services</li>
+        <li>To communicate updates, offers, and account information</li>
+        <li>To ensure security and prevent fraud</li>
+        <li>To comply with legal obligations</li>
+      </ul>
+    </section>
 
-                <!-- How We Use Your Information -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">2. How We Use Your Information</h2>
-                    <p class="text-gray-700 leading-relaxed mb-3">We use collected information for the following purposes:</p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li><strong>Platform Operation:</strong> To provide, maintain, and improve our TriLink Commerce system</li>
-                        <li><strong>Verification:</strong> To verify user identity and business legitimacy for legal compliance</li>
-                        <li><strong>Payment Processing:</strong> To process earnings, withdrawals, and business transactions</li>
-                        <li><strong>Communication:</strong> To send platform updates, task notifications, and support messages</li>
-                        <li><strong>Security:</strong> To detect and prevent fraud, abuse, and illegal activities</li>
-                        <li><strong>Analytics:</strong> To understand platform usage and improve user experience</li>
-                        <li><strong>Legal Compliance:</strong> To comply with applicable laws and regulations</li>
-                        <li><strong>Marketing:</strong> To send promotional materials (with your consent)</li>
-                    </ul>
-                </div>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">4. Data Sharing</h2>
+      <p>
+        We do not sell your personal data. We only share information with trusted partners when necessary to provide our services — for example, payment processors or analytics tools — under strict confidentiality agreements.
+      </p>
+    </section>
 
-                <!-- Information Sharing -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">3. Information Sharing and Disclosure</h2>
-                    <p class="text-gray-700 leading-relaxed mb-3">We may share your information in the following circumstances:</p>
-                    
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.1 Service Providers</h3>
-                    <p class="text-gray-700 leading-relaxed">
-                        We work with third-party service providers for payment processing, hosting, analytics, and customer support. These providers are contractually obligated to protect your information.
-                    </p>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">5. Data Security</h2>
+      <p>
+        We use modern encryption, secure servers, and regular audits to safeguard your information. However, no online platform can guarantee absolute security.
+      </p>
+    </section>
 
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.2 Business Transfers</h3>
-                    <p class="text-gray-700 leading-relaxed">
-                        In the event of a merger, acquisition, or sale of assets, your information may be transferred to the acquiring entity.
-                    </p>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">6. Your Rights</h2>
+      <p>
+        You can access, update, or delete your data anytime by contacting our support team. You may also opt out of marketing emails by following the unsubscribe link in our messages.
+      </p>
+    </section>
 
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.3 Legal Requirements</h3>
-                    <p class="text-gray-700 leading-relaxed">
-                        We may disclose information when required by law, court order, or government request, or to protect our rights and safety.
-                    </p>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">7. Changes to This Policy</h2>
+      <p>
+        We may update this policy from time to time. Any significant changes will be announced on our website or via email.
+      </p>
+    </section>
 
-                    <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">3.4 Within the Platform</h3>
-                    <p class="text-gray-700 leading-relaxed">
-                        Limited information (such as username and public profile) may be visible to other users for network building purposes.
-                    </p>
-                </div>
+    <section class="fade-in">
+      <h2 class="text-2xl font-semibold gradient-text mb-4">8. Contact Us</h2>
+      <p>
+        If you have questions or requests regarding this Privacy Policy, please reach out at  
+        <a href="mailto:support@ccmarketers.com" class="text-red-600 font-semibold hover:underline">
+          support@ccmarketers.com
+        </a>.
+      </p>
+    </section>
+  </main>
 
-                <!-- Data Security -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">4. Data Security</h2>
-                    <p class="text-gray-700 leading-relaxed mb-3">
-                        We implement industry-standard security measures to protect your information, including:
-                    </p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li>Encryption of sensitive data in transit and at rest</li>
-                        <li>Regular security audits and vulnerability assessments</li>
-                        <li>Access controls and authentication requirements</li>
-                        <li>Secure payment processing through certified providers</li>
-                        <li>Employee training on data protection practices</li>
-                    </ul>
-                    <p class="text-gray-700 leading-relaxed mt-4">
-                        However, no method of transmission over the internet is 100% secure. While we strive to protect your information, we cannot guarantee absolute security.
-                    </p>
-                </div>
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 text-center py-8 mt-10">
+    <p class="text-sm">&copy; 2025 CC Marketers. All rights reserved.</p>
+  </footer>
 
-                <!-- Your Rights -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">5. Your Rights and Choices</h2>
-                    <p class="text-gray-700 leading-relaxed mb-3">You have the following rights regarding your personal information:</p>
-                    <ul class="list-disc list-inside space-y-2 text-gray-700 ml-4">
-                        <li><strong>Access:</strong> Request a copy of the personal information we hold about you</li>
-                        <li><strong>Correction:</strong> Update or correct inaccurate information</li>
-                        <li><strong>Deletion:</strong> Request deletion of your account and associated data (subject to legal obligations)</li>
-                        <li><strong>Opt-Out:</strong> Unsubscribe from marketing communications at any time</li>
-                        <li><strong>Data Portability:</strong> Request your data in a machine-readable format</li>
-                        <li><strong>Restriction:</strong> Request limitation of processing in certain circumstances</li>
-                    </ul>
-                    <p class="text-gray-700 leading-relaxed mt-4">
-                        To exercise these rights, contact us at <a href="mailto:considerateclub@gmail.com" class="text-red-600 hover:text-red-700 font-semibold">considerateclub@gmail.com</a>
-                    </p>
-                </div>
+  <script>
+    // Fade-in animation on scroll
+    const fadeEls = document.querySelectorAll('.fade-in');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.2 });
+    fadeEls.forEach(el => observer.observe(el));
+  </script>
 
-                <!-- Cookies -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">6. Cookies and Tracking Technologies</h2>
-                    <p class="text-gray-700 leading-relaxed mb-3">
-                        We use cookies and similar technologies to enhance your experience, analyze usage, and deliver personalized content. You can control cookies through your browser settings, though this may affect platform functionality.
-                    </p>
-                    <p class="text-gray-700 leading-relaxed">
-                        We use both session cookies (temporary) and persistent cookies (stored on your device) for authentication, preferences, and analytics.
-                    </p>
-                </div>
-
-                <!-- Children's Privacy -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">7. Children's Privacy</h2>
-                    <p class="text-gray-700 leading-relaxed">
-                        CC Marketers is not intended for individuals under the age of 18. We do not knowingly collect personal information from minors. If we discover that we have collected information from a minor, we will delete it immediately. If you believe a minor has provided us with information, please contact us at <a href="mailto:considerateclub@gmail.com" class="text-red-600 hover:text-red-700 font-semibold">considerateclub@gmail.com</a>
-                    </p>
-                </div>
-
-                <!-- International Transfers -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">8. International Data Transfers</h2>
-                    <p class="text-gray-700 leading-relaxed">
-                        Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place to protect your information in accordance with this Privacy Policy and applicable laws.
-                    </p>
-                </div>
-
-                <!-- Data Retention -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">9. Data Retention</h2>
-                    <p class="text-gray-700 leading-relaxed">
-                        We retain your personal information for as long as necessary to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. After account deletion, we may retain certain information for legal and auditing purposes as required by law.
-                    </p>
-                </div>
-
-                <!-- Changes to Policy -->
-                <div class="section-card bg-white p-6 rounded-xl border border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">10. Changes to This Privacy Policy</h2>
-                    <p class="text-gray-700 leading-relaxed">
-                        We may update this Privacy Policy from time to time. We will notify you of significant changes by posting the new policy on our platform and updating the "Last Updated" date. Your continued use of CC Marketers after changes become effective constitutes acceptance of the revised policy.
-                    </p>
-                </div>
-
-                <!-- Contact -->
-                <div class="section-card bg-red-50 p-6 rounded-xl border-l-4 border-red-600">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">11. Contact Us</h2>
-                    <p class="text-gray-700 leading-relaxed mb-4">
-                        If you have questions or concerns about this Privacy Policy or our data practices, please contact us:
-                    </p>
-                    <div class="space-y-2 text-gray-700">
-                        <p><strong>Email:</strong> <a href="mailto:considerateclub@gmail.com" class="text-red-600 hover:text-red-700">considerateclub@gmail.com</a></p>
-                        <p><strong>Address:</strong> Km 10, Idiroko Rd, Ota, Ogun State, Nigeria</p>
-                        <p><strong>Phone:</strong> Available through our contact form</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-8 px-4 mt-16">
-        <div class="container mx-auto text-center">
-            <p class="text-gray-400">Copyright © 2025 CC Marketers. All Rights Reserved.</p>
-            <div class="mt-4 space-x-4">
-                <a href="/" class="text-gray-400 hover:text-red-500">Home</a>
-                <a href="/terms-of-service/" class="text-gray-400 hover:text-red-500">Terms of Service</a>
-                <a href="/contact/" class="text-gray-400 hover:text-red-500">Contact</a>
-            </div>
-        </div>
-    </footer>
 </body>
 </html>

@@ -1,91 +1,77 @@
-<!-- templates/components/navbar.html -->
 {% load static %}
 
-<nav class="bg-white border-b-2 border-red-600 shadow-sm sticky top-0 z-50">
+<!-- Accessible, SEO-Friendly Navbar -->
+<nav 
+  class="bg-white border-b-2 border-red-600 shadow-sm sticky top-0 z-50" 
+  role="navigation" 
+  aria-label="Main navigation"
+  itemscope itemtype="https://schema.org/SiteNavigationElement"
+>
   <div class="container mx-auto px-4">
     <div class="flex justify-between items-center h-16">
 
-      <!-- Logo -->
-<!-- Logo -->
+      <!-- Logo (linked to homepage) -->
       <div class="flex items-center">
-        <a href="/" class="flex items-center space-x-2 hover:opacity-90 transition-opacity duration-200">
-          <img src="{% static 'images/logos.png' %}" alt="Logo" class="w-9 h-9 rounded-lg shadow-md">
-          <span class="text-red-600 font-bold text-xl tracking-tight">CC_Marketers</span>
+        <a href="/" class="flex items-center space-x-2 hover:opacity-90 transition-opacity duration-200" itemprop="url">
+          <img src="{% static 'images/logos.png' %}" alt="CC Marketers Logo" width="36" height="36" class="w-9 h-9 rounded-lg shadow-md" itemprop="image">
+          <span class="text-red-600 font-bold text-xl tracking-tight" itemprop="name">CC_Marketers</span>
         </a>
       </div>
 
-
       <!-- Navigation Links (Desktop) -->
-      <div class="hidden md:flex items-center space-x-6">
+      <ul class="hidden md:flex items-center space-x-6">
         {% if user.is_authenticated %}
-          <!-- Core task actions -->
-          <a href="{% url 'tasks:task_list' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            Browse Tasks
-          </a>
-          <a href="{% url 'tasks:my_submissions' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            My Tasks
-          </a>
+          <li><a href="{% url 'tasks:task_list' %}" class="nav-link" itemprop="url">Browse Tasks</a></li>
+          <li><a href="{% url 'tasks:my_submissions' %}" class="nav-link" itemprop="url">My Tasks</a></li>
           {% if request.user.role == 'advertiser' or request.user.is_staff %}
-          <a href="{% url 'tasks:create_task' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            Post Task
-          </a>
+            <li><a href="{% url 'tasks:create_task' %}" class="nav-link" itemprop="url">Post Task</a></li>
           {% endif %}
-
-          <!-- Money section -->
-          <a href="{% url 'wallets:dashboard' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            Wallet
-          </a>
-          <a href="{% url 'referrals:dashboard' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            Connections
-          </a>
-
-          <!-- Admin-only -->
+          <li><a href="{% url 'wallets:dashboard' %}" class="nav-link" itemprop="url">Wallet</a></li>
+          <li><a href="{% url 'referrals:dashboard' %}" class="nav-link" itemprop="url">Connections</a></li>
           {% if request.user.role == 'admin' or request.user.is_staff %}
-          <a href="{% url 'tasks:admin_disputes' %}" class="text-red-600 hover:text-red-800 font-medium border-b-2 border-transparent hover:border-red-600 pb-1 transition-all duration-200">
-            Disputes
-          </a>
+            <li><a href="{% url 'tasks:admin_disputes' %}" class="nav-link" itemprop="url">Disputes</a></li>
           {% endif %}
         {% endif %}
-      </div>
+      </ul>
 
       <!-- User Menu (Desktop) -->
       <div class="hidden md:flex items-center space-x-4">
         {% if user.is_authenticated %}
           <div class="relative group">
-            <button class="flex items-center space-x-2 text-red-600 hover:text-red-800 font-medium focus:outline-none">
-              <div class="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center shadow-inner">
+            <button 
+              class="flex items-center space-x-2 text-red-600 hover:text-red-800 font-medium focus:outline-none" 
+              aria-haspopup="true" aria-expanded="false"
+            >
+              <div class="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center shadow-inner" aria-hidden="true">
                 <span class="text-red-600 font-semibold text-sm">{{ user.username|first|upper }}</span>
               </div>
               <span class="truncate max-w-[100px]">{{ user.username }}</span>
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293..." clip-rule="evenodd"></path>
               </svg>
             </button>
-            <!-- Dropdown -->
+
+            <!-- Dropdown Menu -->
             <div class="absolute right-0 mt-2 w-52 bg-white border border-red-200 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div class="py-1 divide-y divide-red-100">
-                <a href="{% url 'users:dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800">Dashboard</a>
+                <a href="{% url 'users:dashboard' %}" class="dropdown-link">Dashboard</a>
                 {% if request.user.role == 'admin' or request.user.is_staff %}
-                <a href="{% url 'referrals:admin_dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800">Admin Dashboard</a>
+                  <a href="{% url 'referrals:admin_dashboard' %}" class="dropdown-link">Admin Dashboard</a>
                 {% endif %}
-                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800">Profile</a>
-                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800">Logout</a>
+                <a href="{% url 'users:profile' %}" class="dropdown-link">Profile</a>
+                <a href="{% url 'users:logout' %}" class="dropdown-link">Logout</a>
               </div>
             </div>
           </div>
         {% else %}
-          <a href="{% url 'users:login' %}" class="text-red-600 hover:text-red-800 font-medium border border-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-all duration-200">
-            Login
-          </a>
-          <a href="{% url 'users:register' %}" class="bg-red-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg">
-            Register
-          </a>
+          <a href="{% url 'users:login' %}" class="btn-outline-red">Login</a>
+          <a href="{% url 'users:register' %}" class="btn-solid-red">Register</a>
         {% endif %}
       </div>
 
-      <!-- Mobile menu button -->
+      <!-- Mobile Menu Button -->
       <div class="md:hidden">
-        <button data-mobile-menu class="text-red-600 hover:text-red-800 focus:outline-none">
+        <button data-mobile-menu class="text-red-600 hover:text-red-800 focus:outline-none" aria-label="Toggle mobile menu">
           <svg class="w-6 h-6 menu-open" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
@@ -97,34 +83,64 @@
     </div>
   </div>
 
-  <!-- Mobile menu dropdown -->
+  <!-- Mobile Menu -->
   <div data-mobile-menu-content class="hidden md:hidden bg-white border-t border-red-200">
-    <div class="px-4 py-4 space-y-2 text-center">
+    <ul class="px-4 py-4 space-y-2 text-center">
       {% if user.is_authenticated %}
-        <!-- Core -->
-        <a href="{% url 'tasks:task_list' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Browse Tasks</a>
-        <a href="{% url 'tasks:my_submissions' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">My Tasks</a>
+        <li><a href="{% url 'tasks:task_list' %}" class="mobile-link">Browse Tasks</a></li>
+        <li><a href="{% url 'tasks:my_submissions' %}" class="mobile-link">My Tasks</a></li>
         {% if request.user.role == 'advertiser' or request.user.is_staff %}
-        <a href="{% url 'tasks:create_task' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Post Task</a>
+          <li><a href="{% url 'tasks:create_task' %}" class="mobile-link">Post Task</a></li>
         {% endif %}
-
-        <!-- Money -->
-        <a href="{% url 'wallets:dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Wallet</a>
-        <a href="{% url 'referrals:dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Connections</a>
-
-        <!-- Admin -->
+        <li><a href="{% url 'wallets:dashboard' %}" class="mobile-link">Wallet</a></li>
+        <li><a href="{% url 'referrals:dashboard' %}" class="mobile-link">Connections</a></li>
         {% if request.user.role == 'admin' or request.user.is_staff %}
-        <a href="{% url 'tasks:admin_disputes' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Disputes</a>
-        <a href="{% url 'referrals:admin_dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Admin Dashboard</a>
+          <li><a href="{% url 'tasks:admin_disputes' %}" class="mobile-link">Disputes</a></li>
+          <li><a href="{% url 'referrals:admin_dashboard' %}" class="mobile-link">Admin Dashboard</a></li>
         {% endif %}
-        <!-- Account -->
-        <a href="{% url 'users:dashboard' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Dashboard</a>
-        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Profile</a>
-        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Logout</a>
+        <li><a href="{% url 'users:dashboard' %}" class="mobile-link">Dashboard</a></li>
+        <li><a href="{% url 'users:profile' %}" class="mobile-link">Profile</a></li>
+        <li><a href="{% url 'users:logout' %}" class="mobile-link">Logout</a></li>
       {% else %}
-        <a href="{% url 'users:login' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-800 rounded-md">Login</a>
-        <a href="{% url 'users:register' %}" class="block px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-all duration-200">Register</a>
+        <li><a href="{% url 'users:login' %}" class="mobile-link">Login</a></li>
+        <li><a href="{% url 'users:register' %}" class="mobile-link bg-red-600 text-white hover:bg-red-700">Register</a></li>
       {% endif %}
-    </div>
+    </ul>
   </div>
 </nav>
+
+<!-- Helper styles -->
+<style>
+.nav-link {
+  color: #dc2626;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+  transition: all .2s;
+}
+.nav-link:hover { color: #991b1b; border-color: #dc2626; }
+.dropdown-link {
+  display: block; padding: .5rem 1rem;
+  color: #dc2626;
+}
+.dropdown-link:hover { background-color: #fef2f2; color: #991b1b; }
+.btn-outline-red {
+  border: 1px solid #dc2626;
+  padding: .5rem 1rem; border-radius: .5rem;
+  color: #dc2626;
+  transition: all .2s;
+}
+.btn-outline-red:hover { background: #fef2f2; color: #991b1b; }
+.btn-solid-red {
+  background: #dc2626; color: #fff;
+  border-radius: .5rem; padding: .5rem 1rem;
+  transition: background .2s;
+}
+.btn-solid-red:hover { background: #b91c1c; }
+.mobile-link {
+  display: block; padding: .5rem 1rem;
+  color: #dc2626; border-radius: .375rem;
+  transition: all .2s;
+}
+.mobile-link:hover { background: #fef2f2; color: #991b1b; }
+</style>
