@@ -1,17 +1,17 @@
 # subscriptions/views.py
-from datetime import timedelta
+# from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 # from django.db.models import Sum
 from django.shortcuts import render, redirect
-from django.utils import timezone
+# from django.utils import timezone
 
 from .models import SubscriptionPlan, UserSubscription
 from .services import SubscriptionService
 from wallets.models import Wallet
-from wallets.services import WalletService
+# from wallets.services import WalletService
 from referrals.services import credit_signup_bonus_on_subscription
 from tasks.services import TaskWalletService
 
@@ -120,12 +120,11 @@ def toggle_auto_renewal(request):
 
     return redirect("subscriptions:my_subscription")
 
-
 @login_required
 def cancel_subscription(request):
     """
-    Cancel user's active subscription (with refund if within 6 hours).
-    If Business Plan → ensure $10 Task Wallet allocation is reversed fully.
+    Cancel user's active subscription.
+    If Business Plan → ensure $10 Task Wallet allocation is reversed if unused.
     """
     if request.method != "POST":
         return redirect("subscriptions:my_subscription")
@@ -135,29 +134,17 @@ def cancel_subscription(request):
         messages.error(request, "No active subscription found!")
         return redirect("subscriptions:my_subscription")
 
-    now = timezone.now()
-    time_diff = now - active_subscription.start_date
-    refund_allowed = True
-
     # Mark subscription as cancelled
     active_subscription.status = "cancelled"
     active_subscription.save(update_fields=["status"])
 
-    # Special handling for Business Member Account allocation
+    # Handle Business Member Account allocation reversal if balance still intact
     if active_subscription.plan.name == "Business Member Account":
         allocation_amount = Decimal("10.00")
         task_wallet = TaskWalletService.get_or_create_wallet(user=request.user)
 
-        if task_wallet.balance < allocation_amount:
-            # User already used allocation → cannot refund
-            refund_allowed = False
-            messages.warning(
-                request,
-                "Your subscription was cancelled, but refund is not possible "
-                "because you already spent the Task Wallet allocation.",
-            )
-        else:
-            # Reverse allocation
+        if task_wallet.balance >= allocation_amount:
+            # Reverse allocation if unused
             TaskWalletService.debit_wallet(
                 user=request.user,
                 amount=allocation_amount,
@@ -167,24 +154,15 @@ def cancel_subscription(request):
                     f"{active_subscription.plan.name}"
                 ),
             )
+            messages.info(
+                request,
+                "Business plan allocation reversed successfully."
+            )
+        else:
+            messages.warning(
+                request,
+                "Your subscription was cancelled, but the Task Wallet allocation was already used."
+            )
 
-    refund_amount = active_subscription.plan.price
-
-    if refund_allowed and time_diff <= timedelta(hours=6) and refund_amount > 0:
-        WalletService.credit_wallet(
-            user=request.user,
-            amount=refund_amount,
-            category="subscription_refund",
-            description=f"Refund for {active_subscription.plan.name} (cancelled within 6 hours)",
-            reference=f"REFUND_{request.user.id}_{active_subscription.id}",
-        )
-        messages.success(
-            request, f"Subscription cancelled. ${refund_amount} refunded to your wallet."
-        )
-    elif refund_allowed:
-        messages.success(
-            request, "Subscription cancelled successfully (no refund, beyond 6 hours)."
-        )
-
-
+    messages.success(request, "Subscription cancelled successfully.")
     return redirect("subscriptions:my_subscription")
