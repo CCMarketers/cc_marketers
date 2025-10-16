@@ -43,7 +43,6 @@ class ReferralEarningAdmin(admin.ModelAdmin):
         'commission_rate',
         'status_display',
         'level_display',
-        'transaction_link',
         'created_at',
     ]
     list_filter = ['status', 'earning_type', 'created_at', 'referral__level']
@@ -52,7 +51,7 @@ class ReferralEarningAdmin(admin.ModelAdmin):
         'referred_user__username',
         'transaction_id',
     ]
-    readonly_fields = ['created_at', 'approved_at', 'paid_at']
+    readonly_fields = ['created_at', 'approved_at', 'paid_at', 'transaction_link']
     raw_id_fields = ['referrer', 'referred_user', 'referral']
     actions = ['approve_earnings', 'mark_as_paid', 'cancel_earnings']
 
@@ -108,8 +107,12 @@ class ReferralEarningAdmin(admin.ModelAdmin):
     def transaction_link(self, obj):
         """Link to related wallet transaction if exists"""
         if obj.transaction_id:
-            url = reverse('admin:wallets_transaction_changelist') + f'?q={obj.transaction_id}'
-            return format_html('<a href="{}" target="_blank">View Transaction</a>', url)
+            try:
+                url = reverse('admin:wallets_transaction_changelist') + f'?q={obj.transaction_id}'
+                return format_html('<a href="{}" target="_blank">View Transaction</a>', url)
+            except:  # noqa: E722
+                # If wallet app is not registered, just return the transaction ID
+                return obj.transaction_id
         return '-'
     transaction_link.short_description = 'Transaction'
 
@@ -134,7 +137,6 @@ class ReferralEarningAdmin(admin.ModelAdmin):
         updated = queryset.filter(status__in=['pending', 'approved']).update(status='cancelled')
         self.message_user(request, f'{updated} earnings cancelled.')
     cancel_earnings.short_description = 'Cancel selected earnings'
-
 
 @admin.register(CommissionTier)
 class CommissionTierAdmin(admin.ModelAdmin):
