@@ -57,7 +57,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">Total Earnings</p>
-                    <p class="text-2xl font-bold text-red-600">${{ stats.total_earnings|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-2xl font-bold text-red-600">₦{{ stats.total_earnings|floatformat:2|default:"0.00" }}</p>
                 </div>
                 <div class="bg-red-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +72,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-600 text-sm">This Month</p>
-                    <p class="text-2xl font-bold text-blue-600">${{ stats.monthly_earnings|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-2xl font-bold text-blue-600">₦{{ stats.monthly_earnings|floatformat:2|default:"0.00" }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,20 +194,20 @@
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-green-700">Registration Bonus:</span>
-                        <span class="font-semibold text-green-800">$5</span>
+                        <span class="font-semibold text-green-800">₦5000</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-green-700">First Task Completed:</span>
-                        <span class="font-semibold text-green-800">$2</span>
+                        <span class="font-semibold text-green-800">₦2000</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-green-700">Monthly Active Bonus:</span>
-                        <span class="font-semibold text-green-800">$1</span>
+                        <span class="font-semibold text-green-800">₦1000</span>
                     </div>
                     <div class="border-t border-green-300 pt-2 mt-2">
                         <div class="flex justify-between">
                             <span class="text-green-700 font-medium">Per Connection Potential:</span>
-                            <span class="font-bold text-green-800">$900+</span>
+                            <span class="font-bold text-green-800">₦900+</span>
                         </div>
                     </div>
                 </div>
@@ -240,7 +240,7 @@
                         <span class="badge {% if referral.is_verified %}badge-green{% else %}badge-yellow{% endif %}">
                             {% if referral.is_verified %}Verified{% else %}Pending{% endif %}
                         </span>
-                        <p class="text-sm text-gray-600 mt-1">${{ referral.earned_amount|floatformat:0|default:"0" }}</p>
+                        <p class="text-sm text-gray-600 mt-1">₦{{ referral.earned_amount|floatformat:0|default:"0" }}</p>
                     </div>
                 </div>
                 {% empty %}
@@ -267,7 +267,7 @@
                         <p class="text-sm text-gray-600">{{ month.referrals_count }} Connection{{ month.referrals_count|pluralize }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="font-semibold text-red-600">${{ month.earnings|floatformat:0 }}</p>
+                        <p class="font-semibold text-red-600">₦{{ month.earnings|floatformat:0 }}</p>
                         <div class="w-24 bg-gray-200 rounded-full h-2 mt-1">
                             <div class="bg-red-600 h-2 rounded-full" style="width: {{ month.percentage }}%"></div>
                         </div>
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statsCounters = document.querySelectorAll('.text-2xl.font-bold');
     statsCounters.forEach((counter, index) => {
         const finalValue = parseInt(counter.textContent.replace(/[^\d]/g, '')) || 0;
-        const currency = counter.textContent.includes('$');
+        const currency = counter.textContent.includes('₦');
         
         let current = 0;
         const increment = finalValue / 30;
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (currency) {
-                counter.textContent = `$${Math.floor(current).toLocaleString()}.00`;
+                counter.textContent = `₦${Math.floor(current).toLocaleString()}.00`;
             } else {
                 counter.textContent = Math.floor(current).toString();
             }
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageTextarea = document.getElementById('custom-message');
     
     if (totalReferrals > 0 && totalEarnings > 0 && messageTextarea) {
-        const successMessage = `🔥 I've earned $${totalEarnings.toLocaleString()} on CC_Marketers already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
+        const successMessage = `🔥 I've earned ₦${totalEarnings.toLocaleString()} on CC_Marketers already! Join me using my referral link and start earning too. It's completely legit and pays well! 💰`;
         messageTextarea.placeholder = successMessage;
     }
 });

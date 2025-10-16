@@ -38,7 +38,7 @@
       </svg>
       <div class="ml-4">
         <p class="text-sm font-medium text-gray-500">Total Earnings</p>
-        <p class="text-2xl font-bold text-gray-900">${{ total_earnings|floatformat:2 }}</p>
+        <p class="text-2xl font-bold text-gray-900">₦{{ total_earnings|floatformat:2 }}</p>
       </div>
     </div>
 
@@ -50,7 +50,7 @@
       </svg>
       <div class="ml-4">
         <p class="text-sm font-medium text-gray-500">Pending Earnings</p>
-        <p class="text-2xl font-bold text-gray-900">${{ pending_earnings|floatformat:2 }}</p>
+        <p class="text-2xl font-bold text-gray-900">₦{{ pending_earnings|floatformat:2 }}</p>
       </div>
     </div>
   </div>
@@ -109,7 +109,7 @@
           {% for earning in recent_earnings %}
             <div class="flex justify-between items-center p-3 bg-gray-50 rounded-md">
               <div>
-                <p class="font-medium text-gray-900">${{ earning.amount|floatformat:2 }}</p>
+                <p class="font-medium text-gray-900">₦{{ earning.amount|floatformat:2 }}</p>
                 <p class="text-sm text-gray-600">{{ earning.get_earning_type_display }} • {{ earning.created_at|date:"M d, Y" }}</p>
               </div>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium

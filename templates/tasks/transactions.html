@@ -89,11 +89,11 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="text-sm font-semibold 
                                            {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
-                                    {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                                    {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}₦{{ transaction.amount|floatformat:2 }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                ${{ transaction.balance_after|floatformat:2 }}
+                                ₦{{ transaction.balance_after|floatformat:2 }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
@@ -136,7 +136,7 @@
                         <div class="text-right">
                             <p class="font-semibold 
                                      {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
-                                {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}${{ transaction.amount|floatformat:2 }}
+                                {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}₦{{ transaction.amount|floatformat:2 }}
                             </p>
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
                                         {% if transaction.status == 'success' %}bg-green-100 text-green-800{% elif transaction.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
@@ -145,7 +145,7 @@
                         </div>
                     </div>
                     <div class="text-sm text-gray-600">
-                        <p><span class="font-medium">Balance after:</span> ${{ transaction.balance_after|floatformat:2 }}</p>
+                        <p><span class="font-medium">Balance after:</span> ₦{{ transaction.balance_after|floatformat:2 }}</p>
                         {% if transaction.description %}
                             <p class="mt-1"><span class="font-medium">Description:</span> {{ transaction.description }}</p>
                         {% endif %}

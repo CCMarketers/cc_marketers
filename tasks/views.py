@@ -449,7 +449,7 @@ class TaskWalletTopupView(LoginRequiredMixin, FormView):
             TaskWalletService.transfer_from_main_wallet(
                 user=self.request.user, amount=form.cleaned_data["amount"]
             )
-            messages.success(self.request, f"Task Wallet topped up with ${form.cleaned_data['amount']}")
+            messages.success(self.request, f"Task Wallet topped up with ₦{form.cleaned_data['amount']}")
             return redirect(self.success_url)
         except ValueError as e:
             messages.error(self.request, str(e))

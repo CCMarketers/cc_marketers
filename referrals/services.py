@@ -1,5 +1,4 @@
-# apps/referrals/services.py (or signals.py)
-
+# apps/referrals/services.py
 import logging
 from decimal import Decimal
 from django.utils import timezone
@@ -78,7 +77,7 @@ def credit_signup_bonus_on_subscription(user):
                 status="approved",
                 approved_at=timezone.now(),
             )
-            logger.info(f"✅ {referrer.username} credited ${amount} for referring {user.username} (Level {referral.level})")
+            logger.info(f"✅ {referrer.username} credited ₦{amount} for referring {user.username} (Level {referral.level})")
         except Exception as exc:
             logger.error(f"Failed to credit {referrer.username}: {exc}")
             from django.core.exceptions import ImproperlyConfigured

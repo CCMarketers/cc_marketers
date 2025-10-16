@@ -48,11 +48,11 @@ class Command(BaseCommand):
                         wallet = TaskWallet.objects.get(user=subscription.user)
                         if wallet.balance >= subscription.plan.price:
                             self.stdout.write(
-                                f'Would renew: {subscription.user.username} - {subscription.plan.name} (${subscription.plan.price})'
+                                f'Would renew: {subscription.user.username} - {subscription.plan.name} (₦{subscription.plan.price})'
                             )
                         else:
                             self.stdout.write(
-                                f'Would expire (insufficient funds): {subscription.user.username} - {subscription.plan.name} (needs ${subscription.plan.price}, has ${wallet.balance})'
+                                f'Would expire (insufficient funds): {subscription.user.username} - {subscription.plan.name} (needs ₦{subscription.plan.price}, has ₦{wallet.balance})'
                             )
                     except:  # noqa: E722
                         self.stdout.write(

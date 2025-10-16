@@ -33,7 +33,7 @@
           {% else %} bg-red-100 text-red-800 {% endif %}">
           {{ task.get_status_display }}
         </span>
-        <p class="text-sm mt-2"><strong>Payout:</strong> ${{ task.payout_per_slot }}</p>
+        <p class="text-sm mt-2"><strong>Payout:</strong> ₦{{ task.payout_per_slot }}</p>
         <p class="text-sm"><strong>Slots:</strong> {{ task.filled_slots }}/{{ task.total_slots }}</p>
         <p class="text-sm"><strong>Deadline:</strong> {{ task.deadline|date:"M d, Y" }}</p>
       </div>

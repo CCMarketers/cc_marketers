@@ -124,7 +124,7 @@ def toggle_auto_renewal(request):
 def cancel_subscription(request):
     """
     Cancel user's active subscription.
-    If Business Plan → ensure $10 Task Wallet allocation is reversed if unused.
+    If Business Plan → ensure ₦5000 Task Wallet allocation is reversed if unused.
     """
     if request.method != "POST":
         return redirect("subscriptions:my_subscription")
@@ -140,7 +140,7 @@ def cancel_subscription(request):
 
     # Handle Business Member Account allocation reversal if balance still intact
     if active_subscription.plan.name == "Business Member Account":
-        allocation_amount = Decimal("10.00")
+        allocation_amount = Decimal("5000.00")
         task_wallet = TaskWalletService.get_or_create_wallet(user=request.user)
 
         if task_wallet.balance >= allocation_amount:

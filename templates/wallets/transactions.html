@@ -100,13 +100,13 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     {% if transaction.transaction_type == 'funding' %}
-                                        <span class="text-green-600 font-bold">+${{ transaction.amount_usd|floatformat:2 }}</span>
+                                        <span class="text-green-600 font-bold">+₦{{ transaction.amount_usd|floatformat:2 }}</span>
                                     {% else %}
-                                        <span class="text-red-600 font-bold">-${{ transaction.amount_usd|floatformat:2 }}</span>
+                                        <span class="text-red-600 font-bold">-₦{{ transaction.amount_usd|floatformat:2 }}</span>
                                     {% endif %}
                                 </td>
                                 {% comment %} <td class="px-6 py-4 whitespace-nowrap text-sm text-red-900 font-medium">
-                                    ${{ transaction.balance_after|floatformat:2 }}
+                                    ₦{{ transaction.balance_after|floatformat:2 }}
                                 </td> {% endcomment %}
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {% if transaction.status == 'success' %}

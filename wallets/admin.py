@@ -20,7 +20,7 @@ class WalletAdmin(admin.ModelAdmin):
         # Format to 2 decimal places before passing to format_html
         formatted = f"{available:.2f}"
         return format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span>',
+            '<span style="color: {}; font-weight: bold;">₦{}</span>',
             color,
             formatted
         )
@@ -34,7 +34,7 @@ class WalletAdmin(admin.ModelAdmin):
             category__in=['task_earning', 'referral_bonus'],
             status='success'
         ).aggregate(total=Sum('amount_usd'))['total'] or 0
-        return f'${total:.2f}'
+        return f'₦{total:.2f}'
     total_earned.short_description = 'Total Earned'
 
 

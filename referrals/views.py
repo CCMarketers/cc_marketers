@@ -111,11 +111,11 @@ class CommissionTiersView(TemplateView):
 
         for tier in tiers:
             if tier.earning_type == "task_completion":
-                tier.display_rate = f"${tier.rate * Decimal('0.50'):.2f} per $50 task"
+                tier.display_rate = f"₦{tier.rate * Decimal('0.50'):.2f} per ₦50 task"
             elif tier.earning_type == "advertiser_funding":
-                tier.display_rate = f"${tier.rate:.0f} per $1000 funding"
+                tier.display_rate = f"₦{tier.rate:.0f} per ₦1000 funding"
             elif tier.earning_type == "signup":
-                tier.display_rate = f"${tier.rate * Decimal('0.10'):.2f} per signup"
+                tier.display_rate = f"₦{tier.rate * Decimal('0.10'):.2f} per signup"
             else:
                 tier.display_rate = "Varies by amount"
 

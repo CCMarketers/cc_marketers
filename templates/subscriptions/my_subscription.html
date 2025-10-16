@@ -15,7 +15,7 @@
     <!-- Wallet Balance -->
     <div class="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg text-center">
         <h2 class="text-xl font-semibold text-red-800 mb-2">Wallet Balance</h2>
-        <p class="text-3xl font-bold text-red-600">${{ wallet_balance|floatformat:2 }}</p>
+        <p class="text-3xl font-bold text-red-600">₦{{ wallet_balance|floatformat:2 }}</p>
     </div>
 
     {% if active_subscription %}
@@ -33,7 +33,7 @@
                         <div class="space-y-3">
                             <div class="flex justify-between items-center py-2 border-b border-gray-200">
                                 <span class="font-medium text-gray-600">Price:</span>
-                                <span class="text-lg font-semibold text-red-600">${{ active_subscription.plan.price }}</span>
+                                <span class="text-lg font-semibold text-red-600">₦{{ active_subscription.plan.price }}</span>
                             </div>
                             <div class="flex justify-between items-center py-2 border-b border-gray-200">
                                 <span class="font-medium text-gray-600">Business Volume:</span>
@@ -41,11 +41,11 @@
                             </div>
                             <div class="flex justify-between items-center py-2 border-b border-gray-200">
                                 <span class="font-medium text-gray-600">Connections Commission:</span>
-                                <span class="font-semibold">${{ active_subscription.plan.referral_commission }}</span>
+                                <span class="font-semibold">₦{{ active_subscription.plan.referral_commission }}</span>
                             </div>
                             <div class="flex justify-between items-center py-2 border-b border-gray-200">
                                 <span class="font-medium text-gray-600">Commission To Tree:</span>
-                                <span class="font-semibold">${{ active_subscription.plan.commission_to_tree }}</span>
+                                <span class="font-semibold">₦{{ active_subscription.plan.commission_to_tree }}</span>
                             </div>
                             <div class="flex justify-between items-center py-2">
                                 <span class="font-medium text-gray-600">Daily Ad Limit:</span>
@@ -186,7 +186,7 @@
                                     <div class="font-medium text-gray-900">{{ subscription.plan.name }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-gray-900">${{ subscription.plan.price }}</div>
+                                    <div class="text-gray-900">₦{{ subscription.plan.price }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-gray-900">{{ subscription.start_date|date:"M d, Y" }}</div>

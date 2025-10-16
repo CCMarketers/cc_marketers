@@ -45,7 +45,7 @@ class Command(BaseCommand):
             try:
                 if dry_run:
                     self.stdout.write(
-                        f'[DRY RUN] Would process withdrawal {withdrawal.id} for ${withdrawal.amount}'
+                        f'[DRY RUN] Would process withdrawal {withdrawal.id} for ₦{withdrawal.amount}'
                     )
                 else:
                     # Process payment via gateway (Paystack example)
@@ -143,70 +143,70 @@ class Command(BaseCommand):
         # Implement Flutterwave transfer logic here
         return False
 
-# wallets/management/commands/sync_wallet_balances.py
-from django.core.management.base import BaseCommand
-from django.db.models import Sum
-from wallets.models import Wallet, Transaction
-from decimal import Decimal
+# # wallets/management/commands/sync_wallet_balances.py
+# from django.core.management.base import BaseCommand
+# from django.db.models import Sum
+# from wallets.models import Wallet, Transaction
+# from decimal import Decimal
 
-class Command(BaseCommand):
-    help = 'Sync wallet balances with transaction history (audit/fix balances)'
+# class Command(BaseCommand):
+#     help = 'Sync wallet balances with transaction history (audit/fix balances)'
     
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--fix',
-            action='store_true',
-            help='Actually fix incorrect balances',
-        )
+#     def add_arguments(self, parser):
+#         parser.add_argument(
+#             '--fix',
+#             action='store_true',
+#             help='Actually fix incorrect balances',
+#         )
     
-    def handle(self, *args, **options):
-        fix_balances = options['fix']
+#     def handle(self, *args, **options):
+#         fix_balances = options['fix']
         
-        wallets = Wallet.objects.all()
-        incorrect_count = 0
+#         wallets = Wallet.objects.all()
+#         incorrect_count = 0
         
-        for wallet in wallets:
-            # Calculate balance from transactions
-            credits = Transaction.objects.filter(
-                user=wallet.user,
-                transaction_type='credit',
-                status='success'
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+#         for wallet in wallets:
+#             # Calculate balance from transactions
+#             credits = Transaction.objects.filter(
+#                 user=wallet.user,
+#                 transaction_type='credit',
+#                 status='success'
+#             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            debits = Transaction.objects.filter(
-                user=wallet.user,
-                transaction_type='debit',
-                status='success'
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+#             debits = Transaction.objects.filter(
+#                 user=wallet.user,
+#                 transaction_type='debit',
+#                 status='success'
+#             ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             
-            calculated_balance = credits - debits
+#             calculated_balance = credits - debits
             
-            if wallet.balance != calculated_balance:
-                incorrect_count += 1
-                self.stdout.write(
-                    self.style.WARNING(
-                        f'User {wallet.user.username}: Wallet=${wallet.balance}, '
-                        f'Calculated=${calculated_balance}, Difference=${wallet.balance - calculated_balance}'
-                    )
-                )
+#             if wallet.balance != calculated_balance:
+#                 incorrect_count += 1
+#                 self.stdout.write(
+#                     self.style.WARNING(
+#                         f'User {wallet.user.username}: Wallet=₦{wallet.balance}, '
+#                         f'Calculated=₦{calculated_balance}, Difference=₦{wallet.balance - calculated_balance}'
+#                     )
+#                 )
                 
-                if fix_balances:
-                    wallet.balance = calculated_balance
-                    wallet.save()
-                    self.stdout.write(
-                        self.style.SUCCESS(f'Fixed balance for {wallet.user.username}')
-                    )
+#                 if fix_balances:
+#                     wallet.balance = calculated_balance
+#                     wallet.save()
+#                     self.stdout.write(
+#                         self.style.SUCCESS(f'Fixed balance for {wallet.user.username}')
+#                     )
         
-        if incorrect_count == 0:
-            self.stdout.write(self.style.SUCCESS('All wallet balances are correct!'))
-        else:
-            if fix_balances:
-                self.stdout.write(
-                    self.style.SUCCESS(f'Fixed {incorrect_count} incorrect balances')
-                )
-            else:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f'Found {incorrect_count} incorrect balances. Use --fix to correct them.'
-                    )
-                )
+#         if incorrect_count == 0:
+#             self.stdout.write(self.style.SUCCESS('All wallet balances are correct!'))
+#         else:
+#             if fix_balances:
+#                 self.stdout.write(
+#                     self.style.SUCCESS(f'Fixed {incorrect_count} incorrect balances')
+#                 )
+#             else:
+#                 self.stdout.write(
+#                     self.style.WARNING(
+#                         f'Found {incorrect_count} incorrect balances. Use --fix to correct them.'
+#                     )
+#                 )

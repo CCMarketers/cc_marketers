@@ -28,7 +28,7 @@ class ReferralAdmin(admin.ModelAdmin):
         total = obj.referralearning_set.filter(
             status__in=['approved', 'paid']
         ).aggregate(total=Sum('amount'))['total'] or 0
-        return f'${total:.2f}'
+        return f'₦{total:.2f}'
     total_earnings.short_description = 'Total Earnings'
 
 
@@ -80,7 +80,7 @@ class ReferralEarningAdmin(admin.ModelAdmin):
 
     # ====== Custom Display Methods ======
     def amount_display(self, obj):
-        return f'${obj.amount:.2f}'
+        return f'₦{obj.amount:.2f}'
     amount_display.short_description = 'Amount'
     amount_display.admin_order_field = 'amount'
 

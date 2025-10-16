@@ -28,7 +28,7 @@
         {% endif %}">
         {{ submission.get_status_display }}
       </span>
-      <p class="mt-2 text-sm"><strong>Payout:</strong> ${{ submission.task.payout_per_slot }}</p>
+      <p class="mt-2 text-sm"><strong>Payout:</strong> ₦{{ submission.task.payout_per_slot }}</p>
       {% if submission.reviewed_at %}
       <p class="text-sm"><strong>Reviewed:</strong> {{ submission.reviewed_at|date:"M d, Y" }}</p>
       {% endif %}

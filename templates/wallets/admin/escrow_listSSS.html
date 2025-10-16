@@ -40,7 +40,7 @@
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Total Value</div>
-            <div class="text-2xl font-bold text-green-600">$0.00</div>
+            <div class="text-2xl font-bold text-green-600">₦0.00</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Disputed</div>
@@ -83,7 +83,7 @@
                                 <div class="text-sm text-gray-500">{{ escrow.advertiser.email|truncatechars:20 }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">${{ escrow.amount }}</div>
+                                <div class="text-sm font-medium text-gray-900">₦{{ escrow.amount }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if escrow.status == 'active' %}

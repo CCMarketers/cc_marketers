@@ -15,13 +15,13 @@ class FundingForm(forms.Form):
     amount = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
-        min_value=Decimal('2'),
-        max_value=Decimal('10000'),
+        min_value=Decimal('500'),
+        max_value=Decimal('1000000'),
         widget=forms.NumberInput(attrs={
             'class': 'w-full px-3 py-2 border border-red-300 rounded-md '
                      'focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
-            'placeholder': 'Enter amount (Min: $2)',
-            'step': '0.10',
+            'placeholder': 'Enter amount (Min: ₦1500)',
+            'step': '50.00',
         })
     )
 
@@ -46,8 +46,8 @@ class FundingForm(forms.Form):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
-        if amount and amount < Decimal('2'):
-            raise forms.ValidationError("Minimum funding amount is $2")
+        if amount and amount < Decimal('1500'):
+            raise forms.ValidationError("Minimum funding amount is ₦1500")
         return amount
 
 
@@ -56,11 +56,11 @@ class WithdrawalForm(forms.Form):
     amount = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
-        min_value=Decimal('100'),
+        min_value=Decimal('500'),
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter amount (Min: $100)',
-            'step': '0.01',
+            'placeholder': 'Enter amount (Min: ₦500)',
+            'step': '50.00',
         })
     )
     bank_code = forms.CharField(
@@ -87,8 +87,8 @@ class WithdrawalForm(forms.Form):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
-        if amount and amount < Decimal('1'):
-            raise forms.ValidationError("Minimum withdrawal amount is $1")
+        if amount and amount < Decimal('500'):
+            raise forms.ValidationError("Minimum withdrawal amount is ₦500")
         return amount
 
 

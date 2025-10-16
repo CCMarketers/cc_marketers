@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from payments.models import PaymentTransaction
 
+
 class Wallet(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -17,18 +18,19 @@ class Wallet(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{getattr(self.user, 'username', self.user.id)} - ${self.balance:,.2f}"
+        return f"{getattr(self.user, 'username', self.user.id)} - ₦{self.balance:,.2f}"
 
     def get_pending_withdrawals(self) -> Decimal:
-        """Sum of all pending withdrawals."""
-        return (
+        """Sum of all pending withdrawals in ₦."""
+        total = (
             WithdrawalRequest.objects.filter(user=self.user, status="pending")
             .aggregate(total=Sum("amount_usd"))["total"]
             or Decimal("0.00")
         )
+        return total
 
     def available_balance(self) -> Decimal:
-        """Amount the user can actually spend right now."""
+        """Amount the user can actually spend right now (₦)."""
         available = self.balance - self.get_pending_withdrawals()
         return available if available > 0 else Decimal("0.00")
 
@@ -37,16 +39,15 @@ class Wallet(models.Model):
         return self.available_balance()
 
 
-
 class EscrowTransaction(models.Model):
-    """Tracks funds locked in escrow for tasks."""
+    """Tracks funds locked in escrow for tasks (₦)."""
     task = models.OneToOneField('tasks.Task', on_delete=models.CASCADE)
     advertiser = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="escrow_transaction"
     )
-    amount_usd = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_usd = models.DecimalField(max_digits=12, decimal_places=2)  # ₦ equivalent
     taskwallet_transaction = models.ForeignKey(
         'tasks.TaskWalletTransaction',
         on_delete=models.CASCADE,
@@ -64,6 +65,7 @@ class EscrowTransaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     released_at = models.DateTimeField(blank=True, null=True)
+
     class Meta:
         indexes = [
             models.Index(fields=['status']),
@@ -71,7 +73,7 @@ class EscrowTransaction(models.Model):
         ]
 
     def __str__(self):
-        return f"Escrow for Task #{self.task.id} - ${self.amount_usd:,.2f}"
+        return f"Escrow for Task #{self.task.id} - ₦{self.amount_usd:,.2f}"
 
 
 class WithdrawalRequest(models.Model):
@@ -83,9 +85,6 @@ class WithdrawalRequest(models.Model):
         ('failed', 'Failed'),
     ]
     WITHDRAWAL_METHODS = [
-        # ('paystack', 'Paystack'),
-        # ('flutterwave', 'Flutterwave'),
-        # ('crypto', 'Crypto'),
         ('bank_transfer', 'Bank Transfer'),
     ]
 
@@ -95,7 +94,7 @@ class WithdrawalRequest(models.Model):
         on_delete=models.CASCADE,
         related_name="withdrawals"
     )
-    amount_usd = models.DecimalField(
+    amount_usd = models.DecimalField(  # ₦ equivalent
         max_digits=12, decimal_places=2,
         validators=[MinValueValidator(Decimal('1.00'))]
     )
@@ -105,7 +104,6 @@ class WithdrawalRequest(models.Model):
     account_name = models.CharField(max_length=100, blank=True, null=True)
     bank_name = models.CharField(max_length=100, blank=True, null=True)
     bank_code = models.CharField(max_length=10, blank=True, null=True)
-    # wallet_address
 
     status = models.CharField(max_length=10, choices=WITHDRAWAL_STATUS, default='pending')
     admin_notes = models.TextField(blank=True)
@@ -116,7 +114,6 @@ class WithdrawalRequest(models.Model):
         related_name='processed_withdrawals'
     )
 
-    # Payment gateway response
     gateway_reference = models.CharField(max_length=100, blank=True)
     gateway_response = models.JSONField(blank=True, null=True)
 
@@ -134,4 +131,4 @@ class WithdrawalRequest(models.Model):
         ]
 
     def __str__(self):
-        return f"{getattr(self.user, 'username', self.user.id)} - ${self.amount_usd:,.2f} ({self.status})"
+        return f"{getattr(self.user, 'username', self.user.id)} - ₦{self.amount_usd:,.2f} ({self.status})"

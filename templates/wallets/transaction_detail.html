@@ -66,7 +66,7 @@
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-600">Amount</label>
-                            <p class="text-lg font-semibold text-gray-900">${{ transaction.amount_usd|floatformat:2 }}</p>
+                            <p class="text-lg font-semibold text-gray-900">₦{{ transaction.amount_usd|floatformat:2 }}</p>
                         </div>
                         {% if transaction.description %}
                         <div>

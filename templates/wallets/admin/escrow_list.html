@@ -72,7 +72,7 @@
                                 <div class="text-sm text-red-500">{{ escrow.advertiser.email }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-lg font-bold text-red-800">
-                                ${{ escrow.amount_usd|floatformat:2 }}
+                                ₦{{ escrow.amount_usd|floatformat:2 }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if escrow.status == 'locked' %}

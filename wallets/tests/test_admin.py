@@ -70,7 +70,7 @@ class WalletAdminTest(WalletTestCase):
         
         # Should display available balance (500 - 100 = 400) in green
         expected = format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span>',
+            '<span style="color: {}; font-weight: bold;">₦{}</span>',
             'green',
             '400.00'
         )
@@ -86,7 +86,7 @@ class WalletAdminTest(WalletTestCase):
         
         # Should display in red for negative balance
         expected = format_html(
-            '<span style="color: {}; font-weight: bold;">${}</span>',
+            '<span style="color: {}; font-weight: bold;">₦{}</span>',
             'red',
             '-50.00'
         )

@@ -16,10 +16,10 @@
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-medium text-red-800">Available Balance</h3>
-                <p class="text-3xl font-bold text-red-600">${{ available_balance|floatformat:2 }}</p>
+                <p class="text-3xl font-bold text-red-600">₦{{ available_balance|floatformat:2 }}</p>
             </div>
             <div class="text-right">
-                <p class="text-sm text-red-600">Total Balance: ${{ wallet.balance|floatformat:2 }}</p>
+                <p class="text-sm text-red-600">Total Balance: ₦{{ wallet.balance|floatformat:2 }}</p>
                 <p class="text-xs text-red-500">Available = Total - Escrowed funds</p>
             </div>
         </div>
@@ -43,7 +43,7 @@
                 {% if form.amount_usd.errors %}
                     <p class="mt-2 text-sm text-red-600">{{ form.amount_usd.errors.0 }}</p>
                 {% endif %}
-                <p class="mt-1 text-sm text-red-500">Minimum: $1.00 | Maximum: $100,000.00</p>
+                <p class="mt-1 text-sm text-red-500">Minimum: ₦100.00 | Maximum: ₦100,000,000.00</p>
             </div>
 
             <!-- Withdrawal Method -->

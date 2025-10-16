@@ -161,7 +161,7 @@ class UserProfileForm(forms.ModelForm):
             'birth_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
             'country': forms.TextInput(attrs={'class': 'form-input'}),
             'state': forms.TextInput(attrs={'class': 'form-input'}),
-            'city': forms.TextInput(attrs={'class': 'form-input'}),
+            'city': forms.TextInput(attrs={'class': 'form-input'}), 
             'receive_email_notifications': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'receive_sms_notifications': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }

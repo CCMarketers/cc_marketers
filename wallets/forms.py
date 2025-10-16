@@ -42,10 +42,10 @@ class WithdrawalRequestForm(forms.ModelForm):
 
     def clean_amount_usd(self):
         amount_usd = self.cleaned_data['amount_usd']
-        if amount_usd < Decimal('1.00'):  # match service minimum
-            raise forms.ValidationError("Minimum withdrawal amount is $1.00")
-        if amount_usd > Decimal('100000.00'):
-            raise forms.ValidationError("Maximum withdrawal amount is $100,000.00")
+        if amount_usd < Decimal('100.00'):  # match service minimum
+            raise forms.ValidationError("Minimum withdrawal amount is ₦100.00")
+        if amount_usd > Decimal('1000000.00'):
+            raise forms.ValidationError("Maximum withdrawal amount is ₦1,000,000.00")
         return amount_usd
 
     def clean(self):

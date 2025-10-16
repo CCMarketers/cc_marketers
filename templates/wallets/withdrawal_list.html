@@ -37,7 +37,7 @@
                         {% for withdrawal in withdrawals %}
                             <tr class="hover:bg-red-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-lg font-bold text-red-800">${{ withdrawal.amount_usd|floatformat:2 }}</div>
+                                    <div class="text-lg font-bold text-red-800">₦{{ withdrawal.amount_usd|floatformat:2 }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

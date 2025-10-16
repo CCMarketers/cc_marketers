@@ -11,7 +11,7 @@
     {% if user.is_authenticated %}
         <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg inline-block">
             <p class="text-red-800">
-                <span class="font-semibold">Wallet Balance:</span> ${{ user_wallet_balance }}
+                <span class="font-semibold">Wallet Balance:</span> ₦{{ user_wallet_balance }}
             </p>
         </div>
     {% endif %}
@@ -47,7 +47,7 @@
             <div class="bg-red-600 text-white text-center py-6">
                 <h2 class="text-2xl font-bold">{{ plan.name }}</h2>
                 <div class="mt-2">
-                    <span class="text-4xl font-bold">${{ plan.price }}</span>
+                    <span class="text-4xl font-bold">₦{{ plan.price }}</span>
                     <span class="text-red-200">/month</span>
                 </div>
             </div>
@@ -77,13 +77,13 @@
             <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
             </svg>
-            <span><strong>Recurring Direct Connections:</strong> $5</span>
+            <span><strong>Recurring Direct Connections:</strong> ₦5000</span>
         </li>
         <li class="flex items-center">
             <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
             </svg>
-            <span><strong>Recurring Indirect Connections:</strong> $2</span>
+            <span><strong>Recurring Indirect Connections:</strong> ₦3000</span>
         </li>
         <li class="flex items-center">
             <svg class="h-5 w-5 text-green-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -123,7 +123,7 @@
                     Insufficient Balance
                 </button>
                 <p class="text-red-600 text-sm mt-2 text-center">
-                    Need ${{ plan.price|floatformat:2 }} (You have ${{ user_wallet_balance|floatformat:2 }}) 
+                    Need ₦{{ plan.price|floatformat:2 }} (You have ₦{{ user_wallet_balance|floatformat:2 }}) 
                 </p>
                 <a href="{% url 'payments:initiate_funding' %}" class="text-red-600 text-sm mt-2 text-center block">
                     Fund Wallet

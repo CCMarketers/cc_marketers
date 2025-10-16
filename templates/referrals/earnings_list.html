@@ -29,7 +29,7 @@
         </svg>
         <div class="ml-4">
           <p class="text-sm font-medium text-gray-500">Total Earned</p>
-          <p class="text-2xl font-semibold text-gray-900">${{ earnings_summary.total|floatformat:2 }}</p>
+          <p class="text-2xl font-semibold text-gray-900">₦{{ earnings_summary.total|floatformat:2 }}</p>
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@
         </svg>
         <div class="ml-4">
           <p class="text-sm font-medium text-gray-500">Pending</p>
-          <p class="text-2xl font-semibold text-gray-900">${{ earnings_summary.pending|floatformat:2 }}</p>
+          <p class="text-2xl font-semibold text-gray-900">₦{{ earnings_summary.pending|floatformat:2 }}</p>
         </div>
       </div>
     </div>
@@ -55,7 +55,7 @@
         </svg>
         <div class="ml-4">
           <p class="text-sm font-medium text-gray-500">Paid Out</p>
-          <p class="text-2xl font-semibold text-gray-900">${{ earnings_summary.paid|floatformat:2 }}</p>
+          <p class="text-2xl font-semibold text-gray-900">₦{{ earnings_summary.paid|floatformat:2 }}</p>
         </div>
       </div>
     </div>
@@ -82,7 +82,7 @@
           <tbody class="bg-white divide-y divide-gray-200">
             {% for earning in earnings %}
               <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">${{ earning.amount|floatformat:2 }}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">₦{{ earning.amount|floatformat:2 }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ earning.get_earning_type_display }}</td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">

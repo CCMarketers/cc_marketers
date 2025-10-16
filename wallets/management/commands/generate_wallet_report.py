@@ -60,15 +60,15 @@ class Command(BaseCommand):
             # Overall stats
             writer.writerow(['Overall Statistics'])
             writer.writerow(['Total Users with Wallets', total_users])
-            writer.writerow(['Total System Balance', f'${total_balance:.2f}'])
+            writer.writerow(['Total System Balance', f'₦{total_balance:.2f}'])
             writer.writerow([])
             
             # Transaction stats
             writer.writerow(['Transaction Statistics (Period)'])
             writer.writerow(['Total Transactions', total_transactions])
-            writer.writerow(['Total Credits', f'${total_credits:.2f}'])
-            writer.writerow(['Total Debits', f'${total_debits:.2f}'])
-            writer.writerow(['Net Flow', f'${(total_credits - total_debits):.2f}'])
+            writer.writerow(['Total Credits', f'₦{total_credits:.2f}'])
+            writer.writerow(['Total Debits', f'₦{total_debits:.2f}'])
+            writer.writerow(['Net Flow', f'₦{(total_credits - total_debits):.2f}'])
             writer.writerow([])
             
             # Withdrawal stats

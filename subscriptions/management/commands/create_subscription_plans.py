@@ -12,20 +12,20 @@ class Command(BaseCommand):
             plan_type__in=[SubscriptionPlan.PLAN_BUSINESS, SubscriptionPlan.PLAN_TRIAL]
         ).delete()
 
-        # Demo Account ($2)
+        # Demo Account (₦1000)
         trial_plan, created = SubscriptionPlan.objects.get_or_create(
             name="Demo Account",
             defaults={
                 'plan_type': SubscriptionPlan.PLAN_TRIAL,
-                'price': 3.00,
+                'price': 1000.00,
                 'duration_days': 30,
 
                 'own_store': False,
                 'hire_marketers': False,
                 'affiliate_marketing': False,
 
-                'referral_commission': 5.00,
-                'commission_to_tree': 3.00,
+                'referral_commission': 0.00,
+                'commission_to_tree': 0.00,
                 'daily_ad_limit': 100,
                 'is_active': True,
             }
@@ -35,20 +35,20 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f'Already exists: {trial_plan.name}')
 
-        # Business Member Account ($25)
+        # Business Member Account (₦20000)
         business_plan, created = SubscriptionPlan.objects.get_or_create(
             name="Business Member Account",
             defaults={
                 'plan_type': SubscriptionPlan.PLAN_BUSINESS,
-                'price': 25.00,
+                'price': 20000.00,
                 'duration_days': 30,
 
                 'own_store': True,
                 'hire_marketers': True,
                 'affiliate_marketing': True,
 
-                'referral_commission': 5.00,
-                'commission_to_tree': 3.00,
+                'referral_commission': 5000.00,
+                'commission_to_tree': 3000.00,
                 'daily_ad_limit': 0,   # Unlimited
                 'is_active': True,
             }

@@ -4,7 +4,7 @@ import hmac
 import hashlib
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict
-from django.core.cache import cache
+# from django.core.cache import cache
 
 import requests
 from django.conf import settings
@@ -17,7 +17,7 @@ from .models import (
     PaymentGateway,
     WebhookEvent,
     FlutterwaveTransaction,   
-    CurrencyRate,
+    # CurrencyRate,
     MonnifyTransaction,
 
 )
@@ -1662,73 +1662,32 @@ class MonnifyService:
             logger.exception("Error resolving Monnify account: %s", exc)
             return {"success": False, "data": {}, "error": str(exc)}
 
-
 class CurrencyService:
-    """Handles currency conversion and rate management"""
+    """Handles currency conversion and rate management — now fixed to Naira"""
 
     @classmethod
     def get_exchange_rate(cls, from_currency="USD", to_currency="NGN"):
-        """Get exchange rate with caching"""
-        from_currency = str(from_currency).upper()
-        to_currency = str(to_currency).upper()
-
-        cache_key = f"rate_{from_currency}_{to_currency}"
-        rate = cache.get(cache_key)
-
-        if rate is None:
-            try:
-                currency_rate = CurrencyRate.objects.get(
-                    base_currency=from_currency,
-                    target_currency=to_currency,
-                )
-                rate = currency_rate.rate
-            except CurrencyRate.DoesNotExist:
-                rate = cls._fetch_rate_from_api(from_currency, to_currency)
-
-            cache.set(cache_key, str(rate), 3600)  # store as string for safety
-
-        return Decimal(str(rate))
+        """
+        Always return 1 so that USD and NGN are treated as equivalent.
+        This effectively disables conversion logic.
+        """
+        return Decimal("1.00")
 
     @classmethod
     def _fetch_rate_from_api(cls, from_currency, to_currency):
-        """Fetch rate from external API with fallback"""
-        try:
-            url = f"https://api.exchangerate-api.com/v4/latest/{from_currency}"
-            response = requests.get(url, timeout=10)
-            data = response.json()
-
-            rate = data["rates"].get(to_currency)
-            if not rate:
-                raise ValueError(f"Rate for {to_currency} not found")
-
-            CurrencyRate.objects.update_or_create(
-                base_currency=from_currency,
-                target_currency=to_currency,
-                defaults={"rate": Decimal(str(rate))},
-            )
-
-            return Decimal(str(rate))
-        except Exception as e:
-            logger.warning("Falling back to hardcoded rate: %s", e)
-            fallback_rates = {
-                "NGN": Decimal("1600"),
-                "GHS": Decimal("15.5"),
-                "KES": Decimal("155"),
-            }
-            return fallback_rates.get(to_currency, Decimal("1"))
+        """No longer used — kept for compatibility."""
+        return Decimal("1.00")
 
     @classmethod
     def convert_usd_to_local(cls, amount_usd, target_currency):
-        target_currency = str(target_currency).upper()
-        if target_currency == "USD":
-            return amount_usd
-        rate = cls.get_exchange_rate("USD", target_currency)
-        return (Decimal(amount_usd) * rate).quantize(Decimal("0.01"))
+        """
+        Treat 'USD' amounts as already in Naira.
+        """
+        return Decimal(amount_usd).quantize(Decimal("0.01"))
 
     @classmethod
     def convert_local_to_usd(cls, amount_local, from_currency):
-        from_currency = str(from_currency).upper()
-        if from_currency == "USD":
-            return amount_local
-        rate = cls.get_exchange_rate("USD", from_currency)
-        return (Decimal(amount_local) / rate).quantize(Decimal("0.01"))
+        """
+        Treat local (₦) amounts as 'USD' internally for backward compatibility.
+        """
+        return Decimal(amount_local).quantize(Decimal("0.01"))

@@ -24,7 +24,7 @@ def handle_task_creation(sender, instance, created, **kwargs):
                 task=instance,
                 amount=amount,
             )
-            logger.info(f"Escrow created for Task {instance.pk}: ${amount}")
+            logger.info(f"Escrow created for Task {instance.pk}: ₦{amount}")
         except ValueError as e:
             logger.error(f"Failed to create escrow for Task {instance.pk}: {str(e)}")
             # Optionally mark status

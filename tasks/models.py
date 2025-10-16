@@ -193,7 +193,7 @@ class TaskWallet(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Task Wallet - {self.user.username}: ${self.balance}"
+        return f"Task Wallet - {self.user.username}: ₦{self.balance}"
 
     def get_available_balance(self):
         return self.balance
@@ -236,4 +236,4 @@ class TaskWalletTransaction(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.username} - {self.transaction_type} ${self.amount} ({self.category})"
+        return f"{self.user.username} - {self.transaction_type} ₦{self.amount} ({self.category})"

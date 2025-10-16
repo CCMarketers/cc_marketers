@@ -54,7 +54,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Total Earnings</p>
-                        <p class="text-2xl font-semibold text-gray-900">${{ total_earnings|floatformat:2 }}</p>
+                        <p class="text-2xl font-semibold text-gray-900">₦{{ total_earnings|floatformat:2 }}</p>
                     </div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Pending Earnings</p>
-                        <p class="text-2xl font-semibold text-gray-900">${{ pending_earnings|floatformat:2 }}</p>
+                        <p class="text-2xl font-semibold text-gray-900">₦{{ pending_earnings|floatformat:2 }}</p>
                     </div>
                 </div>
             </div>
@@ -111,7 +111,7 @@
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <p class="font-semibold text-gray-900">${{ referrer.total_earned|default:0|floatformat:2 }}</p>
+                                        <p class="font-semibold text-gray-900">₦{{ referrer.total_earned|default:0|floatformat:2 }}</p>
                                         <p class="text-sm text-gray-500">earned</p>
                                     </div>
                                 </div>
@@ -156,7 +156,7 @@
                             {% for earning in recent_earnings|slice:":5" %}
                                 <div class="flex items-center justify-between text-sm">
                                     <div>
-                                        <span class="font-medium text-gray-900">${{ earning.amount|floatformat:2 }}</span>
+                                        <span class="font-medium text-gray-900">₦{{ earning.amount|floatformat:2 }}</span>
                                         <span class="text-gray-500">to</span>
                                         <span class="font-medium text-gray-900">{{ earning.referrer.username }}</span>
                                     </div>

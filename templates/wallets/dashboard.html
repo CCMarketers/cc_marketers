@@ -30,7 +30,7 @@
                 <i class="fas fa-wallet text-red-500 text-2xl"></i>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-red-600">Total Balance</p>
-                    <p class="text-2xl font-bold text-red-800">${{ wallet.balance|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold text-red-800">₦{{ wallet.balance|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
                 <i class="fas fa-dollar-sign text-green-500 text-2xl"></i>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-green-600">Available</p>
-                    <p class="text-2xl font-bold text-green-800">${{ available_balance|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold text-green-800">₦{{ available_balance|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -52,7 +52,7 @@
                 <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-blue-600">Total Earned</p>
-                    <p class="text-2xl font-bold text-blue-800">${{ total_earned|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold text-blue-800">₦{{ total_earned|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -63,7 +63,7 @@
                 <i class="fas fa-hourglass-half text-yellow-500 text-2xl"></i>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-yellow-600">Pending</p>
-                    <p class="text-2xl font-bold text-yellow-800">${{ pending_withdrawals|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold text-yellow-800">₦{{ pending_withdrawals|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -126,9 +126,9 @@
                         <td class="px-6 py-4 text-sm text-red-600">{{ transaction.get_category_display }}</td>
                         <td class="px-6 py-4 text-sm font-medium">
                             {% if transaction.transaction_type == 'funding' %}
-                                <span class="text-green-600">+${{ transaction.amount_usd |floatformat:2 }}</span>
+                                <span class="text-green-600">+₦{{ transaction.amount_usd |floatformat:2 }}</span>
                             {% else %}
-                                <span class="text-red-600">-${{ transaction.amount_usd |floatformat:2 }}</span>
+                                <span class="text-red-600">-₦{{ transaction.amount_usd |floatformat:2 }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4">

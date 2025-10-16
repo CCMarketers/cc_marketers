@@ -84,7 +84,7 @@
                 </td>
                 <!-- Earnings -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${{ referral.referralearning_set.all.aggregate.amount__sum|default:0|floatformat:2 }}
+                  ₦{{ referral.referralearning_set.all.aggregate.amount__sum|default:0|floatformat:2 }}
                 </td>
               </tr>
             {% endfor %}

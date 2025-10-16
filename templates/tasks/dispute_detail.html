@@ -98,7 +98,7 @@
       <h6 class="font-semibold text-gray-800 mb-3">Task Information</h6>
       <p class="text-sm text-gray-700"><strong>Title:</strong> {{ dispute.submission.task.title }}</p>
       <p class="text-sm text-gray-700"><strong>Advertiser:</strong> {{ dispute.submission.task.advertiser.username }}</p>
-      <p class="text-sm text-gray-700"><strong>Payout:</strong> ${{ dispute.submission.task.payout_per_slot }}</p>
+      <p class="text-sm text-gray-700"><strong>Payout:</strong> ₦{{ dispute.submission.task.payout_per_slot }}</p>
       <p class="text-sm text-gray-700"><strong>Instructions:</strong><br>
         <small>{{ dispute.submission.task.proof_instructions|truncatewords:15 }}</small>
       </p>

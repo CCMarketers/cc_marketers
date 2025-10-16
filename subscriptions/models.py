@@ -57,7 +57,7 @@ class SubscriptionPlan(models.Model):
         ordering = ["price", "created_at"]
 
     def __str__(self):
-        return f"{self.name} (${self.price})"
+        return f"{self.name} (₦{self.price})"
 
     def is_unlimited_tasks(self):
         return self.daily_ad_limit == 0

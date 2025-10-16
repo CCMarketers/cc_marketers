@@ -21,7 +21,7 @@
                     {% if user.is_authenticated %}
                         <a href="{% url 'subscriptions:plans' %}" class="text-white hover:text-red-200">Plans</a>
                         <a href="{% url 'subscriptions:my_subscription' %}" class="text-white hover:text-red-200">My Subscription</a>
-                        <span class="text-red-200">Balance: ${{ user_wallet_balance|default:0 }}</span>
+                        <span class="text-red-200">Balance: ₦{{ user_wallet_balance|default:0 }}</span>
                     {% else %}
                         <a href="/login/" class="text-white hover:text-red-200">Login</a>
                     {% endif %}

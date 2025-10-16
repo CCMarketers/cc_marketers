@@ -16,9 +16,9 @@ def send_transaction_notification(transaction_id):
         subject = f'Wallet Transaction: {transaction.get_category_display()}'
         
         if transaction.transaction_type == 'credit':
-            message = f'Your wallet has been credited with ${transaction.amount:.2f}'
+            message = f'Your wallet has been credited with ₦{transaction.amount:.2f}'
         else:
-            message = f'${transaction.amount:.2f} has been debited from your wallet'
+            message = f'₦{transaction.amount:.2f} has been debited from your wallet'
         
         send_mail(
             subject=subject,
@@ -45,11 +45,11 @@ def send_withdrawal_notification(withdrawal_id, status_changed_to):
         subject = f'Withdrawal Request {status_changed_to.title()}'
         
         if status_changed_to == 'approved':
-            message = f'Your withdrawal request for ${withdrawal.amount:.2f} has been approved and will be processed shortly.'
+            message = f'Your withdrawal request for ₦{withdrawal.amount:.2f} has been approved and will be processed shortly.'
         elif status_changed_to == 'rejected':
-            message = f'Your withdrawal request for ${withdrawal.amount:.2f} has been rejected. Please contact support for details.'
+            message = f'Your withdrawal request for ₦{withdrawal.amount:.2f} has been rejected. Please contact support for details.'
         elif status_changed_to == 'completed':
-            message = f'Your withdrawal of ${withdrawal.amount:.2f} has been completed and sent to your bank account.'
+            message = f'Your withdrawal of ₦{withdrawal.amount:.2f} has been completed and sent to your bank account.'
         else:
             message = f'Your withdrawal request status has been updated to: {status_changed_to}'
         

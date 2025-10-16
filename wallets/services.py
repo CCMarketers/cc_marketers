@@ -146,7 +146,7 @@ class WalletService:
 
         available_balance = wallet.get_available_balance() if category == 'escrow' else current_balance
         if available_balance < amount:
-            raise ValueError(f"Insufficient balance. Available: ${available_balance}, Required: ${amount}")
+            raise ValueError(f"Insufficient balance. Available: ₦{available_balance}, Required: ₦{amount}")
 
         # Update payment_transaction if provided (for withdrawal transactions)
         # if payment_transaction:
@@ -348,8 +348,8 @@ class WalletService:
         except (InvalidOperation, TypeError):
             raise ValueError("Amount must be a number")
 
-        if amount < Decimal("10.00"):
-            raise ValueError("Minimum withdrawal amount is $1.")
+        if amount < Decimal("100.00"):
+            raise ValueError("Minimum withdrawal amount is ₦100.00")
 
         try:
             wallet_balance = Decimal(wallet.balance)
@@ -357,7 +357,7 @@ class WalletService:
             wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
 
         if wallet_balance < amount:
-            raise ValueError(f"Insufficient balance. Available: ${wallet_balance}, Required: ${amount}")
+            raise ValueError(f"Insufficient balance. Available: ₦{wallet_balance}, Required: ₦{amount}")
 
         withdrawal = WithdrawalRequest.objects.create(
             user=user,
