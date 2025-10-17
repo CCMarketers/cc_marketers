@@ -348,8 +348,8 @@ class WalletService:
         except (InvalidOperation, TypeError):
             raise ValueError("Amount must be a number")
 
-        if amount < Decimal("100.00"):
-            raise ValueError("Minimum withdrawal amount is ₦100.00")
+        if amount < Decimal("2000.00"):
+            raise ValueError("Minimum withdrawal amount is ₦2000.00")
 
         try:
             wallet_balance = Decimal(wallet.balance)

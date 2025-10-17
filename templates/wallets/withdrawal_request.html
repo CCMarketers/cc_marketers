@@ -43,7 +43,7 @@
                 {% if form.amount_usd.errors %}
                     <p class="mt-2 text-sm text-red-600">{{ form.amount_usd.errors.0 }}</p>
                 {% endif %}
-                <p class="mt-1 text-sm text-red-500">Minimum: ₦100.00 | Maximum: ₦100,000,000.00</p>
+                {% comment %} <p class="mt-1 text-sm text-red-500">Minimum: ₦2000.00 | Maximum: ₦100,000,000.00</p> {% endcomment %}
             </div>
 
             <!-- Withdrawal Method -->
