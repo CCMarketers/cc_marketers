@@ -1,133 +1,158 @@
 {% extends 'base.html' %}
+{% comment %} {% load humanize %} {% endcomment %}
 
 {% block title %}My Submissions{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold text-gray-800 mb-6">My Task Submissions</h1>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">My Task Submissions</h1>
 
-{% for submission in submissions %}
-<div class="bg-white rounded-xl shadow card-hover p-6 mb-6 fade-in-up">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    
-    <!-- Left: Task info -->
-    <div class="md:col-span-1">
-      <h5 class="text-lg font-semibold text-gray-900">{{ submission.task.title }}</h5>
-      <p class="text-gray-600 mt-1">{{ submission.task.description|truncatewords:20 }}</p>
-      <p class="text-sm text-gray-500 mt-2">
-        <i class="fas fa-user"></i> {{ submission.task.advertiser.username }} |
-        <i class="fas fa-calendar"></i> Submitted {{ submission.submitted_at|date:"M d, Y H:i" }}
-      </p>
+  {% for submission in submissions %}
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+
+      <!-- Left Section -->
+      <div class="flex-1">
+        <h2 class="text-lg font-semibold text-gray-900">{{ submission.task.title }}</h2>
+        <p class="text-gray-600 text-sm mt-1">{{ submission.task.description|truncatewords:20 }}</p>
+
+        <div class="flex flex-wrap items-center text-sm text-gray-500 mt-3 space-x-2">
+          <span class="flex items-center">
+            <i class="fas fa-user mr-1"></i> {{ submission.task.advertiser.username }}
+          </span>
+
+          {% if submission.task.category %}
+          <span class="flex items-center">
+            · 🏷️
+            <span class="ml-1 inline-flex items-center bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
+              {{ submission.task.category.name }}
+            </span>
+          </span>
+          {% endif %}
+
+          <span class="flex items-center">
+            · ⏰ Submitted {{ submission.submitted_at|date:"M d, Y H:i" }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Middle Section -->
+      <div class="text-sm md:text-right md:w-48">
+        <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold
+          {% if submission.status == 'pending' %} bg-yellow-100 text-yellow-800
+          {% elif submission.status == 'approved' %} bg-green-100 text-green-800
+          {% elif submission.status == 'rejected' %} bg-red-100 text-red-800
+          {% endif %}">
+          {{ submission.get_status_display }}
+        </span>
+
+        <p class="mt-2 text-gray-700 font-medium">
+          {% comment %}  ₦{{ submission.task.payout_per_slot|intcomma }} {% endcomment %}
+          <p class="mt-2 text-sm"><strong>Payout:</strong> 💰 ₦{{ submission.task.payout_per_slot }}</p>
+        </p>
+
+        {% if submission.reviewed_at %}
+        <p class="text-xs text-gray-500 mt-1">
+          Reviewed: {{ submission.reviewed_at|date:"M d, Y" }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Right Section: Actions -->
+      <div class="flex flex-col items-end space-y-2">
+        <!-- View Task -->
+        <a href="{% url 'tasks:task_detail' submission.task.id %}"
+           class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow hover:bg-red-700 transition">
+          <i class="fas fa-eye mr-2"></i> View Task
+        </a>
+
+        {% if submission.status == 'rejected' and not submission.dispute %}
+        <!-- Dispute -->
+        <a href="{% url 'tasks:create_dispute' submission.id %}"
+           class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition">
+          <i class="fas fa-exclamation-triangle mr-2"></i> Dispute
+        </a>
+        {% elif submission.dispute %}
+        <!-- View Dispute -->
+        <a href="{% url 'tasks:dispute_detail' submission.dispute.id %}"
+           class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition">
+          <i class="fas fa-file-alt mr-2"></i> View Dispute
+        </a>
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Middle: Status + payout -->
-    <div>
-      <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold
-        {% if submission.status == 'pending' %} bg-yellow-100 text-yellow-800
-        {% elif submission.status == 'approved' %} bg-green-100 text-green-800
-        {% elif submission.status == 'rejected' %} bg-red-100 text-red-800
-        {% endif %}">
-        {{ submission.get_status_display }}
-      </span>
-      <p class="mt-2 text-sm"><strong>Payout:</strong> ₦{{ submission.task.payout_per_slot }}</p>
-      {% if submission.reviewed_at %}
-      <p class="text-sm"><strong>Reviewed:</strong> {{ submission.reviewed_at|date:"M d, Y" }}</p>
+    <!-- Rejection Reason -->
+    {% if submission.status == 'rejected' and submission.rejection_reason %}
+    <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+      <strong>Rejection Reason:</strong> {{ submission.rejection_reason }}
+    </div>
+    {% endif %}
+
+    <!-- Proof Section -->
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
+      {% if submission.proof_text %}
+      <div class="md:col-span-2">
+        <strong>Proof Text:</strong><br>
+        <span class="text-gray-600">{{ submission.proof_text|truncatewords:30 }}</span>
+      </div>
+      {% endif %}
+      {% if submission.proof_file %}
+      <div>
+        <strong>File:</strong>
+        <a href="{{ submission.proof_file.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
+      </div>
+      {% endif %}
+      {% if submission.screenshot %}
+      <div>
+        <strong>Screenshot:</strong>
+        <a href="{{ submission.screenshot.url }}" target="_blank" class="text-blue-600 hover:underline">View</a>
+      </div>
       {% endif %}
     </div>
-    
-    <!-- Right: Actions -->
-    <div class="flex flex-col items-end space-y-2">
-  <!-- View Task -->
-  <a href="{% url 'tasks:task_detail' submission.task.id %}"
-     class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow hover:bg-red-700 transition-colors duration-200">
-    <i class="fas fa-eye mr-2"></i> View Task
-  </a>
+  </div>
+  {% empty %}
+  <div class="text-center py-12 fade-in-up">
+    <i class="fas fa-file-alt fa-3x text-gray-400 mb-3"></i>
+    <h4 class="text-lg font-semibold text-gray-700">No submissions yet</h4>
+    <p class="text-gray-500">Complete some tasks to see your submissions here.</p>
+    <a href="{% url 'tasks:task_list' %}" class="mt-4 inline-block bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+      Browse Available Tasks
+    </a>
+  </div>
+  {% endfor %}
 
-  {% if submission.status == 'rejected' and not submission.dispute %}
-  <!-- Dispute -->
-  <a href="{% url 'tasks:create_dispute' submission.id %}"
-     class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 rounded-lg shadow hover:bg-yellow-200 transition-colors duration-200">
-    <i class="fas fa-exclamation-triangle mr-2"></i> Dispute
-  </a>
+  <!-- Pagination -->
+  {% if submissions.has_other_pages %}
+  <div class="flex justify-center mt-6">
+    <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+      {% if submissions.has_previous %}
+        <a href="?page={{ submissions.previous_page_number }}"
+           class="px-3 py-1 rounded-l-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
+           Previous
+        </a>
+      {% endif %}
 
-  {% elif submission.dispute %}
-  <!-- View Dispute -->
-  <a href="{% url 'tasks:dispute_detail' submission.dispute.id %}"
-     class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg shadow hover:bg-blue-200 transition-colors duration-200">
-    <i class="fas fa-file-alt mr-2"></i> View Dispute
-  </a>
+      {% for num in submissions.paginator.page_range %}
+        <a href="?page={{ num }}"
+           class="px-3 py-1 border border-gray-300 text-sm
+                  {% if num == submissions.number %}
+                    bg-red-600 text-white
+                  {% else %}
+                    bg-white text-gray-700 hover:bg-gray-50
+                  {% endif %}">
+           {{ num }}
+        </a>
+      {% endfor %}
+
+      {% if submissions.has_next %}
+        <a href="?page={{ submissions.next_page_number }}"
+           class="px-3 py-1 rounded-r-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
+           Next
+        </a>
+      {% endif %}
+    </nav>
+  </div>
   {% endif %}
 </div>
-s
-  </div>
-
-  <!-- Rejection Reason -->
-  {% if submission.status == 'rejected' and submission.rejection_reason %}
-  <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
-    <strong>Rejection Reason:</strong> {{ submission.rejection_reason }}
-  </div>
-  {% endif %}
-
-  <!-- Proof section -->
-  <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-    {% if submission.proof_text %}
-    <div class="md:col-span-2">
-      <strong>Proof Text:</strong><br>
-      <span class="text-gray-600">{{ submission.proof_text|truncatewords:30 }}</span>
-    </div>
-    {% endif %}
-    {% if submission.proof_file %}
-    <div>
-      <strong>File:</strong> 
-      <a href="{{ submission.proof_file.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
-    </div>
-    {% endif %}
-    {% if submission.screenshot %}
-    <div>
-      <strong>Screenshot:</strong> 
-      <a href="{{ submission.screenshot.url }}" target="_blank" class="text-blue-600 hover:underline">View</a>
-    </div>
-    {% endif %}
-  </div>
-</div>
-{% empty %}
-<div class="text-center py-12 fade-in-up">
-  <i class="fas fa-file-alt fa-3x text-gray-400 mb-3"></i>
-  <h4 class="text-lg font-semibold text-gray-700">No submissions yet</h4>
-  <p class="text-gray-500">Complete some tasks to see your submissions here.</p>
-  <a href="{% url 'tasks:task_list' %}" class="btn-primary mt-4">Browse Available Tasks</a>
-</div>
-{% endfor %}
-
-<!-- Pagination -->
-{% if submissions.has_other_pages %}
-<div class="flex justify-center mt-6">
-  <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-    {% if submissions.has_previous %}
-      <a href="?page={{ submissions.previous_page_number }}"
-         class="px-3 py-1 rounded-l-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-         Previous
-      </a>
-    {% endif %}
-
-    {% for num in submissions.paginator.page_range %}
-      <a href="?page={{ num }}"
-         class="px-3 py-1 border border-gray-300 text-sm
-                {% if num == submissions.number %}
-                  bg-blue-600 text-white
-                {% else %}
-                  bg-white text-gray-700 hover:bg-gray-50
-                {% endif %}">
-         {{ num }}
-      </a>
-    {% endfor %}
-
-    {% if submissions.has_next %}
-      <a href="?page={{ submissions.next_page_number }}"
-         class="px-3 py-1 rounded-r-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-         Next
-      </a>
-    {% endif %}
-  </nav>
-</div>
-{% endif %}
 {% endblock %}

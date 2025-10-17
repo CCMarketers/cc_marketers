@@ -52,10 +52,10 @@ class SubscriptionService:
             )
 
             # Task Wallet allocation for specific plan
-            if plan.name == "Business Member Account":
+            if subscription.plan.name.strip().lower() == "business member account":
                 TaskWalletService.credit_wallet(
                     user=user,
-                    amount=Decimal("10.00"),
+                    amount=Decimal("10000.00"),
                     category="subscription_allocation",
                     description=f"Monthly allocation from subscription plan {plan.name}",
                 )
@@ -87,11 +87,10 @@ class SubscriptionService:
                         subscription.start_date = now
                         subscription.expiry_date = now + timezone.timedelta(days=subscription.plan.duration_days)
                         subscription.save(update_fields=["start_date", "expiry_date"])
-
-                        if subscription.plan.name == "Business Member Account":
+                        if subscription.plan.name.strip().lower() == "business member account":
                             TaskWalletService.credit_wallet(
                                 user=subscription.user,
-                                amount=Decimal("10.00"),
+                                amount=Decimal("10000.00"),
                                 category="subscription_allocation",
                                 description=f"Monthly allocation from subscription plan {subscription.plan.name}",
                             )

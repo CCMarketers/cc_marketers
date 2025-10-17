@@ -1,6 +1,6 @@
 # tasks/forms.py
 from django import forms
-from .models import Task, Submission, Dispute
+from .models import Task, Submission, Dispute,TaskCategory
 from decimal import Decimal
 from django.utils import timezone
 from PIL import Image
@@ -17,16 +17,16 @@ class TaskForm(forms.ModelForm):
             'total_slots',
             'deadline',
             'proof_instructions',
-            'sample_image',     # ✅ new
-            'sample_link',      # ✅ new
-            'youtube_url',      # ✅ new
+            'sample_link',      
+            'youtube_url',      
+            'category',         
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'proof_instructions': forms.Textarea(attrs={'rows': 3}),
             'deadline': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'payout_per_slot': forms.NumberInput(attrs={'step': '0.01', 'min': '0.03'}),
+            'payout_per_slot': forms.NumberInput(attrs={'step': '40.00', 'min': '40.00'}),
             'total_slots': forms.NumberInput(),
             'sample_link': forms.URLInput(attrs={'placeholder': 'https://example.com'}),
             'youtube_url': forms.URLInput(attrs={'placeholder': 'https://youtube.com/watch?v=xxxx'}),
@@ -126,7 +126,14 @@ class TaskFilterForm(forms.Form):
         "class": "form-input",
         "placeholder": "Max ₦"
     }))
-
+    category = forms.ModelChoiceField(
+        queryset=TaskCategory.objects.all(),
+        required=False,
+        empty_label="All Categories",
+        widget=forms.Select(attrs={
+            "class": "form-input"
+        })
+    )
 
 class DisputeForm(forms.ModelForm):
     class Meta:
@@ -147,8 +154,6 @@ class ReviewSubmissionForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Reason for rejection (required if rejecting)...'})
     )
-
-
 
 
 class TaskWalletTopupForm(forms.Form):

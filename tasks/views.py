@@ -36,7 +36,7 @@ def task_list(request):
     tasks = (
         Task.objects
         .filter(status="active", deadline__gt=timezone.now(), remaining_slots__gt=0)
-        .select_related("advertiser")
+        .select_related("advertiser", "category")
     )
     form = TaskFilterForm(request.GET)
     if form.is_valid():
@@ -47,6 +47,8 @@ def task_list(request):
         if form.cleaned_data.get("search"):
             search = form.cleaned_data["search"]
             tasks = tasks.filter(Q(title__icontains=search) | Q(description__icontains=search))
+        if form.cleaned_data.get("category"):
+            tasks = tasks.filter(category=form.cleaned_data["category"])
 
     paginator = Paginator(tasks, 10)
     page = request.GET.get("page")
@@ -58,7 +60,6 @@ def task_list(request):
         task.already_submitted = Submission.objects.filter(task=task, member=request.user).exists()
 
     return render(request, "tasks/task_list.html", {"tasks": tasks, "form": form})
-
 
 @login_required
 @subscription_required
@@ -193,7 +194,7 @@ def edit_task(request, task_id):
         return redirect("tasks:my_tasks")
 
     if request.method == "POST":
-        form = TaskForm(request.POST, request.FILES, instance=task)  # ✅ include request.FILES
+        form = TaskForm(request.POST, request.FILES, instance=task) 
         if form.is_valid():
             form.save()
             messages.success(request, "Task updated successfully.")

@@ -26,6 +26,17 @@ class Task(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
+
+    category = models.ForeignKey(
+        'TaskCategory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tasks',
+        help_text="Select a category for this task"
+    )
+ 
+    
     total_slots = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     remaining_slots = models.PositiveIntegerField()
     deadline = models.DateTimeField()
@@ -237,3 +248,16 @@ class TaskWalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} ₦{self.amount} ({self.category})"
+
+
+class TaskCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Task Categories"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name

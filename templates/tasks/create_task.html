@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load widget_tweaks %}
 
-{% block title %}Create New Task{% endblock %}
+{% block title %}Create New Task{% endblock %} 
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -36,38 +36,54 @@
         {% endif %}
       </div>
 
-      <!-- Payout + Slots -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label for="{{ form.payout_per_slot.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-            Payout per Slot (₦) <span class="text-red-600">*</span>
-          </label>
-          {{ form.payout_per_slot|add_class:field_class }}
-          {% if form.payout_per_slot.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.payout_per_slot.errors }}</p>
-          {% endif %}
-        </div>
-        <div>
-          <label for="{{ form.total_slots.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-            Number of Slots <span class="text-red-600">*</span>
-          </label>
-          {{ form.total_slots|add_class:field_class }}
-          {% if form.total_slots.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.total_slots.errors }}</p>
-          {% endif %}
-        </div>
-      </div>
+<!-- Payout + Slots -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div>
+    <label for="{{ form.payout_per_slot.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+      Payout per Slot (₦) <span class="text-red-600">*</span>
+    </label>
+    {{ form.payout_per_slot|add_class:field_class }}
+    {% if form.payout_per_slot.errors %}
+      <p class="text-red-600 text-sm mt-1">{{ form.payout_per_slot.errors }}</p>
+    {% endif %}
+  </div>
 
-      <!-- Deadline -->
-      <div>
-        <label for="{{ form.deadline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-          Deadline <span class="text-red-600">*</span>
-        </label>
-        {{ form.deadline|add_class:field_class }}
-        {% if form.deadline.errors %}
-          <p class="text-red-600 text-sm mt-1">{{ form.deadline.errors }}</p>
-        {% endif %}
-      </div>
+  <div>
+    <label for="{{ form.total_slots.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+      Number of Slots <span class="text-red-600">*</span>
+    </label>
+    {{ form.total_slots|add_class:field_class }}
+    {% if form.total_slots.errors %}
+      <p class="text-red-600 text-sm mt-1">{{ form.total_slots.errors }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Deadline + Category -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div>
+    <label for="{{ form.deadline.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+      Deadline <span class="text-red-600">*</span>
+    </label>
+    {{ form.deadline|add_class:field_class }}
+    {% if form.deadline.errors %}
+      <p class="text-red-600 text-sm mt-1">{{ form.deadline.errors }}</p>
+    {% endif %}
+  </div>
+
+  <div>
+    <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+      Category <span class="text-red-600">*</span>
+    </label>
+    {{ form.category|add_class:field_class|attr:"required" }}
+    <p class="text-gray-500 text-xs mt-1">
+      Select the most suitable category for this task.
+    </p>
+    {% if form.category.errors %}
+      <p class="text-red-600 text-sm mt-1">{{ form.category.errors }}</p>
+    {% endif %}
+  </div>
+</div>
 
       <!-- Proof Instructions -->
       <div>

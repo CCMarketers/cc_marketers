@@ -1,11 +1,11 @@
 # tasks/admin.py
 from django.contrib import admin
-from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction
+from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction, TaskCategory
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ['title', 'advertiser', 'payout_per_slot', 'remaining_slots', 'total_slots', 'deadline', 'status']
-    list_filter = ['status', 'created_at', 'deadline']
+    list_display = ['title', 'advertiser', 'payout_per_slot', 'remaining_slots', 'total_slots', 'deadline', 'status', 'category']
+    list_filter = ['status', 'created_at', 'deadline', 'category']
     search_fields = ['title', 'description', 'advertiser__username']
     readonly_fields = ['created_at', 'updated_at']
 
@@ -17,6 +17,10 @@ class SubmissionAdmin(admin.ModelAdmin):
     search_fields = ['task__title', 'member__username']
     readonly_fields = ['submitted_at', 'reviewed_at']
 
+@admin.register(TaskCategory)
+class TaskCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "description", "created_at")
+    search_fields = ("name",)
 
 @admin.register(Dispute)
 class DisputeAdmin(admin.ModelAdmin):
@@ -40,3 +44,4 @@ class TaskWalletTransactionAdmin(admin.ModelAdmin):
     list_filter = ['transaction_type', 'category', 'status', 'created_at']
     search_fields = ['user__username', 'reference']
     readonly_fields = ['created_at']
+
