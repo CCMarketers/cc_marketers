@@ -19,14 +19,15 @@ class TaskForm(forms.ModelForm):
             'proof_instructions',
             'sample_link',      
             'youtube_url',      
-            'category',         
+            'category',    
+            'sample_image',     
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'proof_instructions': forms.Textarea(attrs={'rows': 3}),
             'deadline': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'payout_per_slot': forms.NumberInput(attrs={'step': '40.00', 'min': '40.00'}),
+            'payout_per_slot': forms.NumberInput(attrs={'step': '0.5', 'min': '40.00'}),
             'total_slots': forms.NumberInput(),
             'sample_link': forms.URLInput(attrs={'placeholder': 'https://example.com'}),
             'youtube_url': forms.URLInput(attrs={'placeholder': 'https://youtube.com/watch?v=xxxx'}),
