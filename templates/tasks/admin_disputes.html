@@ -3,85 +3,95 @@
 {% block title %}Admin - Manage Disputes{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">Dispute Management</h1>
-            <p class="text-sm text-gray-500">Review and resolve user disputes</p>
-        </div>
-        <span class="px-4 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
-            {{ disputes|length }} Open Disputes
-        </span>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 space-y-3 md:space-y-0">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Dispute Management</h1>
+      <p class="text-sm text-gray-500">Review, investigate, and resolve user disputes efficiently.</p>
     </div>
+    <div class="flex items-center gap-2 bg-yellow-50 px-4 py-2 rounded-full border border-yellow-200">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 100 12 9 9 0 000-12z" />
+      </svg>
+      <span class="text-sm font-semibold text-yellow-800">{{ disputes|length }} Open Disputes</span>
+    </div>
+  </div>
 
+  <!-- Dispute List -->
+  <div class="space-y-6">
     {% for dispute in disputes %}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-6 mb-6">
-        <!-- Top Section -->
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900">
-                    Dispute #{{ dispute.id }} – {{ dispute.submission.task.title }}
-                </h2>
-                <p class="text-sm text-gray-500 mt-1">
-                    Filed by <span class="font-medium">{{ dispute.raised_by.username }}</span> 
-                    against <span class="font-medium">{{ dispute.submission.task.advertiser.username }}</span> · 
-                    {{ dispute.created_at|date:"M d, Y H:i" }}
-                </p>
-            </div>
-            <div class="mt-3 md:mt-0">
-                <span class="px-3 py-1 text-xs font-medium rounded-full
-                    {% if dispute.status == 'open' %} bg-yellow-100 text-yellow-800
-                    {% elif dispute.status == 'investigating' %} bg-blue-100 text-blue-800
-                    {% elif dispute.status == 'resolved_favor_member' %} bg-green-100 text-green-800
-                    {% elif dispute.status == 'resolved_favor_advertiser' %} bg-red-100 text-red-800
-                    {% else %} bg-gray-100 text-gray-800 {% endif %}">
-                    {{ dispute.get_status_display }}
-                </span>
-            </div>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-6">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <span class="text-gray-400">#{{ dispute.id }}</span>
+            <span>{{ dispute.submission.task.title }}</span>
+          </h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Filed by 
+            <span class="font-medium text-gray-800">{{ dispute.raised_by.username }}</span> 
+            against 
+            <span class="font-medium text-gray-800">{{ dispute.submission.task.advertiser.username }}</span> 
+            · {{ dispute.created_at|date:"M d, Y H:i" }}
+          </p>
+        </div>
+        <div class="mt-3 md:mt-0">
+          <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full capitalize
+            {% if dispute.status == 'open' %} bg-yellow-100 text-yellow-800
+            {% elif dispute.status == 'investigating' %} bg-blue-100 text-blue-800
+            {% elif dispute.status == 'resolved_favor_member' %} bg-green-100 text-green-800
+            {% elif dispute.status == 'resolved_favor_advertiser' %} bg-red-100 text-red-800
+            {% else %} bg-gray-100 text-gray-700 {% endif %}">
+            {{ dispute.get_status_display }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-gray-100 pt-4">
+        <!-- Dispute Details -->
+        <div>
+          <h6 class="text-sm font-semibold text-gray-700 mb-1">Dispute Reason</h6>
+          <p class="text-gray-600 text-sm leading-relaxed">{{ dispute.reason|truncatewords:25 }}</p>
+
+          <h6 class="text-sm font-semibold text-gray-700 mt-4 mb-1">Original Rejection Reason</h6>
+          <p class="text-gray-500 text-sm leading-relaxed">{{ dispute.submission.rejection_reason|truncatewords:20 }}</p>
         </div>
 
-        <!-- Content Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Left: Dispute Details -->
-            <div>
-                <h6 class="text-sm font-semibold text-gray-800">Dispute Reason</h6>
-                <p class="text-gray-600 text-sm">{{ dispute.reason|truncatewords:30 }}</p>
-
-                <h6 class="text-sm font-semibold text-gray-800 mt-4">Original Rejection Reason</h6>
-                <p class="text-gray-500 text-sm">{{ dispute.submission.rejection_reason|truncatewords:20 }}</p>
-            </div>
-
-            <!-- Middle: Meta Info -->
-            <div>
-                <p class="text-sm"><span class="font-medium">Task Payout:</span> ₦{{ dispute.submission.task.payout_per_slot }}</p>
-                <p class="text-sm"><span class="font-medium">Member:</span> {{ dispute.raised_by.username }}</p>
-                <p class="text-sm"><span class="font-medium">Advertiser:</span> {{ dispute.submission.task.advertiser.username }}</p>
-            </div>
-
-            <!-- Right: Actions -->
-            <div class="flex flex-col gap-2">
-                <a href="{% url 'tasks:dispute_detail' dispute.id %}" 
-                   class="w-full text-center px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition">
-                    View Details
-                </a>
-                <a href="{% url 'tasks:resolve_dispute' dispute.id %}" 
-                   class="w-full text-center px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition">
-                    Resolve Dispute
-                </a>
-            </div>
+        <!-- Meta Info -->
+        <div class="text-sm space-y-1">
+          <p><span class="font-medium text-gray-800">Task Payout:</span> ₦{{ dispute.submission.task.payout_per_slot }}</p>
+          <p><span class="font-medium text-gray-800">Member:</span> {{ dispute.raised_by.username }}</p>
+          <p><span class="font-medium text-gray-800">Advertiser:</span> {{ dispute.submission.task.advertiser.username }}</p>
         </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col gap-2">
+          <a href="{% url 'tasks:dispute_detail' dispute.id %}" 
+             class="w-full text-center px-4 py-2 rounded-md text-sm font-medium bg-gray-50 text-gray-700 border hover:bg-gray-100 transition-all">
+            View Details
+          </a>
+          <a href="{% url 'tasks:resolve_dispute' dispute.id %}" 
+             class="w-full text-center px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-all">
+            Resolve Dispute
+          </a>
+        </div>
+      </div>
     </div>
     {% empty %}
     <!-- Empty State -->
-    <div class="text-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm">
-        <svg class="mx-auto h-12 w-12 text-green-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <h4 class="text-lg font-semibold text-gray-700">No pending disputes</h4>
-        <p class="text-gray-500 text-sm">All disputes have been resolved 🎉</p>
+    <div class="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
+      <svg class="mx-auto h-12 w-12 text-green-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h4 class="text-lg font-semibold text-gray-700">No Pending Disputes</h4>
+      <p class="text-gray-500 text-sm">All disputes have been resolved 🎉</p>
     </div>
     {% endfor %}
+  </div>
 </div>
 {% endblock %}

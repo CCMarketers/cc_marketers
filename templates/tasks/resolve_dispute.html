@@ -3,114 +3,151 @@
 {% block title %}Resolve Dispute #{{ dispute.id }}{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <!-- Left Column -->
-  <div class="lg:col-span-2 space-y-6">
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <h4 class="text-xl font-semibold text-gray-800 mb-2">Resolve Dispute #{{ dispute.id }}</h4>
-      <p class="text-gray-600">Task: <strong>{{ dispute.submission.task.title }}</strong></p>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Resolve Dispute #{{ dispute.id }}</h1>
+      <p class="text-gray-500 text-sm">Review both sides and finalize a fair resolution.</p>
+    </div>
+    <span class="
+      inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border
+      {% if dispute.status == 'open' %} bg-yellow-50 text-yellow-800 border-yellow-200
+      {% elif dispute.status == 'investigating' %} bg-blue-50 text-blue-800 border-blue-200
+      {% elif dispute.status == 'resolved_favor_member' %} bg-green-50 text-green-800 border-green-200
+      {% elif dispute.status == 'resolved_favor_advertiser' %} bg-red-50 text-red-800 border-red-200
+      {% else %} bg-gray-50 text-gray-700 border-gray-200 {% endif %}
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 100 12 9 9 0 000-12z"/>
+      </svg>
+      {{ dispute.get_status_display }}
+    </span>
+  </div>
 
-      <!-- Dispute vs Rejection -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div>
-          <h6 class="font-semibold text-gray-800 mb-2">Member’s Dispute</h6>
-          <p class="text-sm text-gray-600 mb-2"><strong>Filed by:</strong> {{ dispute.raised_by.username }}</p>
-          <div class="border rounded-lg p-3 bg-gray-50 text-sm text-gray-700">
-            {{ dispute.reason|linebreaks }}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- LEFT COLUMN -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Comparison Section -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Review Details</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Member Dispute -->
+          <div>
+            <h6 class="text-sm font-semibold text-gray-800 mb-2">Member’s Dispute</h6>
+            <p class="text-sm text-gray-600 mb-2"><strong>Filed by:</strong> {{ dispute.raised_by.username }}</p>
+            <div class="border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm text-gray-700 leading-relaxed">
+              {{ dispute.reason|linebreaks }}
+            </div>
           </div>
-        </div>
-        <div>
-          <h6 class="font-semibold text-gray-800 mb-2">Original Rejection</h6>
-          <p class="text-sm text-gray-600 mb-2"><strong>Rejected by:</strong> {{ dispute.submission.reviewed_by.username }}</p>
-          <div class="border rounded-lg p-3 bg-gray-50 text-sm text-gray-700">
-            {{ dispute.submission.rejection_reason|linebreaks }}
+
+          <!-- Original Rejection -->
+          <div>
+            <h6 class="text-sm font-semibold text-gray-800 mb-2">Original Rejection</h6>
+            <p class="text-sm text-gray-600 mb-2"><strong>Reviewed by:</strong> {{ dispute.submission.reviewed_by.username }}</p>
+            <div class="border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm text-gray-700 leading-relaxed">
+              {{ dispute.submission.rejection_reason|linebreaks }}
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Submission Evidence -->
-      <div class="mt-6">
-        <h6 class="font-semibold text-gray-800 mb-3">Submission Evidence</h6>
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Submission Evidence</h2>
         {% if dispute.submission.proof_text %}
-        <p class="text-sm text-gray-700 mb-3"><strong>Proof Text:</strong><br>{{ dispute.submission.proof_text }}</p>
+        <p class="text-sm text-gray-700 mb-4"><strong>Proof Text:</strong><br>{{ dispute.submission.proof_text }}</p>
         {% endif %}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
           {% if dispute.submission.proof_file %}
           <div>
-            <strong>File:</strong><br>
+            <strong>Attached File:</strong><br>
             <a href="{{ dispute.submission.proof_file.url }}" target="_blank"
-              class="inline-flex items-center px-3 py-1 mt-1 rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
-              <i class="fas fa-file mr-1"></i> View File
+              class="inline-flex items-center mt-2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              View File
             </a>
           </div>
           {% endif %}
           {% if dispute.submission.screenshot %}
           <div>
             <strong>Screenshot:</strong><br>
-            <img src="{{ dispute.submission.screenshot.url }}" class="rounded border max-h-[200px] object-contain">
+            <img src="{{ dispute.submission.screenshot.url }}" class="rounded-lg border mt-2 max-h-[200px] object-contain shadow-sm">
+            <a href="{{ dispute.submission.screenshot.url }}" target="_blank" class="block mt-2 text-blue-600 hover:underline text-sm">
+              View Full Size
+            </a>
           </div>
           {% endif %}
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Right Column -->
-  <div class="space-y-6">
-    <!-- Task Requirements -->
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <h6 class="font-semibold text-gray-800 mb-3">Task Requirements</h6>
-      <p class="text-sm text-gray-700"><strong>Description:</strong><br>{{ dispute.submission.task.description }}</p>
-      <p class="text-sm text-gray-700 mt-2"><strong>Proof Instructions:</strong><br>{{ dispute.submission.task.proof_instructions }}</p>
-      <p class="text-sm text-gray-700 mt-2"><strong>Payout:</strong> ₦{{ dispute.submission.task.payout_per_slot }}</p>
-    </div>
+    <!-- RIGHT COLUMN -->
+    <div class="space-y-8 lg:sticky lg:top-24 h-fit">
+      <!-- Task Requirements -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h6 class="text-base font-semibold text-gray-800 mb-3">Task Information</h6>
+        <p class="text-sm text-gray-700 mb-3"><strong>Description:</strong><br>{{ dispute.submission.task.description }}</p>
+        <p class="text-sm text-gray-700 mb-3"><strong>Proof Instructions:</strong><br>{{ dispute.submission.task.proof_instructions }}</p>
+        <p class="text-sm text-gray-700"><strong>Payout:</strong> ₦{{ dispute.submission.task.payout_per_slot }}</p>
+      </div>
 
-    <!-- Resolve Dispute -->
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <h6 class="font-semibold text-gray-800 mb-3">Resolve Dispute</h6>
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Resolution</label>
-          <div class="space-y-2">
-            <label class="flex items-start space-x-2">
-              <input type="radio" name="resolution" value="favor_member" id="favor_member"
-                class="mt-1 h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500">
-              <span>
-                <span class="font-semibold text-green-700">Favor Member</span><br>
-                <small class="text-gray-600">Approve submission & pay member</small>
-              </span>
-            </label>
-            <label class="flex items-start space-x-2">
-              <input type="radio" name="resolution" value="favor_advertiser" id="favor_advertiser"
-                class="mt-1 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500">
-              <span>
-                <span class="font-semibold text-red-700">Favor Advertiser</span><br>
-                <small class="text-gray-600">Uphold rejection decision</small>
-              </span>
-            </label>
+      <!-- Resolve Form -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h6 class="text-base font-semibold text-gray-800 mb-4">Resolve Dispute</h6>
+        <form method="post" class="space-y-5">
+          {% csrf_token %}
+          <!-- Decision -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Resolution</label>
+            <div class="space-y-3">
+              <label class="flex items-start space-x-3">
+                <input type="radio" name="resolution" value="favor_member" class="mt-1 h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500">
+                <span>
+                  <span class="font-semibold text-green-700">Favor Member</span><br>
+                  <small class="text-gray-600">Approve submission & release payment</small>
+                </span>
+              </label>
+              <label class="flex items-start space-x-3">
+                <input type="radio" name="resolution" value="favor_advertiser" class="mt-1 h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500">
+                <span>
+                  <span class="font-semibold text-red-700">Favor Advertiser</span><br>
+                  <small class="text-gray-600">Uphold rejection & close dispute</small>
+                </span>
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label for="admin_notes" class="block text-sm font-medium text-gray-700">Admin Notes</label>
-          <textarea name="admin_notes" id="admin_notes" rows="4"
-            class="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
-            placeholder="Explain your decision..."></textarea>
-        </div>
+          <!-- Notes -->
+<div>
+  <label for="admin_notes" class="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+  <textarea name="admin_notes" id="admin_notes" rows="4"
+    class="w-full rounded-lg border border-red-500 shadow-sm focus:ring-red-500 focus:border-red-500 text-sm resize-none"
+    placeholder="Add reasoning for your decision..."></textarea>
+</div>
 
-        <div class="flex flex-col space-y-2">
-          <button type="submit"
-            class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition">
-            <i class="fas fa-gavel mr-2"></i> Resolve Dispute
-          </button>
-          <a href="{% url 'tasks:admin_disputes' %}"
-            class="w-full inline-flex justify-center items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg shadow transition">
-            Back to Disputes
-          </a>
-        </div>
-      </form>
+
+          <!-- Buttons -->
+          <div class="flex flex-col gap-3">
+            <button type="submit"
+              class="w-full inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 9a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Finalize Resolution
+            </button>
+            <a href="{% url 'tasks:admin_disputes' %}"
+              class="w-full inline-flex justify-center items-center px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg shadow-sm transition">
+              Back to Disputes
+            </a>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>

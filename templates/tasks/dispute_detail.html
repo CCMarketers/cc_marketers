@@ -3,105 +3,124 @@
 {% block title %}Dispute #{{ dispute.id }}{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <!-- Left Column: Dispute Details -->
-  <div class="lg:col-span-2 space-y-6">
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <div class="flex items-center justify-between mb-4">
-        <h4 class="text-xl font-semibold text-gray-800">Dispute #{{ dispute.id }}</h4>
-        <span class="
-          px-3 py-1 rounded-full text-sm font-medium
-          {% if dispute.status == 'open' %} bg-yellow-100 text-yellow-800
-          {% elif dispute.status == 'investigating' %} bg-blue-100 text-blue-800
-          {% elif dispute.status == 'resolved_favor_member' %} bg-green-100 text-green-800
-          {% elif dispute.status == 'resolved_favor_advertiser' %} bg-red-100 text-red-800
-          {% else %} bg-gray-100 text-gray-700 {% endif %}
-        ">
-          {{ dispute.get_status_display }}
-        </span>
-      </div>
-      <p class="text-gray-600">Task: {{ dispute.submission.task.title }}</p>
-
-      <div class="mt-6 space-y-6">
-        <!-- Dispute Details -->
-        <div>
-          <h6 class="font-semibold text-gray-800">Dispute Details</h6>
-          <p class="text-sm text-gray-700"><strong>Filed by:</strong> {{ dispute.raised_by.username }}</p>
-          <p class="text-sm text-gray-700"><strong>Created:</strong> {{ dispute.created_at|date:"M d, Y H:i" }}</p>
-          {% if dispute.resolved_at %}
-          <p class="text-sm text-gray-700"><strong>Resolved:</strong> {{ dispute.resolved_at|date:"M d, Y H:i" }}</p>
-          <p class="text-sm text-gray-700"><strong>Resolved by:</strong> {{ dispute.resolved_by.username }}</p>
-          {% endif %}
-        </div>
-
-        <!-- Dispute Reason -->
-        <div>
-          <h6 class="font-semibold text-gray-800">Dispute Reason</h6>
-          <div class="border rounded-lg p-3 bg-gray-50 text-sm text-gray-700">
-            {{ dispute.reason|linebreaks }}
-          </div>
-        </div>
-
-        <!-- Admin Notes -->
-        {% if dispute.admin_notes %}
-        <div>
-          <h6 class="font-semibold text-gray-800">Admin Notes</h6>
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm">
-            {{ dispute.admin_notes|linebreaks }}
-          </div>
-        </div>
-        {% endif %}
-      </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Dispute #{{ dispute.id }}</h1>
+      <p class="text-gray-500 text-sm">Detailed overview and resolution information</p>
     </div>
+    <span class="
+      inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border
+      {% if dispute.status == 'open' %} bg-yellow-50 text-yellow-800 border-yellow-200
+      {% elif dispute.status == 'investigating' %} bg-blue-50 text-blue-800 border-blue-200
+      {% elif dispute.status == 'resolved_favor_member' %} bg-green-50 text-green-800 border-green-200
+      {% elif dispute.status == 'resolved_favor_advertiser' %} bg-red-50 text-red-800 border-red-200
+      {% else %} bg-gray-50 text-gray-700 border-gray-200 {% endif %}
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 100 12 9 9 0 000-12z"/>
+      </svg>
+      {{ dispute.get_status_display }}
+    </span>
   </div>
 
-  <!-- Right Column: Submission & Task -->
-  <div class="space-y-6">
-    <!-- Original Submission -->
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <h6 class="font-semibold text-gray-800 mb-3">Original Submission</h6>
-      <p class="mb-2 text-sm"><strong>Status:</strong> 
-        <span class="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-medium">
-          {{ dispute.submission.get_status_display }}
-        </span>
-      </p>
-      <p class="text-sm text-gray-700 mb-3"><strong>Rejection Reason:</strong><br>{{ dispute.submission.rejection_reason }}</p>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- LEFT COLUMN -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Dispute Overview -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <span class="text-gray-400 font-normal">Task:</span>
+          <span>{{ dispute.submission.task.title }}</span>
+        </h2>
 
-      <div class="space-y-3 text-sm text-gray-700">
-        {% if dispute.submission.proof_text %}
-        <div>
-          <strong>Proof Text:</strong><br>
-          <small>{{ dispute.submission.proof_text|truncatewords:20 }}</small>
+        <div class="divide-y divide-gray-100">
+          <div class="pb-5 space-y-1 text-sm">
+            <p><span class="font-medium text-gray-800">Filed by:</span> {{ dispute.raised_by.username }}</p>
+            <p><span class="font-medium text-gray-800">Created:</span> {{ dispute.created_at|date:"M d, Y H:i" }}</p>
+            {% if dispute.resolved_at %}
+              <p><span class="font-medium text-gray-800">Resolved:</span> {{ dispute.resolved_at|date:"M d, Y H:i" }}</p>
+              <p><span class="font-medium text-gray-800">Resolved by:</span> {{ dispute.resolved_by.username }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Dispute Reason -->
+          <div class="pt-5 space-y-3">
+            <h6 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Dispute Reason</h6>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700 leading-relaxed">
+              {{ dispute.reason|linebreaks }}
+            </div>
+          </div>
+
+          <!-- Admin Notes -->
+          {% if dispute.admin_notes %}
+          <div class="pt-5 space-y-3">
+            <h6 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Admin Notes</h6>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 leading-relaxed">
+              {{ dispute.admin_notes|linebreaks }}
+            </div>
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
-        {% if dispute.submission.proof_file %}
-        <div>
-          <strong>File:</strong>
-          <a href="{{ dispute.submission.proof_file.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
-        </div>
-        {% endif %}
-        {% if dispute.submission.screenshot %}
-        <div>
-          <strong>Screenshot:</strong><br>
-          <img src="{{ dispute.submission.screenshot.url }}" class="rounded border max-w-[150px]">
-          <br>
-          <a href="{{ dispute.submission.screenshot.url }}" target="_blank" class="inline-block mt-2 text-sm text-blue-600 hover:underline">
-            View Full Size
-          </a>
-        </div>
-        {% endif %}
       </div>
     </div>
 
-    <!-- Task Information -->
-    <div class="bg-white rounded-xl shadow p-6 fade-in-up">
-      <h6 class="font-semibold text-gray-800 mb-3">Task Information</h6>
-      <p class="text-sm text-gray-700"><strong>Title:</strong> {{ dispute.submission.task.title }}</p>
-      <p class="text-sm text-gray-700"><strong>Advertiser:</strong> {{ dispute.submission.task.advertiser.username }}</p>
-      <p class="text-sm text-gray-700"><strong>Payout:</strong> ₦{{ dispute.submission.task.payout_per_slot }}</p>
-      <p class="text-sm text-gray-700"><strong>Instructions:</strong><br>
-        <small>{{ dispute.submission.task.proof_instructions|truncatewords:15 }}</small>
-      </p>
+    <!-- RIGHT COLUMN -->
+    <div class="space-y-8 lg:sticky lg:top-24 h-fit">
+      <!-- Original Submission -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h6 class="text-base font-semibold text-gray-800 mb-4">Original Submission</h6>
+        <p class="mb-2 text-sm">
+          <strong>Status:</strong>
+          <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-medium">
+            {{ dispute.submission.get_status_display }}
+          </span>
+        </p>
+        {% if dispute.submission.rejection_reason %}
+        <p class="text-sm text-gray-700 mb-4">
+          <strong>Rejection Reason:</strong><br>{{ dispute.submission.rejection_reason }}
+        </p>
+        {% endif %}
+
+        <div class="space-y-3 text-sm text-gray-700">
+          {% if dispute.submission.proof_text %}
+          <div>
+            <strong>Proof Text:</strong><br>
+            <small>{{ dispute.submission.proof_text|truncatewords:20 }}</small>
+          </div>
+          {% endif %}
+          {% if dispute.submission.proof_file %}
+          <div>
+            <strong>File:</strong>
+            <a href="{{ dispute.submission.proof_file.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
+          </div>
+          {% endif %}
+          {% if dispute.submission.screenshot %}
+          <div>
+            <strong>Screenshot:</strong><br>
+            <img src="{{ dispute.submission.screenshot.url }}" class="rounded-lg border mt-2 max-w-[180px] shadow-sm">
+            <a href="{{ dispute.submission.screenshot.url }}" target="_blank" class="block mt-2 text-sm text-blue-600 hover:underline">
+              View Full Size
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Task Information -->
+      <div class="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all p-6">
+        <h6 class="text-base font-semibold text-gray-800 mb-4">Task Information</h6>
+        <dl class="text-sm text-gray-700 space-y-2">
+          <div><dt class="font-medium">Title:</dt> <dd>{{ dispute.submission.task.title }}</dd></div>
+          <div><dt class="font-medium">Advertiser:</dt> <dd>{{ dispute.submission.task.advertiser.username }}</dd></div>
+          <div><dt class="font-medium">Payout:</dt> <dd>₦{{ dispute.submission.task.payout_per_slot }}</dd></div>
+          <div><dt class="font-medium">Instructions:</dt> 
+            <dd><small>{{ dispute.submission.task.proof_instructions|truncatewords:15 }}</small></dd>
+          </div>
+        </dl>
+      </div>
     </div>
   </div>
 </div>
