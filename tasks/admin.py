@@ -1,6 +1,7 @@
 # tasks/admin.py
 from django.contrib import admin
-from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction, TaskCategory, TimeWallTransaction
+from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction, TaskCategory
+# TimeWallTransaction
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
