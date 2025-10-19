@@ -137,6 +137,51 @@ class TaskWalletService:
             reference=getattr(debit_txn, "reference", None),
         )
 
+
+    @staticmethod
+    @transaction.atomic
+    def transfer_to_main_wallet(user, amount):
+        """
+        Move funds from TaskWallet into Main Wallet (for withdrawal).
+        """
+        amount = Decimal(amount)
+
+        # Step 1: Debit TaskWallet
+        task_wallet = TaskWalletService.debit_wallet(
+            user=user,
+            amount=amount,
+            category="transfer_to_main",
+            description="Transfer to Main Wallet",
+        )
+
+        # Step 2: Credit Main Wallet
+        main_wallet = WalletService.credit_wallet(
+            user=user,
+            amount=amount,
+            category="task_wallet_transfer",
+            description="Received from Task Wallet",
+        )
+
+        # Optionally: log a cross-reference transaction
+        TaskWalletTransaction.objects.create(
+            user=user,
+            transaction_type="transfer",
+            category="transfer_to_main",
+            amount=amount,
+            balance_before=task_wallet.balance + amount,
+            balance_after=task_wallet.balance,
+            description="Transferred to Main Wallet",
+            reference=f"TW2MW-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+        )
+
+        return {
+            "success": True,
+            "message": f"₦{amount} successfully moved to Main Wallet.",
+            "task_wallet_balance": task_wallet.balance,
+            "main_wallet_balance": getattr(main_wallet, "balance", None),
+        }
+
+
     # -------------------------------
     # Escrow
     # -------------------------------
@@ -178,24 +223,21 @@ class TaskWalletService:
     @staticmethod
     @transaction.atomic
     def release_task_escrow(escrow, member):
-        """
-        Release escrow to worker and company after approval.
-        """
         if escrow.status != "locked":
             raise ValueError("Escrow already released or refunded")
 
-        # Split payment
         member_amount, company_cut = TaskWalletService.split_payment(escrow.amount_usd)
 
-        # Pay worker
-        WalletService.credit_wallet(
+        # ✅ Credit worker's TASK WALLET (not main wallet)
+        TaskWalletService.credit_wallet(
             user=member,
             amount=member_amount,
-            description=f"Payment for task: {escrow.task.title}",
             category="task_payment",
+            description=f"Earnings from task: {escrow.task.title}",
+            reference=escrow.id
         )
 
-        # Pay company
+        # ✅ Credit company cut to main wallet (still good)
         WalletService.credit_wallet(
             user=get_company_user(),
             amount=company_cut,
@@ -207,7 +249,6 @@ class TaskWalletService:
         escrow.released_at = timezone.now()
         escrow.save(update_fields=['status', 'released_at'])
 
-        # Update transaction status if applicable
         if hasattr(escrow, "taskwallet_transaction") and hasattr(escrow.taskwallet_transaction, "status"):
             escrow.taskwallet_transaction.status = "success"
             escrow.taskwallet_transaction.save(update_fields=['status'])

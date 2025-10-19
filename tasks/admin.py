@@ -1,6 +1,6 @@
 # tasks/admin.py
 from django.contrib import admin
-from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction, TaskCategory
+from .models import Task, Submission, Dispute, TaskWallet, TaskWalletTransaction, TaskCategory, TimeWallTransaction
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
@@ -45,3 +45,16 @@ class TaskWalletTransactionAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'reference']
     readonly_fields = ['created_at']
 
+
+
+
+@admin.register(TimeWallTransaction)
+class TimeWallTransactionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'type', 'amount', 'revenue_usd', 'transaction_id', 'created_at')
+    list_filter = ('type', 'created_at')
+    search_fields = ('user__username', 'transaction_id', 'user_ip')
+    readonly_fields = ('transaction_id', 'created_at')
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent accidental deletion of transaction records
+        return False

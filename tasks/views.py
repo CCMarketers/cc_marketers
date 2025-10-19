@@ -8,26 +8,40 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q, F
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+# from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import DetailView, ListView
-from django.views.generic.edit import FormView
+# from django.views.generic.edit import FormView
 
 from subscriptions.decorators import subscription_required
 from users.models import User
 from wallets.models import EscrowTransaction
-from wallets.services import WalletService
+# from wallets.services import WalletService
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.conf import settings
+import hashlib
+from decimal import Decimal
+import logging
 from .forms import (
     DisputeForm,
     ReviewSubmissionForm,
     SubmissionForm,
     TaskFilterForm,
     TaskForm,
-    TaskWalletTopupForm,
+    # TaskWalletTopupForm,
+    TransactionForm,
 )
-from .models import Dispute, Submission, Task, TaskWallet, TaskWalletTransaction
+
+
+from .models import Dispute, Submission, Task, TaskWallet, TaskWalletTransaction, TimeWallTransaction
 from .services import TaskWalletService
+
+logger = logging.getLogger(__name__)
+
+
 
 
 @login_required
@@ -439,26 +453,252 @@ class TaskWalletTransactionListView(LoginRequiredMixin, ListView):
         return TaskWalletTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-class TaskWalletTopupView(LoginRequiredMixin, FormView):
-    """Move funds from main wallet into task wallet."""
-    form_class = TaskWalletTopupForm
-    template_name = "tasks/topup.html"
-    success_url = reverse_lazy("tasks:task_wallet_dashboard")
+# class TaskWalletTopupView(LoginRequiredMixin, FormView):
+#     """Move funds from main wallet into task wallet."""
+#     form_class = TaskWalletTopupForm
+#     template_name = "tasks/topup.html"
+#     success_url = reverse_lazy("tasks:task_wallet_dashboard")
 
-    def form_valid(self, form):
-        try:
-            TaskWalletService.transfer_from_main_wallet(
-                user=self.request.user, amount=form.cleaned_data["amount"]
+#     def form_valid(self, form):
+#         try:
+#             TaskWalletService.transfer_from_main_wallet(
+#                 user=self.request.user, amount=form.cleaned_data["amount"]
+#             )
+#             messages.success(self.request, f"Task Wallet topped up with ₦{form.cleaned_data['amount']}")
+#             return redirect(self.success_url)
+#         except ValueError as e:
+#             messages.error(self.request, str(e))
+#             return self.form_invalid(form)
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         user = self.request.user
+#         wallet = WalletService.get_or_create_wallet(user)
+#         context["available_balance"] = wallet.get_available_balance()
+#         return context
+
+
+def render_transaction_page(request, form, context_data):
+    """Helper function to render transaction pages with common context"""
+    context = {
+        'form': form,
+        **context_data
+    }
+    return render(request, 'tasks/topup.html', context)
+
+@login_required
+def transfer_to_task_wallet_view(request):
+    """Transfer funds from main wallet to task wallet"""
+    if request.method == "POST":
+        form = TransactionForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            try:
+                TaskWalletService.transfer_from_main_wallet(request.user, amount)
+                messages.success(request, f"₦{amount} successfully transferred to your Task Wallet.")
+                return redirect("tasks:task_wallet_dashboard")
+            except ValueError as e:
+                messages.error(request, str(e))
+            except Exception:
+                messages.error(request, "Something went wrong while processing your transfer.")
+    else:
+        form = TransactionForm()
+
+    context = {
+        'page_title': 'Top Up Task Wallet',
+        'page_description': 'Transfer funds from your main wallet to your task wallet',
+        'form_title': 'Transfer Funds',
+        'amount_label': 'Transfer Amount',
+        'source_balance_label': 'Current Task Wallet Balance',
+        'source_balance': request.user.taskwallet.balance,
+        'available_balance': request.user.wallet.balance,  # Adjust based on your model
+        'balance_info_label': 'Main Wallet Balance',
+        'transaction_from': 'Main Wallet',
+        'transaction_to': 'Task Wallet',
+        'transaction_fee': 0,
+        'submit_button_text': 'Transfer Funds',
+        'quick_amounts': [
+            (100, '₦100'),
+            (2500, '₦2,500'),
+            (5000, '₦5,000'),
+            (100000, '₦100,000'),
+        ],
+        'info_title': 'About Task Wallet Transfers',
+        'info_items': [
+            'Transfers from your main wallet are instant and free',
+            'Funds in your task wallet can only be used for posting tasks',
+            'You can transfer any amount above ₦0.01',
+            'Your main wallet must have sufficient balance for the transfer',
+        ],
+    }
+
+    return render_transaction_page(request, form, context)
+
+@login_required
+def transfer_to_main_wallet_view(request):
+    """Transfer funds from task wallet back to main wallet"""
+    if request.method == "POST":
+        form = TransactionForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data['amount']
+            try:
+                result = TaskWalletService.transfer_to_main_wallet(request.user, amount)
+                messages.success(request, result["message"])
+                return redirect("tasks:task_wallet_dashboard")
+            except ValueError as e:
+                messages.error(request, str(e))
+            except Exception:
+                messages.error(request, "Something went wrong while processing your transfer.")
+    else:
+        form = TransactionForm()
+
+    context = {
+        'page_title': 'Withdraw from Task Wallet',
+        'page_description': 'Transfer funds from your task wallet back to your main wallet',
+        'form_title': 'Withdraw Funds',
+        'amount_label': 'Withdrawal Amount',
+        'source_balance_label': 'Current Task Wallet Balance',
+        'source_balance': request.user.taskwallet.balance,
+        'available_balance': request.user.taskwallet.balance,
+        'balance_info_label': 'Task Wallet Balance',
+        'transaction_from': 'Task Wallet',
+        'transaction_to': 'Main Wallet',
+        'transaction_fee': 0,
+        'submit_button_text': 'Withdraw Funds',
+        'quick_amounts': [
+            (100, '₦100'),
+            (2500, '₦2,500'),
+            (5000, '₦5,000'),
+            (100000, '₦100,000'),
+        ],
+        'info_title': 'About Task Wallet Withdrawals',
+        'info_items': [
+            'Withdrawals to your main wallet are instant and free',
+            'You can withdraw any amount above ₦0.01',
+            'Your task wallet must have sufficient balance for the withdrawal',
+            'Withdrawn funds will be available in your main wallet immediately',
+        ],
+    }
+
+    return render_transaction_page(request, form, context)
+
+
+
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def timewall_postback(request):
+    """
+    Webhook endpoint for TimeWall to send reward notifications.
+    TimeWall will POST here when user completes a task.
+    """
+    
+    # Extract parameters from query string
+    user_id = request.GET.get("userID")
+    transaction_id = request.GET.get("transactionID")
+    revenue = request.GET.get("revenue")
+    currency_amount = request.GET.get("currencyAmount")
+    received_hash = request.GET.get("hash")
+    transaction_type = request.GET.get("type", "credit")
+    user_ip = request.GET.get("ip", request.META.get('REMOTE_ADDR', ''))
+
+    # Log incoming request
+    logger.info(f"TimeWall postback received - User: {user_id}, TxnID: {transaction_id}")
+
+    # Verify all required parameters
+    if not all([user_id, transaction_id, revenue, currency_amount, received_hash]):
+        logger.warning("Missing required TimeWall postback parameters")
+        return JsonResponse(
+            {"error": "Missing required parameters"},
+            status=400
+        )
+
+    # Verify hash signature (SECURITY CRITICAL)
+    secret = getattr(settings, "TIMEWALL_SECRET_KEY", None)
+    if not secret:
+        logger.error("TIMEWALL_SECRET_KEY not configured in settings")
+        return JsonResponse(
+            {"error": "Server misconfiguration"},
+            status=500
+        )
+
+    hash_string = f"{user_id}{revenue}{secret}"
+    expected_hash = hashlib.sha256(hash_string.encode()).hexdigest()
+
+    if received_hash != expected_hash:
+        logger.warning(
+            f"Hash mismatch for user {user_id} - "
+            f"Expected: {expected_hash}, Received: {received_hash}"
+        )
+        return JsonResponse(
+            {"error": "Invalid signature - hash verification failed"},
+            status=401
+        )
+
+    logger.info(f"Hash verified successfully for user {user_id}")
+
+    try:
+        # Get user from database
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            logger.warning(f"User not found: {user_id}")
+            return JsonResponse(
+                {"error": "User not found"},
+                status=404
             )
-            messages.success(self.request, f"Task Wallet topped up with ₦{form.cleaned_data['amount']}")
-            return redirect(self.success_url)
-        except ValueError as e:
-            messages.error(self.request, str(e))
-            return self.form_invalid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        wallet = WalletService.get_or_create_wallet(user)
-        context["available_balance"] = wallet.get_available_balance()
-        return context
+        # Convert string amounts to Decimal
+        points = Decimal(currency_amount)
+        revenue_usd = Decimal(revenue)
+
+        # Handle chargeback (user refunded, take back points)
+        if transaction_type == "chargeback":
+            TaskWallet.objects.filter(user=user).update(balance=F("balance") - points)
+            
+            TimeWallTransaction.objects.create(
+                user=user,
+                transaction_id=transaction_id,
+                type="chargeback",
+                amount=-points,
+                revenue_usd=-revenue_usd,
+                user_ip=user_ip,
+                note="TimeWall chargeback - points deducted",
+            )
+            logger.info(f"Chargeback processed for user {user_id}: -{points} pts")
+
+        else:
+            # Normal credit (user completed task, award points)
+            wallet, created = TaskWallet.objects.get_or_create(user=user)
+            wallet.balance += points
+            wallet.save()
+
+            TimeWallTransaction.objects.create(
+                user=user,
+                transaction_id=transaction_id,
+                type="credit",
+                amount=points,
+                revenue_usd=revenue_usd,
+                user_ip=user_ip,
+                note=f"TimeWall reward earned (${revenue_usd} USD)",
+            )
+            logger.info(f"Points credited to user {user_id}: +{points} pts (${revenue_usd})")
+
+        return JsonResponse(
+            {"success": True, "message": "Postback processed successfully"},
+            status=200
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing postback for user {user_id}: {str(e)}", exc_info=True)
+        return JsonResponse(
+            {"error": f"Processing error: {str(e)}"},
+            status=500
+        )
+
+
+@login_required
+def offerwall_view(request):
+    return render(request, "tasks/offerwall.html", {
+        "placement_id": "your_placement_id_here",
+    })

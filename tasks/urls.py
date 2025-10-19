@@ -15,6 +15,10 @@ urlpatterns = [
     path("task/<int:task_id>/edit/", views.edit_task, name="edit_task"),
     path("task/<int:task_id>/delete/", views.delete_task, name="delete_task"),
 
+    # TimeWall postback endpoint (webhook)
+    path('timewall/postback/', views.timewall_postback, name='timewall_postback'),
+    path('timewall', views.offerwall_view, name='timewall'),
+
     
     # Review URLs
     path('<int:task_id>/review/', views.review_submissions, name='review_submissions'),
@@ -25,7 +29,7 @@ urlpatterns = [
     # Task wallet
     path("task-wallet/", views.TaskWalletDashboardView.as_view(), name="task_wallet_dashboard"),
     path("task-wallet/transactions/", views.TaskWalletTransactionListView.as_view(), name="task_wallet_transactions"),
-    path("task-wallet/topup/", views.TaskWalletTopupView.as_view(), name="task_wallet_topup"),
+    # path("task-wallet/topup/", views.TaskWalletTopupView.as_view(), name="task_wallet_topup"),
 
     # Dispute URLs
     path('submission/<int:submission_id>/dispute/', views.create_dispute, name='create_dispute'),
@@ -35,4 +39,9 @@ urlpatterns = [
     # Admin URLs
     path('admin/disputes/', views.admin_disputes, name='admin_disputes'),
     path('admin/dispute/<int:dispute_id>/resolve/', views.resolve_dispute, name='resolve_dispute'),
+
+
+    path("transfer-to-task-wallet/", views.transfer_to_task_wallet_view, name="transfer_to_task_wallet"),
+    path("transfer-to-main/", views.transfer_to_main_wallet_view, name="transfer_to_main_wallet"),
+
 ]

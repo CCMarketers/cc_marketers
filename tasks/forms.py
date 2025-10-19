@@ -1,7 +1,7 @@
 # tasks/forms.py
 from django import forms
 from .models import Task, Submission, Dispute,TaskCategory
-from decimal import Decimal
+# from decimal import Decimal
 from django.utils import timezone
 from PIL import Image
 from io import BytesIO
@@ -157,10 +157,21 @@ class ReviewSubmissionForm(forms.Form):
     )
 
 
-class TaskWalletTopupForm(forms.Form):
+# class TaskWalletTopupForm(forms.Form):
+#     amount = forms.DecimalField(
+#         max_digits=12,
+#         decimal_places=2,
+#         min_value=Decimal('1.00'),
+#         label="Amount to Transfer from Main Wallet"
+#     )
+
+class TransactionForm(forms.Form):
     amount = forms.DecimalField(
-        max_digits=12,
+        min_value=0.01,
         decimal_places=2,
-        min_value=Decimal('1.00'),
+        widget=forms.NumberInput(attrs={
+            'placeholder': '0.00',
+            'step': '0.01',
+        }),
         label="Amount to Transfer from Main Wallet"
     )

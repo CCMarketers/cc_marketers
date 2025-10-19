@@ -1,7 +1,6 @@
-<!-- tasks/task_wallet/topup.html -->
 {% extends 'base.html' %}
 
-{% block title %}Top Up Task Wallet{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 py-8">
@@ -12,18 +11,18 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
-            <span class="text-red-600">Top Up</span>
+            <span class="text-red-600">{{ page_title }}</span>
         </nav>
-        <h1 class="text-3xl font-bold text-red-800 mb-2">Top Up Task Wallet</h1>
-        <p class="text-gray-600">Transfer funds from your main wallet to your task wallet</p>
+        <h1 class="text-3xl font-bold text-red-800 mb-2">{{ page_title }}</h1>
+        <p class="text-gray-600">{{ page_description }}</p>
     </div>
 
     <!-- Current Balance Card -->
     <div class="bg-white rounded-lg shadow border border-red-200 p-6 mb-8">
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-lg font-semibold text-red-700 mb-1">Current Task Wallet Balance</h2>
-                <p class="text-3xl font-bold text-red-800">₦{{ user.taskwallet.balance|floatformat:2|default:"0.00" }}</p>
+                <h2 class="text-lg font-semibold text-red-700 mb-1">{{ source_balance_label }}</h2>
+                <p class="text-3xl font-bold text-red-800">₦{{ source_balance|floatformat:2|default:"0.00" }}</p>
             </div>
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                 <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,9 +32,9 @@
         </div>
     </div>
 
-    <!-- Top-up Form -->
+    <!-- Transaction Form -->
     <div class="bg-white rounded-lg shadow-lg border border-red-200 p-6">
-        <h2 class="text-xl font-semibold text-red-700 mb-6">Transfer Funds</h2>
+        <h2 class="text-xl font-semibold text-red-700 mb-6">{{ form_title }}</h2>
 
         <form method="post" class="space-y-6">
             {% csrf_token %}
@@ -43,7 +42,7 @@
             <!-- Amount Input -->
             <div>
                 <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-red-700 mb-2">
-                    Transfer Amount
+                    {{ amount_label }}
                 </label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -59,7 +58,7 @@
                            placeholder="0.00"
                            value="{{ form.amount.value|default:'' }}">
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span class="text-gray-500 text-sm">USD</span>
+                        <span class="text-gray-500 text-sm">NGN</span>
                     </div>
                 </div>
                 {% if form.amount.errors %}
@@ -73,56 +72,48 @@
             </div>
 
             <!-- Quick Amount Buttons -->
+            {% if quick_amounts %}
             <div>
                 <label class="block text-sm font-medium text-red-700 mb-3">Quick Select</label>
                 <div class="grid grid-cols-4 gap-3">
-                    <button type="button" onclick="setAmount(10)" 
+                    {% for amount, label in quick_amounts %}
+                    <button type="button" onclick="setAmount({{ amount }})" 
                             class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                        ₦100
+                        {{ label }}
                     </button>
-                    <button type="button" onclick="setAmount(25)" 
-                            class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                        ₦2500
-                    </button>
-                    <button type="button" onclick="setAmount(50)" 
-                            class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                        ₦5000
-                    </button>
-                    <button type="button" onclick="setAmount(100)" 
-                            class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                        ₦100000
-                    </button>
+                    {% endfor %}
                 </div>
             </div>
+            {% endif %}
 
-            <!-- Main Wallet Balance Info -->
+            <!-- Available Balance Info -->
             <div class="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div class="flex items-center">
                     <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <p class="text-sm font-medium text-red-800">Available Balance</p>
-                        <p class="text-sm text-red-600">Available: ₦{{ available_balance |floatformat:2|default:"0.00" }}</p>
+                        <p class="text-sm font-medium text-red-800">{{ balance_info_label }}</p>
+                        <p class="text-sm text-red-600">Available: ₦{{ available_balance|floatformat:2|default:"0.00" }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Transfer Summary -->
+            <!-- Transaction Summary -->
             <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <h3 class="text-sm font-medium text-gray-700 mb-3">Transfer Summary</h3>
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Transaction Summary</h3>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-600">From:</span>
-                        <span class="text-gray-900">Main Wallet</span>
+                        <span class="text-gray-900">{{ transaction_from }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">To:</span>
-                        <span class="text-gray-900">Task Wallet</span>
+                        <span class="text-gray-900">{{ transaction_to }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Transfer Fee:</span>
-                        <span class="text-green-600">₦0.00 (Free)</span>
+                        <span class="text-green-600">₦{{ transaction_fee|floatformat:2|default:"0.00" }} (Free)</span>
                     </div>
                     <hr class="border-gray-300">
                     <div class="flex justify-between font-medium">
@@ -149,7 +140,7 @@
                 </a>
                 <button type="submit" 
                         class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                    Transfer Funds
+                    {{ submit_button_text }}
                 </button>
             </div>
         </form>
@@ -162,39 +153,33 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <div>
-                <h3 class="text-sm font-medium text-blue-800 mb-2">About Task Wallet Transfers</h3>
+                <h3 class="text-sm font-medium text-blue-800 mb-2">{{ info_title }}</h3>
                 <ul class="text-sm text-blue-700 space-y-1">
-                    <li>• Transfers from your main wallet are instant and free</li>
-                    <li>• Funds in your task wallet can only be used for posting tasks</li>
-                    <li>• You can transfer any amount above ₦0.01</li>
-                    <li>• Your main wallet must have sufficient balance for the transfer</li>
+                    {% for info_item in info_items %}
+                    <li>• {{ info_item }}</li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>
     </div>
 </div>
+
 <script>
 function setAmount(amount) {
     const amountInput = document.getElementById('{{ form.amount.id_for_label }}');
     const transferAmount = document.getElementById('transfer-amount');
     
-    // Set input value
     amountInput.value = amount.toFixed(2);
-
-    // Update summary
     transferAmount.textContent = `₦${amount.toFixed(2)}`;
     
-    // Remove focus from the clicked button
     event.target.blur();
 }
 
-// Update transfer amount display when input changes
 document.getElementById('{{ form.amount.id_for_label }}').addEventListener('input', function(e) {
     const amount = parseFloat(e.target.value) || 0;
     const transferAmount = document.getElementById('transfer-amount');
     transferAmount.textContent = `₦${amount.toFixed(2)}`;
 });
 </script>
-
 
 {% endblock %}
