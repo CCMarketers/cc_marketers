@@ -36,7 +36,8 @@ from .forms import (
 )
 
 
-from .models import Dispute, Submission, Task, TaskWallet, TaskWalletTransaction, TimeWallTransaction
+from .models import Dispute, Submission, Task, TaskWallet, TaskWalletTransaction
+# , TimeWallTransaction
 from .services import TaskWalletService
 
 logger = logging.getLogger(__name__)
@@ -586,119 +587,119 @@ def transfer_to_main_wallet_view(request):
 
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
-def timewall_postback(request):
-    """
-    Webhook endpoint for TimeWall to send reward notifications.
-    TimeWall will POST here when user completes a task.
-    """
+# @csrf_exempt
+# @require_http_methods(["GET"])
+# def timewall_postback(request):
+#     """
+#     Webhook endpoint for TimeWall to send reward notifications.
+#     TimeWall will POST here when user completes a task.
+#     """
     
-    # Extract parameters from query string
-    user_id = request.GET.get("userID")
-    transaction_id = request.GET.get("transactionID")
-    revenue = request.GET.get("revenue")
-    currency_amount = request.GET.get("currencyAmount")
-    received_hash = request.GET.get("hash")
-    transaction_type = request.GET.get("type", "credit")
-    user_ip = request.GET.get("ip", request.META.get('REMOTE_ADDR', ''))
+#     # Extract parameters from query string
+#     user_id = request.GET.get("userID")
+#     transaction_id = request.GET.get("transactionID")
+#     revenue = request.GET.get("revenue")
+#     currency_amount = request.GET.get("currencyAmount")
+#     received_hash = request.GET.get("hash")
+#     transaction_type = request.GET.get("type", "credit")
+#     user_ip = request.GET.get("ip", request.META.get('REMOTE_ADDR', ''))
 
-    # Log incoming request
-    logger.info(f"TimeWall postback received - User: {user_id}, TxnID: {transaction_id}")
+#     # Log incoming request
+#     logger.info(f"TimeWall postback received - User: {user_id}, TxnID: {transaction_id}")
 
-    # Verify all required parameters
-    if not all([user_id, transaction_id, revenue, currency_amount, received_hash]):
-        logger.warning("Missing required TimeWall postback parameters")
-        return JsonResponse(
-            {"error": "Missing required parameters"},
-            status=400
-        )
+#     # Verify all required parameters
+#     if not all([user_id, transaction_id, revenue, currency_amount, received_hash]):
+#         logger.warning("Missing required TimeWall postback parameters")
+#         return JsonResponse(
+#             {"error": "Missing required parameters"},
+#             status=400
+#         )
 
-    # Verify hash signature (SECURITY CRITICAL)
-    secret = getattr(settings, "TIMEWALL_SECRET_KEY", None)
-    if not secret:
-        logger.error("TIMEWALL_SECRET_KEY not configured in settings")
-        return JsonResponse(
-            {"error": "Server misconfiguration"},
-            status=500
-        )
+#     # Verify hash signature (SECURITY CRITICAL)
+#     secret = getattr(settings, "TIMEWALL_SECRET_KEY", None)
+#     if not secret:
+#         logger.error("TIMEWALL_SECRET_KEY not configured in settings")
+#         return JsonResponse(
+#             {"error": "Server misconfiguration"},
+#             status=500
+#         )
 
-    hash_string = f"{user_id}{revenue}{secret}"
-    expected_hash = hashlib.sha256(hash_string.encode()).hexdigest()
+#     hash_string = f"{user_id}{revenue}{secret}"
+#     expected_hash = hashlib.sha256(hash_string.encode()).hexdigest()
 
-    if received_hash != expected_hash:
-        logger.warning(
-            f"Hash mismatch for user {user_id} - "
-            f"Expected: {expected_hash}, Received: {received_hash}"
-        )
-        return JsonResponse(
-            {"error": "Invalid signature - hash verification failed"},
-            status=401
-        )
+#     if received_hash != expected_hash:
+#         logger.warning(
+#             f"Hash mismatch for user {user_id} - "
+#             f"Expected: {expected_hash}, Received: {received_hash}"
+#         )
+#         return JsonResponse(
+#             {"error": "Invalid signature - hash verification failed"},
+#             status=401
+#         )
 
-    logger.info(f"Hash verified successfully for user {user_id}")
+#     logger.info(f"Hash verified successfully for user {user_id}")
 
-    try:
-        # Get user from database
-        user = User.objects.filter(id=user_id).first()
-        if not user:
-            logger.warning(f"User not found: {user_id}")
-            return JsonResponse(
-                {"error": "User not found"},
-                status=404
-            )
+#     try:
+#         # Get user from database
+#         user = User.objects.filter(id=user_id).first()
+#         if not user:
+#             logger.warning(f"User not found: {user_id}")
+#             return JsonResponse(
+#                 {"error": "User not found"},
+#                 status=404
+#             )
 
-        # Convert string amounts to Decimal
-        points = Decimal(currency_amount)
-        revenue_usd = Decimal(revenue)
+#         # Convert string amounts to Decimal
+#         points = Decimal(currency_amount)
+#         revenue_usd = Decimal(revenue)
 
-        # Handle chargeback (user refunded, take back points)
-        if transaction_type == "chargeback":
-            TaskWallet.objects.filter(user=user).update(balance=F("balance") - points)
+#         # Handle chargeback (user refunded, take back points)
+#         if transaction_type == "chargeback":
+#             TaskWallet.objects.filter(user=user).update(balance=F("balance") - points)
             
-            TimeWallTransaction.objects.create(
-                user=user,
-                transaction_id=transaction_id,
-                type="chargeback",
-                amount=-points,
-                revenue_usd=-revenue_usd,
-                user_ip=user_ip,
-                note="TimeWall chargeback - points deducted",
-            )
-            logger.info(f"Chargeback processed for user {user_id}: -{points} pts")
+#             TimeWallTransaction.objects.create(
+#                 user=user,
+#                 transaction_id=transaction_id,
+#                 type="chargeback",
+#                 amount=-points,
+#                 revenue_usd=-revenue_usd,
+#                 user_ip=user_ip,
+#                 note="TimeWall chargeback - points deducted",
+#             )
+#             logger.info(f"Chargeback processed for user {user_id}: -{points} pts")
 
-        else:
-            # Normal credit (user completed task, award points)
-            wallet, created = TaskWallet.objects.get_or_create(user=user)
-            wallet.balance += points
-            wallet.save()
+#         else:
+#             # Normal credit (user completed task, award points)
+#             wallet, created = TaskWallet.objects.get_or_create(user=user)
+#             wallet.balance += points
+#             wallet.save()
 
-            TimeWallTransaction.objects.create(
-                user=user,
-                transaction_id=transaction_id,
-                type="credit",
-                amount=points,
-                revenue_usd=revenue_usd,
-                user_ip=user_ip,
-                note=f"TimeWall reward earned (${revenue_usd} USD)",
-            )
-            logger.info(f"Points credited to user {user_id}: +{points} pts (${revenue_usd})")
+#             TimeWallTransaction.objects.create(
+#                 user=user,
+#                 transaction_id=transaction_id,
+#                 type="credit",
+#                 amount=points,
+#                 revenue_usd=revenue_usd,
+#                 user_ip=user_ip,
+#                 note=f"TimeWall reward earned (${revenue_usd} USD)",
+#             )
+#             logger.info(f"Points credited to user {user_id}: +{points} pts (${revenue_usd})")
 
-        return JsonResponse(
-            {"success": True, "message": "Postback processed successfully"},
-            status=200
-        )
+#         return JsonResponse(
+#             {"success": True, "message": "Postback processed successfully"},
+#             status=200
+#         )
 
-    except Exception as e:
-        logger.error(f"Error processing postback for user {user_id}: {str(e)}", exc_info=True)
-        return JsonResponse(
-            {"error": f"Processing error: {str(e)}"},
-            status=500
-        )
+#     except Exception as e:
+#         logger.error(f"Error processing postback for user {user_id}: {str(e)}", exc_info=True)
+#         return JsonResponse(
+#             {"error": f"Processing error: {str(e)}"},
+#             status=500
+#         )
 
 
-@login_required
-def offerwall_view(request):
-    return render(request, "tasks/offerwall.html", {
-        "placement_id": "your_placement_id_here",
-    })
+# @login_required
+# def offerwall_view(request):
+#     return render(request, "tasks/offerwall.html", {
+#         "placement_id": "your_placement_id_here",
+#     })
