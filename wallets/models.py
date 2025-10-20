@@ -60,6 +60,12 @@ class EscrowTransaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     released_at = models.DateTimeField(blank=True, null=True)
+    taskwallet_transaction = models.ForeignKey(
+        'tasks.TaskWalletTransaction',
+        on_delete=models.CASCADE,
+        related_name="escrow_transactions",
+        null=True, blank=True
+    )
     class Meta:
         # ✅ Ensure only ONE locked escrow per task
         constraints = [
