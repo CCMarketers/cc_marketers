@@ -252,7 +252,7 @@ class TaskWalletService:
         release_ref = f"ESCROW_RELEASE_{escrow.id}_{submission.id if submission else 'MANUAL'}"
         
         # ✅ Check for duplicate credit (belt-and-suspenders approach)
-        from wallets.models import Transaction
+        from payments.models import PaymentTransaction as Transaction
         existing_credit = Transaction.objects.filter(
             reference=release_ref
         ).exists()
