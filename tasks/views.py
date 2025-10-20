@@ -15,7 +15,7 @@ from django.views.generic import DetailView, ListView
 
 from subscriptions.decorators import subscription_required
 from users.models import User
-from wallets.models import EscrowTransaction
+from wallets.models import EscrowTransaction, Wallet
 # from wallets.services import WalletService
 
 from django.http import JsonResponse
@@ -148,7 +148,7 @@ def create_task(request):
                 return redirect("tasks:my_tasks")
             except ValueError as e:
                 messages.error(request, str(e))
-                return redirect("tasks:task_wallet_topup")
+                return redirect("tasks:transfer_to_task_wallet")
     else:
         form = TaskForm()
 
@@ -512,7 +512,7 @@ def transfer_to_task_wallet_view(request):
         'amount_label': 'Transfer Amount',
         'source_balance_label': 'Current Task Wallet Balance',
         'source_balance': request.user.taskwallet.balance,
-        'available_balance': request.user.wallet.balance,  # Adjust based on your model
+        'available_balance': Wallet.get_available_balance(), 
         'balance_info_label': 'Main Wallet Balance',
         'transaction_from': 'Main Wallet',
         'transaction_to': 'Task Wallet',

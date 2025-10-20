@@ -73,7 +73,7 @@ class EscrowTransaction(models.Model):
         ]
 
     def __str__(self):
-        return f"Escrow for Task #{self.task.id} - ₦{self.amount_usd:,.2f}"
+        return f"Escrow for Task #{self.task.id} - ₦{self.amount:,.2f}"
 
 
 class WithdrawalRequest(models.Model):

@@ -244,8 +244,8 @@ class WalletService:
 
         escrow = EscrowTransaction.objects.select_for_update().get(task=task, status='locked')
 
-        company_cut = (escrow.amount * Decimal("0.20")).quantize(Decimal("0.00"))
-        member_amount = escrow.amount - company_cut
+        company_cut = (escrow.amount_usd * Decimal("0.20")).quantize(Decimal("0.00"))
+        member_amount = escrow.amount_usd - company_cut
 
         company_user, _ = User.objects.get_or_create(username=settings.COMPANY_SYSTEM_USERNAME)
 
@@ -287,7 +287,7 @@ class WalletService:
 
         credit_txn = WalletService.credit_wallet(
             user=escrow.advertiser,
-            amount=escrow.amount,
+            amount=escrow.amount_usd,
             category='refund',
             description=f"Refund for task: {task.title}",
             reference=f"REFUND_TASK_{task.id}",
