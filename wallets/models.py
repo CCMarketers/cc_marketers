@@ -38,24 +38,19 @@ class Wallet(models.Model):
         """Alias for clarity."""
         return self.available_balance()
 
-
 class EscrowTransaction(models.Model):
-    """Tracks funds locked in escrow for tasks (₦)."""
-    task = models.OneToOneField('tasks.Task', on_delete=models.CASCADE)
-    advertiser = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="escrow_transaction"
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE)
+    submission = models.OneToOneField(  # ✅ Changed to OneToOne
+        'tasks.Submission', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='escrow_release'  # ✅ Added related name
     )
-    amount_usd = models.DecimalField(max_digits=12, decimal_places=2)  # ₦ equivalent
-    taskwallet_transaction = models.ForeignKey(
-        'tasks.TaskWalletTransaction',
-        on_delete=models.CASCADE,
-        related_name="escrow_transactions",
-        null=True, blank=True
-    )
+    advertiser = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount_usd = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=[
             ('locked', 'Locked'),
             ('released', 'Released'),
@@ -65,17 +60,15 @@ class EscrowTransaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     released_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        indexes = [
-            models.Index(fields=['status']),
-            models.Index(fields=['created_at']),
+        # ✅ Ensure only ONE locked escrow per task
+        constraints = [
+            models.UniqueConstraint(
+                fields=['task'],
+                condition=models.Q(status='locked'),
+                name='unique_locked_escrow_per_task'
+            )
         ]
-
-    def __str__(self):
-        return f"Escrow for Task #{self.task.id} - ₦{self.amount:,.2f}"
-
-
 class WithdrawalRequest(models.Model):
     WITHDRAWAL_STATUS = [
         ('pending', 'Pending'),

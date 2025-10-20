@@ -1,5 +1,6 @@
 # tasks/services/task_wallet_service.py
 from decimal import Decimal
+import logging
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.contrib.auth import get_user_model
 from wallets.models import EscrowTransaction
 from .models import TaskWallet, TaskWalletTransaction
 from wallets.services import WalletService  # main wallet service
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -222,38 +224,103 @@ class TaskWalletService:
 
     @staticmethod
     @transaction.atomic
-    def release_task_escrow(escrow, member):
+    def release_task_escrow(escrow, member, submission=None):
+        """
+        Release escrow for ONE submission only.
+        Prevents duplicate releases via database constraints.
+        """
+        # ✅ Lock the escrow row for update
+        escrow = EscrowTransaction.objects.select_for_update().get(id=escrow.id)
+        
         if escrow.status != "locked":
-            raise ValueError("Escrow already released or refunded")
-
+            logger.warning(
+                f"Attempted to release escrow {escrow.id} but status is {escrow.status}"
+            )
+            raise ValueError(f"Escrow already {escrow.status}. Cannot release.")
+        
+        # ✅ Check if this submission already has a release
+        if submission and hasattr(submission, 'escrow_release'):
+            logger.warning(
+                f"Submission {submission.id} already has escrow release {submission.escrow_release.id}"
+            )
+            raise ValueError("This submission already has an escrow release")
+        
+        # ✅ Calculate payment (80% to member, 20% to company)
         member_amount, company_cut = TaskWalletService.split_payment(escrow.amount_usd)
-
-        # ✅ Credit worker's TASK WALLET (not main wallet)
-        TaskWalletService.credit_wallet(
-            user=member,
-            amount=member_amount,
-            category="task_payment",
-            description=f"Earnings from task: {escrow.task.title}",
-            reference=escrow.id
-        )
-
-        # ✅ Credit company cut to main wallet (still good)
-        WalletService.credit_wallet(
-            user=get_company_user(),
-            amount=company_cut,
-            description=f"Company cut for task: {escrow.task.title}",
-            category="company_cut",
-        )
-
+        
+        # ✅ Create unique reference for this release
+        release_ref = f"ESCROW_RELEASE_{escrow.id}_{submission.id if submission else 'MANUAL'}"
+        
+        # ✅ Check for duplicate credit (belt-and-suspenders approach)
+        from wallets.models import Transaction
+        existing_credit = Transaction.objects.filter(
+            reference=release_ref
+        ).exists()
+        
+        if existing_credit:
+            logger.error(f"Duplicate credit detected for {release_ref}")
+            raise ValueError("This escrow has already been credited")
+        
+        from wallets.services import WalletService
+        
+        # ✅ Credit member's MAIN WALLET
+        try:
+            WalletService.credit_wallet(
+                user=member,
+                amount=member_amount,
+                category="task_payment",
+                description=f"Task: {escrow.task.title} (80% of ₦{escrow.amount_usd})",
+                reference=release_ref,
+                extra_data={
+                    "task_id": escrow.task.id,
+                    "submission_id": submission.id if submission else None,
+                    "escrow_id": escrow.id,
+                    "payout_per_slot": str(escrow.task.payout_per_slot),
+                    "member_share": str(member_amount),
+                    "company_cut": str(company_cut),
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to credit member wallet: {e}")
+            raise
+        
+        # ✅ Credit company cut
+        try:
+            WalletService.credit_wallet(
+                user=get_company_user(),
+                amount=company_cut,
+                category="company_cut",
+                description=f"Platform fee: {escrow.task.title}",
+                reference=f"COMPANY_CUT_{escrow.id}_{submission.id if submission else 'MANUAL'}",
+                extra_data={
+                    "task_id": escrow.task.id,
+                    "escrow_id": escrow.id,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to credit company wallet: {e}")
+            # Don't rollback - member already paid
+        
+        # ✅ Update escrow status ATOMICALLY
         escrow.status = "released"
         escrow.released_at = timezone.now()
-        escrow.save(update_fields=['status', 'released_at'])
-
-        if hasattr(escrow, "taskwallet_transaction") and hasattr(escrow.taskwallet_transaction, "status"):
+        if submission:
+            escrow.submission = submission  # Link to submission
+        escrow.save(update_fields=['status', 'released_at', 'submission'])
+        
+        # Update linked transaction if exists
+        if hasattr(escrow, "taskwallet_transaction") and escrow.taskwallet_transaction:
             escrow.taskwallet_transaction.status = "success"
             escrow.taskwallet_transaction.save(update_fields=['status'])
-
+        
+        logger.info(
+            f"✓ Escrow {escrow.id} released: {member.username} got ₦{member_amount}, "
+            f"Company got ₦{company_cut}"
+        )
+        
         return escrow
+
+
 
     @staticmethod
     @transaction.atomic

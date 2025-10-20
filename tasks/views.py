@@ -115,8 +115,6 @@ def task_detail(request, task_id):
         "tasks/task_detail.html",
         {"task": task, "form": form, "existing_submission": existing_submission},
     )
-
-
 @login_required
 @subscription_required
 def create_task(request):
@@ -136,6 +134,17 @@ def create_task(request):
                     task.save()
 
                     total_cost = task.payout_per_slot * task.total_slots
+                    
+                    # ✅ Check if escrow already exists (prevent duplicates)
+                    existing_escrow = EscrowTransaction.objects.filter(
+                        task=task,
+                        status="locked"
+                    ).exists()
+                    
+                    if existing_escrow:
+                        raise ValueError("Escrow already created for this task")
+                    
+                    # ✅ Create escrow ONCE
                     TaskWalletService.create_task_escrow(
                         advertiser=request.user,
                         task=task,
@@ -153,7 +162,6 @@ def create_task(request):
         form = TaskForm()
 
     return render(request, "tasks/create_task.html", {"form": form})
-
 
 @login_required
 @subscription_required
@@ -252,11 +260,13 @@ def review_submissions(request, task_id):
         },
     )
 
-
 @login_required
 @subscription_required
 def review_submission(request, submission_id):
-    submission = get_object_or_404(Submission.objects.select_related("task", "member"), id=submission_id)
+    submission = get_object_or_404(
+        Submission.objects.select_related("task", "member"), 
+        id=submission_id
+    )
 
     if submission.task.advertiser != request.user and not request.user.is_staff:
         messages.error(request, "Permission denied.")
@@ -266,25 +276,51 @@ def review_submission(request, submission_id):
         form = ReviewSubmissionForm(request.POST)
         if form.is_valid():
             decision = form.cleaned_data["decision"]
+            
             if decision == "approve":
                 with transaction.atomic():
-                    submission.approve(request.user)
-                    escrow = EscrowTransaction.objects.filter(task=submission.task, status="locked").first()
+                    # ✅ ONLY update submission status
+                    submission.status = "approved"
+                    submission.reviewed_at = timezone.now()
+                    submission.reviewed_by = request.user
+                    submission.save(update_fields=["status", "reviewed_at", "reviewed_by"])
+
+                    # ✅ Release escrow ONCE (not in signal)
+                    escrow = EscrowTransaction.objects.filter(
+                        task=submission.task, 
+                        status="locked"
+                    ).first()
+                    
                     if escrow:
                         TaskWalletService.release_task_escrow(escrow, submission.member)
-                messages.success(request, "Submission approved and escrow released!")
+                        messages.success(request, "Submission approved and payment released!")
+                    else:
+                        messages.warning(request, "Submission approved but no locked escrow found.")
+                        
             elif decision == "reject":
                 reason = form.cleaned_data.get("rejection_reason")
                 if not reason:
                     messages.error(request, "Rejection reason is required.")
                 else:
-                    submission.reject(request.user, reason)
+                    with transaction.atomic():
+                        submission.status = "rejected"
+                        submission.rejection_reason = reason
+                        submission.reviewed_at = timezone.now()
+                        submission.reviewed_by = request.user
+                        submission.save(update_fields=[
+                            "status", "rejection_reason", "reviewed_at", "reviewed_by"
+                        ])
                     messages.success(request, "Submission rejected.")
+                    
             return redirect("tasks:review_submissions", task_id=submission.task.id)
     else:
         form = ReviewSubmissionForm()
-    return render(request, "tasks/review_submission.html", {"submission": submission, "form": form})
-
+        
+    return render(
+        request, 
+        "tasks/review_submission.html", 
+        {"submission": submission, "form": form}
+    )
 
 @login_required
 @subscription_required

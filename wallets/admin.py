@@ -55,6 +55,8 @@ class EscrowTransactionAdmin(admin.ModelAdmin):
 
     task_link.short_description = 'Task'
 
+
+
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_display = [
