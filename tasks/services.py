@@ -39,7 +39,7 @@ class TaskWalletService:
     # Utility helpers
     # -------------------------------
     @staticmethod
-    def split_payment(amount, company_rate=Decimal("0.20")):
+    def split_payment(amount, company_rate=Decimal("0.10")):
         """
         Split escrow amount between worker and company.
         Returns (member_amount, company_cut)

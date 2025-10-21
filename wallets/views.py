@@ -226,6 +226,12 @@ class AdminEscrowListView(ListView):
         return qs
 
 
+from django.db.models import Q
+from django.utils.decorators import method_decorator
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.generic import ListView
+from .models import PaymentTransaction
+
 @method_decorator(staff_member_required, name='dispatch')
 class AdminTransactionListView(ListView):
     """Admin view to monitor all transactions."""
@@ -244,6 +250,20 @@ class AdminTransactionListView(ListView):
                 Q(description__icontains=search)
             )
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+
+        # Count transactions
+        context['total_transactions'] = qs.count()
+        context['credits'] = qs.filter(transaction_type='funding', status='success').count()
+        context['debits'] = qs.filter(transaction_type='withdrawal', status='success').count()
+        context['pending'] = qs.filter(status='pending').count()
+
+        return context
+
+
 
 
 @login_required

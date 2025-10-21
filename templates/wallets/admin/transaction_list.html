@@ -37,19 +37,19 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Total Transactions</div>
-            <div class="text-2xl font-bold text-blue-600">{{ transactions|length }}</div>
+            <div class="text-2xl font-bold text-blue-600">{{ total_transactions }}</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Credits</div>
-            <div class="text-2xl font-bold text-green-600">0</div>
+            <div class="text-2xl font-bold text-green-600"> {{ credits }}  </div>
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Debits</div>
-            <div class="text-2xl font-bold text-red-600">0</div>
+            <div class="text-2xl font-bold text-red-600">{{ debits }}</div>
         </div>
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="text-sm font-medium text-gray-500">Pending</div>
-            <div class="text-2xl font-bold text-yellow-600">0</div>
+            <div class="text-2xl font-bold text-yellow-600">{{ pending }}</div>
         </div>
     </div>
 
@@ -82,7 +82,7 @@
                                 <div class="text-sm text-gray-500">{{ transaction.user.email|truncatechars:20 }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                {% if transaction.transaction_type == 'credit' %}
+                                {% if transaction.transaction_type == 'funding' %}
                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Credit</span>
                                 {% else %}
                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Debit</span>
@@ -92,8 +92,8 @@
                                 {{ transaction.get_category_display }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium {% if transaction.transaction_type == 'credit' %}text-green-600{% else %}text-red-600{% endif %}">
-                                    {% if transaction.transaction_type == 'credit' %}+{% else %}-{% endif %}&dollar;{{ transaction.amount }}
+                                <div class="text-sm font-medium {% if transaction.transaction_type == 'funding' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {% if transaction.transaction_type == 'funding' %}+{% else %}-{% endif %} ₦{{ transaction.amount_usd }}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
