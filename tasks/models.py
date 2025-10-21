@@ -261,3 +261,29 @@ class TaskCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TimeWallTransaction(models.Model):
+    """Log all TimeWall earnings and chargebacks"""
+    TRANSACTION_TYPES = [
+        ('credit', 'Credit'),
+        ('chargeback', 'Chargeback'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='timewall_transactions')
+    transaction_id = models.CharField(max_length=255, unique=True)  # TimeWall txn ID
+    type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)  # Points awarded
+    revenue_usd = models.DecimalField(max_digits=10, decimal_places=2)  # USD earned
+    user_ip = models.CharField(max_length=45, blank=True, null=True)  # IPv4 or IPv6
+    note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.type} - {self.amount} pts (${self.revenue_usd})"
+
+    class Meta:
+        verbose_name_plural = "TimeWall Transactions"
+        ordering = ['-created_at']
+
+        

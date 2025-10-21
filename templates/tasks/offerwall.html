@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Earn Rewards - CC Marketers{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white text-gray-800">
+    <div class="max-w-5xl mx-auto py-10 px-6">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-red-600 mb-2">Earn Rewards</h1>
+            <p class="text-gray-600 text-lg">Complete offers & earn instant points!</p>
+        </div>
+
+        <!-- Wallet Balance -->
+        <div class="bg-red-500 text-white rounded-2xl p-6 mb-8 shadow-lg">
+            <p class="text-sm opacity-90">Your Current Balance</p>
+            <p class="text-3xl font-bold" id="wallet-balance">
+                {{ request.user.task_wallet.balance|default:"0" }} pts
+            </p>
+        </div>
+
+        <!-- Offerwall iFrame -->
+        <div class="rounded-2xl overflow-hidden border border-red-200 shadow-lg">
+            <iframe
+                id="timewall-frame"
+                src="https://timewall.io/offerwall/1741497395046984?uid={{ request.user.id }}"
+                width="100%"
+                height="750"
+                frameborder="0"
+                scrolling="yes"
+                class="rounded-2xl">
+            </iframe>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 mt-8">
+            Powered by <span class="text-red-500 font-semibold">TimeWall.io</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh wallet balance every 10s
+    function refreshWalletBalance() {
+        fetch('{% url "tasks:task_wallet_dashboard" %}')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('wallet-balance').textContent = 
+                    Math.floor(data.balance) + ' pts';
+            })
+            .catch(err => console.error('Error fetching balance:', err));
+    }
+    setInterval(refreshWalletBalance, 10000);
+</script>
+{% endblock %}
