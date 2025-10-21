@@ -260,6 +260,9 @@ def review_submissions(request, task_id):
         },
     )
 
+# CRITICAL FIX FOR PRODUCTION RACE CONDITION
+# Apply to tasks/views.py → review_submission()
+
 @login_required
 @subscription_required
 def review_submission(request, submission_id):
@@ -278,25 +281,48 @@ def review_submission(request, submission_id):
             decision = form.cleaned_data["decision"]
             
             if decision == "approve":
-                with transaction.atomic():
-                    # ✅ ONLY update submission status
-                    submission.status = "approved"
-                    submission.reviewed_at = timezone.now()
-                    submission.reviewed_by = request.user
-                    submission.save(update_fields=["status", "reviewed_at", "reviewed_by"])
-
-                    # ✅ Release escrow ONCE (not in signal)
-                    escrow = EscrowTransaction.objects.filter(
-                        task=submission.task, 
-                        status="locked"
-                    ).first()
-                    
-                    if escrow:
-                        TaskWalletService.release_task_escrow(escrow, submission.member)
-                        messages.success(request, "Submission approved and payment released!")
-                    else:
-                        messages.warning(request, "Submission approved but no locked escrow found.")
+                try:
+                    with transaction.atomic():
+                        # ✅ CRITICAL: Lock submission first to prevent concurrent approvals
+                        submission = Submission.objects.select_for_update().get(id=submission_id)
                         
+                        # ✅ Check if already approved (race condition check)
+                        if submission.status == "approved":
+                            messages.warning(request, "This submission has already been approved.")
+                            return redirect("tasks:review_submissions", task_id=submission.task.id)
+                        
+                        # ✅ Lock escrow BEFORE checking (prevents race condition)
+                        escrow = EscrowTransaction.objects.select_for_update().filter(
+                            task=submission.task, 
+                            status="locked"
+                        ).first()
+                        
+                        if not escrow:
+                            messages.error(request, "No locked escrow found for this task.")
+                            return redirect("tasks:review_submissions", task_id=submission.task.id)
+                        
+                        # ✅ Update submission status FIRST
+                        submission.status = "approved"
+                        submission.reviewed_at = timezone.now()
+                        submission.reviewed_by = request.user
+                        submission.save(update_fields=["status", "reviewed_at", "reviewed_by"])
+                        
+                        # ✅ Release escrow (escrow already locked above)
+                        TaskWalletService.release_task_escrow(escrow, submission.member, submission)
+                        
+                        messages.success(
+                            request, 
+                            f"Submission approved! ₦{escrow.task.payout_per_slot * Decimal('0.80')} "
+                            f"credited to {submission.member.username}."
+                        )
+                        
+                except ValueError as e:
+                    messages.error(request, str(e))
+                    logger.error(f"Error approving submission {submission_id}: {e}")
+                except Exception as e:
+                    messages.error(request, "An error occurred. Please try again.")
+                    logger.error(f"Unexpected error approving submission {submission_id}: {e}", exc_info=True)
+                    
             elif decision == "reject":
                 reason = form.cleaned_data.get("rejection_reason")
                 if not reason:
@@ -321,6 +347,7 @@ def review_submission(request, submission_id):
         "tasks/review_submission.html", 
         {"submission": submission, "form": form}
     )
+
 
 @login_required
 @subscription_required

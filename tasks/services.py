@@ -222,46 +222,67 @@ class TaskWalletService:
         )
         return escrow
 
+
+    # tasks/services.py → TaskWalletService.release_task_escrow()
+
     @staticmethod
     @transaction.atomic
     def release_task_escrow(escrow, member, submission=None):
         """
         Release escrow for ONE submission only.
-        Prevents duplicate releases via database constraints.
+        CRITICAL: Assumes escrow is already locked via select_for_update() in calling code.
         """
-        # ✅ Lock the escrow row for update
-        escrow = EscrowTransaction.objects.select_for_update().get(id=escrow.id)
+        from wallets.services import WalletService
         
+        # ✅ Re-fetch with lock if not already locked (defensive programming)
+        if not hasattr(escrow, '_state') or not getattr(escrow._state, 'locked_for_update', False):
+            escrow = EscrowTransaction.objects.select_for_update().get(id=escrow.id)
+        
+        # ✅ CRITICAL: Check status (prevents race condition)
         if escrow.status != "locked":
             logger.warning(
-                f"Attempted to release escrow {escrow.id} but status is {escrow.status}"
+                f"Escrow {escrow.id} status is {escrow.status}, not 'locked'. "
+                f"Already processed by another worker."
             )
             raise ValueError(f"Escrow already {escrow.status}. Cannot release.")
         
-        # ✅ Check if this submission already has a release
-        if submission and hasattr(submission, 'escrow_release'):
-            logger.warning(
-                f"Submission {submission.id} already has escrow release {submission.escrow_release.id}"
-            )
-            raise ValueError("This submission already has an escrow release")
+        # ✅ Check if submission already has escrow release
+        if submission:
+            # Check via escrow table (more reliable than hasattr)
+            existing_release = EscrowTransaction.objects.filter(
+                submission=submission,
+                status='released'
+            ).exists()
+            
+            if existing_release:
+                logger.warning(
+                    f"Submission {submission.id} already has an escrow release. "
+                    f"Race condition prevented."
+                )
+                raise ValueError("This submission already has an escrow release")
         
         # ✅ Calculate payment (80% to member, 20% to company)
-        member_amount, company_cut = TaskWalletService.split_payment(escrow.amount_usd)
+        # member_amount, company_cut = TaskWalletService.split_payment(escrow.amount_usd)
+        per_slot_amount = escrow.task.payout_per_slot
+        member_amount, company_cut = TaskWalletService.split_payment(per_slot_amount)
         
-        # ✅ Create unique reference for this release
-        release_ref = f"ESCROW_RELEASE_{escrow.id}_{submission.id if submission else 'MANUAL'}"
+        # ✅ Create GLOBALLY unique reference (includes escrow ID + submission ID)
+        release_ref = f"ESCROW_RELEASE_{escrow.id}_{submission.id if submission else 'MANUAL'}_{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
         
-        # ✅ Check for duplicate credit (belt-and-suspenders approach)
+        # ✅ Double-check for duplicate credit (database-level check)
         from payments.models import PaymentTransaction as Transaction
         existing_credit = Transaction.objects.filter(
-            reference=release_ref
+            user=member,
+            category="task_payment",
+            reference__startswith=f"ESCROW_RELEASE_{escrow.id}_"
         ).exists()
         
         if existing_credit:
-            logger.error(f"Duplicate credit detected for {release_ref}")
+            logger.error(
+                f"Duplicate credit detected for escrow {escrow.id}. "
+                f"Race condition prevented at database level."
+            )
             raise ValueError("This escrow has already been credited")
-        
-        from wallets.services import WalletService
         
         # ✅ Credit member's MAIN WALLET
         try:
@@ -269,19 +290,24 @@ class TaskWalletService:
                 user=member,
                 amount=member_amount,
                 category="task_payment",
-                description=f"Task: {escrow.task.title} (80% of ₦{escrow.amount_usd})",
+                description=f"Task: {escrow.task.title} (80% of ₦{escrow.task.payout_per_slot})",
                 reference=release_ref,
                 extra_data={
                     "task_id": escrow.task.id,
+                    "task_title": escrow.task.title,
+                    "task_payout": str(escrow.task.payout_per_slot),
                     "submission_id": submission.id if submission else None,
                     "escrow_id": escrow.id,
-                    "payout_per_slot": str(escrow.task.payout_per_slot),
                     "member_share": str(member_amount),
                     "company_cut": str(company_cut),
                 }
             )
+            logger.info(
+                f"Escrow {escrow.id}: Credited ₦{member_amount} to {member.username} "
+                f"(Task: {escrow.task.title}, Payout: ₦{escrow.task.payout_per_slot})"
+            )
         except Exception as e:
-            logger.error(f"Failed to credit member wallet: {e}")
+            logger.error(f"Failed to credit member wallet for escrow {escrow.id}: {e}")
             raise
         
         # ✅ Credit company cut
@@ -298,30 +324,43 @@ class TaskWalletService:
                 }
             )
         except Exception as e:
-            logger.error(f"Failed to credit company wallet: {e}")
+            logger.error(f"Failed to credit company wallet for escrow {escrow.id}: {e}")
             # Don't rollback - member already paid
         
-        # ✅ Update escrow status ATOMICALLY
-        escrow.status = "released"
-        escrow.released_at = timezone.now()
-        if submission:
-            escrow.submission = submission  # Link to submission
-        escrow.save(update_fields=['status', 'released_at', 'submission'])
+        # ✅ CRITICAL: Update escrow status ATOMICALLY
+        # This prevents other workers from processing the same escrow
+        updated_count = EscrowTransaction.objects.filter(
+            id=escrow.id,
+            status='locked'  # Only update if still locked
+        ).update(
+            status='released',
+            released_at=timezone.now(),
+            submission=submission
+        )
         
-        # Update linked transaction if exists
+        if updated_count == 0:
+            logger.error(
+                f"Failed to update escrow {escrow.id} status. "
+                f"Already processed by another worker."
+            )
+            raise ValueError("Escrow was already released by another process")
+        
+        # Refresh from DB to get updated values
+        escrow.refresh_from_db()
+        
+        # Update linked TaskWalletTransaction if exists
         if hasattr(escrow, "taskwallet_transaction") and escrow.taskwallet_transaction:
             escrow.taskwallet_transaction.status = "success"
             escrow.taskwallet_transaction.save(update_fields=['status'])
         
         logger.info(
-            f"✓ Escrow {escrow.id} released: {member.username} got ₦{member_amount}, "
+            f"✓ Escrow {escrow.id} released successfully: "
+            f"Member={member.username} got ₦{member_amount}, "
             f"Company got ₦{company_cut}"
         )
         
         return escrow
-
-
-
+    
     @staticmethod
     @transaction.atomic
     def refund_task_escrow(escrow):
