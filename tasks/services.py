@@ -284,23 +284,30 @@ class TaskWalletService:
             )
             raise ValueError("This escrow has already been credited")
         
-        # ✅ Credit member's MAIN WALLET
+        # ✅ Credit member's t WALLET
         try:
-            WalletService.credit_wallet(
+            # WalletService.credit_wallet(
+            #     user=member,
+            #     amount=member_amount,
+            #     category="task_payment",
+            #     description=f"Task: {escrow.task.title} (80% of ₦{escrow.task.payout_per_slot})",
+            #     reference=release_ref,
+            #     extra_data={
+            #         "task_id": escrow.task.id,
+            #         "task_title": escrow.task.title,
+            #         "task_payout": str(escrow.task.payout_per_slot),
+            #         "submission_id": submission.id if submission else None,
+            #         "escrow_id": escrow.id,
+            #         "member_share": str(member_amount),
+            #         "company_cut": str(company_cut),
+            #     }
+            # )
+            TaskWalletService.credit_wallet(
                 user=member,
                 amount=member_amount,
                 category="task_payment",
-                description=f"Task: {escrow.task.title} (80% of ₦{escrow.task.payout_per_slot})",
-                reference=release_ref,
-                extra_data={
-                    "task_id": escrow.task.id,
-                    "task_title": escrow.task.title,
-                    "task_payout": str(escrow.task.payout_per_slot),
-                    "submission_id": submission.id if submission else None,
-                    "escrow_id": escrow.id,
-                    "member_share": str(member_amount),
-                    "company_cut": str(company_cut),
-                }
+                description=f"Earnings from task: {escrow.task.title}",
+                reference=escrow.id
             )
             logger.info(
                 f"Escrow {escrow.id}: Credited ₦{member_amount} to {member.username} "
