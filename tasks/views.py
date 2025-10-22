@@ -115,19 +115,24 @@ def task_detail(request, task_id):
         "tasks/task_detail.html",
         {"task": task, "form": form, "existing_submission": existing_submission},
     )
+
 @login_required
 @subscription_required
 def create_task(request):
-    """
-    ✅ IMPROVED: Better error handling and logging
-    """
+    """Advertiser creates a new task; funds locked in escrow."""
     if request.user.account_type != User.MEMBERS and not request.user.is_staff:
+        logger.warning(
+            f"[TASK_CREATE] Unauthorized attempt by user: {request.user.id} ({request.user.email})"
+        )
         messages.error(request, "Only advertisers can create tasks.")
         return redirect("tasks:task_list")
 
     if request.method == "POST":
         form = TaskForm(request.POST, request.FILES)
+        logger.info(f"[TASK_CREATE] Form submitted by {request.user.email}")
+
         if form.is_valid():
+            logger.debug(f"[TASK_CREATE] Valid form data received: {form.cleaned_data}")
             try:
                 with transaction.atomic():
                     task = form.save(commit=False)
@@ -136,49 +141,65 @@ def create_task(request):
                     task.save()
 
                     total_cost = task.payout_per_slot * task.total_slots
-                    
                     logger.info(
-                        f"[CREATE_TASK] Creating task {task.id} - "
-                        f"Cost: {total_cost}, Slots: {task.total_slots}"
+                        f"[TASK_CREATE] New task created: {task.id} | "
+                        f"Advertiser: {request.user.email} | "
+                        f"Slots: {task.total_slots} | Total Cost: {total_cost}"
                     )
-                    
-                    # ✅ Create escrow ONCE (service has duplicate protection)
+
+                    # ✅ Check if escrow already exists (prevent duplicates)
+                    existing_escrow = EscrowTransaction.objects.filter(
+                        task=task,
+                        status="locked"
+                    ).exists()
+
+                    if existing_escrow:
+                        logger.warning(
+                            f"[ESCROW_CREATE] Duplicate escrow attempt for task {task.id}"
+                        )
+                        raise ValueError("Escrow already created for this task")
+
+                    # ✅ Create escrow ONCE
+                    logger.info(
+                        f"[ESCROW_CREATE] Creating escrow for Task {task.id} | Amount: {total_cost}"
+                    )
                     TaskWalletService.create_task_escrow(
                         advertiser=request.user,
                         task=task,
                         amount=total_cost,
                     )
-                    
-                    logger.info(
-                        f"[CREATE_TASK] Task {task.id} created successfully with escrow"
-                    )
 
+                logger.info(
+                    f"[TASK_CREATE_SUCCESS] Task {task.id} created successfully | Escrow locked: {total_cost}"
+                )
                 messages.success(
-                    request, 
-                    f"✓ Task created successfully! ₦{total_cost} locked in escrow."
+                    request, "Task created successfully and funds locked in escrow!"
                 )
                 return redirect("tasks:my_tasks")
-                
+
             except ValueError as e:
-                logger.error(f"[CREATE_TASK] ValueError: {e}")
-                messages.error(request, str(e))
-                # If escrow creation failed, task is rolled back
-                return redirect("tasks:transfer_to_task_wallet")
-                
-            except Exception as e:
                 logger.error(
-                    f"[CREATE_TASK] Unexpected error creating task: {e}", 
-                    exc_info=True
+                    f"[TASK_CREATE_ERROR] ValueError for user {request.user.email}: {e}"
                 )
-                messages.error(
-                    request, 
-                    "An unexpected error occurred. Please try again or contact support."
+                messages.error(request, str(e))
+                return redirect("tasks:transfer_to_task_wallet")
+
+            except Exception as e:
+                logger.exception(
+                    f"[TASK_CREATE_ERROR] Unexpected error for user {request.user.email}: {e}"
                 )
+                messages.error(request, "An unexpected error occurred.")
+                return redirect("tasks:task_list")
+
+        else:
+            logger.warning(
+                f"[TASK_CREATE] Invalid form submission by {request.user.email}: {form.errors.as_json()}"
+            )
     else:
+        logger.debug(f"[TASK_CREATE] GET request by {request.user.email}")
         form = TaskForm()
 
     return render(request, "tasks/create_task.html", {"form": form})
-
 
 @login_required
 @subscription_required
