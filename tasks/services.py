@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from wallets.models import EscrowTransaction
-from .models import TaskWallet, TaskWalletTransaction
+from .models import Submission, TaskWallet, TaskWalletTransaction
 from django.db.models import F
 from wallets.services import WalletService  # main wallet service
 logger = logging.getLogger(__name__)
@@ -379,7 +379,29 @@ class TaskWalletService:
         except EscrowTransaction.DoesNotExist:
             logger.error(f"[ESCROW_RELEASE] FAILED - Escrow {escrow_id} not found")
             raise ValueError(f"Escrow {escrow_id} does not exist")
-        
+
+        # ✅ NEW CHECK: Ensure all task slots are filled before releasing escrow
+        task = escrow.task
+        filled_slots = Submission.objects.filter(task=task, status="approved").count()
+        total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
+
+        if total_slots is None:
+            logger.warning(
+                f"[ESCROW_RELEASE] Task {task.id} has no 'slots' or 'total_slots' defined."
+            )
+        else:
+            logger.info(
+                f"[ESCROW_RELEASE] Slot check - Approved: {filled_slots}/{total_slots}"
+            )
+            if filled_slots < total_slots:
+                logger.warning(
+                    f"[ESCROW_RELEASE] BLOCKED - Task slots not filled yet - "
+                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
+                )
+                raise ValueError(
+                    f"Cannot release escrow yet. Only {filled_slots} of {total_slots} slots are approved."
+                )
+
         # ✅ FIRST CHECK: Escrow status
         if escrow.status != "locked":
             logger.warning(
@@ -550,7 +572,6 @@ class TaskWalletService:
         )
         
         return escrow
-
 
     @staticmethod
     def get_task_escrow(task):
