@@ -118,7 +118,9 @@ def task_detail(request, task_id):
 @login_required
 @subscription_required
 def create_task(request):
-    """Advertiser creates a new task; funds locked in escrow."""
+    """
+    ✅ IMPROVED: Better error handling and logging
+    """
     if request.user.account_type != User.MEMBERS and not request.user.is_staff:
         messages.error(request, "Only advertisers can create tasks.")
         return redirect("tasks:task_list")
@@ -135,33 +137,48 @@ def create_task(request):
 
                     total_cost = task.payout_per_slot * task.total_slots
                     
-                    # ✅ Check if escrow already exists (prevent duplicates)
-                    existing_escrow = EscrowTransaction.objects.filter(
-                        task=task,
-                        status="locked"
-                    ).exists()
+                    logger.info(
+                        f"[CREATE_TASK] Creating task {task.id} - "
+                        f"Cost: {total_cost}, Slots: {task.total_slots}"
+                    )
                     
-                    if existing_escrow:
-                        raise ValueError("Escrow already created for this task")
-                    
-                    # ✅ Create escrow ONCE
+                    # ✅ Create escrow ONCE (service has duplicate protection)
                     TaskWalletService.create_task_escrow(
                         advertiser=request.user,
                         task=task,
                         amount=total_cost,
                     )
+                    
+                    logger.info(
+                        f"[CREATE_TASK] Task {task.id} created successfully with escrow"
+                    )
 
                 messages.success(
-                    request, "Task created successfully and funds locked in escrow!"
+                    request, 
+                    f"✓ Task created successfully! ₦{total_cost} locked in escrow."
                 )
                 return redirect("tasks:my_tasks")
+                
             except ValueError as e:
+                logger.error(f"[CREATE_TASK] ValueError: {e}")
                 messages.error(request, str(e))
+                # If escrow creation failed, task is rolled back
                 return redirect("tasks:transfer_to_task_wallet")
+                
+            except Exception as e:
+                logger.error(
+                    f"[CREATE_TASK] Unexpected error creating task: {e}", 
+                    exc_info=True
+                )
+                messages.error(
+                    request, 
+                    "An unexpected error occurred. Please try again or contact support."
+                )
     else:
         form = TaskForm()
 
     return render(request, "tasks/create_task.html", {"form": form})
+
 
 @login_required
 @subscription_required
@@ -188,7 +205,9 @@ def my_tasks(request):
 @login_required
 @subscription_required
 def delete_task(request, task_id):
-    """Advertiser deletes a task (refund escrow first)."""
+    """
+    ✅ FIXED: Proper escrow refund handling
+    """
     task = get_object_or_404(Task, id=task_id, advertiser=request.user)
 
     if task.submissions.exists():
@@ -196,12 +215,44 @@ def delete_task(request, task_id):
         return redirect("tasks:my_tasks")
 
     if request.method == "POST":
-        escrow = EscrowTransaction.objects.filter(task=task, status="locked").first()
-        if escrow:
-            TaskWalletService.refund_task_escrow(escrow)
-
-        task.delete()
-        messages.success(request, "Task deleted successfully.")
+        try:
+            with transaction.atomic():
+                # ✅ Get locked escrow for this task
+                escrow = EscrowTransaction.objects.filter(
+                    task=task, 
+                    status="locked"
+                ).select_for_update().first()
+                
+                if escrow:
+                    logger.info(
+                        f"[DELETE_TASK] Refunding escrow {escrow.id} for task {task_id}, "
+                        f"Amount: {escrow.amount_usd}"
+                    )
+                    
+                    # ✅ Refund escrow back to advertiser's task wallet
+                    TaskWalletService.refund_task_escrow(escrow)
+                    
+                    logger.info(
+                        f"[DELETE_TASK] Escrow {escrow.id} refunded successfully"
+                    )
+                else:
+                    logger.info(
+                        f"[DELETE_TASK] No locked escrow found for task {task_id}"
+                    )
+                
+                # Delete the task
+                task.delete()
+                
+                messages.success(
+                    request, 
+                    f"Task deleted successfully. {f'₦{escrow.amount_usd} refunded to your Task Wallet.' if escrow else ''}"
+                )
+                logger.info(f"[DELETE_TASK] Task {task_id} deleted successfully")
+                
+        except Exception as e:
+            messages.error(request, f"Error deleting task: {str(e)}")
+            logger.error(f"[DELETE_TASK] Error deleting task {task_id}: {e}", exc_info=True)
+            
         return redirect("tasks:my_tasks")
 
     return render(request, "tasks/confirm_delete.html", {"task": task})
@@ -260,12 +311,12 @@ def review_submissions(request, task_id):
         },
     )
 
-# CRITICAL FIX FOR PRODUCTION RACE CONDITION
-# Apply to tasks/views.py → review_submission()
-
 @login_required
 @subscription_required
 def review_submission(request, submission_id):
+    """
+    ✅ FIXED: Proper escrow handling with race condition protection
+    """
     submission = get_object_or_404(
         Submission.objects.select_related("task", "member"), 
         id=submission_id
@@ -291,37 +342,57 @@ def review_submission(request, submission_id):
                             messages.warning(request, "This submission has already been approved.")
                             return redirect("tasks:review_submissions", task_id=submission.task.id)
                         
-                        # ✅ Lock escrow BEFORE checking (prevents race condition)
-                        escrow = EscrowTransaction.objects.select_for_update().filter(
-                            task=submission.task, 
-                            status="locked"
-                        ).first()
-                        
-                        if not escrow:
-                            messages.error(request, "No locked escrow found for this task.")
+                        # ✅ Check if already has escrow release (belt-and-suspenders)
+                        if hasattr(submission, 'escrow_release') and submission.escrow_release:
+                            messages.warning(
+                                request, 
+                                f"This submission already has an escrow release (ID: {submission.escrow_release.id})."
+                            )
                             return redirect("tasks:review_submissions", task_id=submission.task.id)
                         
-                        # ✅ Update submission status FIRST
+                        # ✅ Update submission status FIRST (before escrow release)
                         submission.status = "approved"
                         submission.reviewed_at = timezone.now()
                         submission.reviewed_by = request.user
                         submission.save(update_fields=["status", "reviewed_at", "reviewed_by"])
                         
-                        # ✅ Release escrow (escrow already locked above)
-                        TaskWalletService.release_task_escrow(escrow, submission.member, submission)
+                        logger.info(
+                            f"[APPROVAL] Submission {submission_id} marked approved, "
+                            f"releasing escrow for task {submission.task.id}"
+                        )
+                        
+                        # ✅ CORRECT: Pass task object, let service find the escrow
+                        TaskWalletService.release_task_escrow(
+                            escrow_or_task=submission.task,  # ← FIXED: Pass task, not escrow ID
+                            member=submission.member,
+                            submission=submission
+                        )
+                        
+                        # Calculate member amount for message
+                        member_amount = submission.task.payout_per_slot * Decimal('0.90')
                         
                         messages.success(
                             request, 
-                            f"Submission approved! ₦{escrow.task.payout_per_slot * Decimal('0.80')} "
-                            f"credited to {submission.member.username}."
+                            f"✓ Submission approved! ₦{member_amount} credited to {submission.member.username}."
+                        )
+                        
+                        logger.info(
+                            f"[APPROVAL] Successfully approved submission {submission_id}, "
+                            f"credited ₦{member_amount} to user {submission.member.id}"
                         )
                         
                 except ValueError as e:
-                    messages.error(request, str(e))
-                    logger.error(f"Error approving submission {submission_id}: {e}")
+                    messages.error(request, f"Payment error: {str(e)}")
+                    logger.error(
+                        f"[APPROVAL] ValueError for submission {submission_id}: {e}",
+                        exc_info=True
+                    )
                 except Exception as e:
-                    messages.error(request, "An error occurred. Please try again.")
-                    logger.error(f"Unexpected error approving submission {submission_id}: {e}", exc_info=True)
+                    messages.error(request, "An unexpected error occurred. Please contact support.")
+                    logger.error(
+                        f"[APPROVAL] Unexpected error for submission {submission_id}: {e}",
+                        exc_info=True
+                    )
                     
             elif decision == "reject":
                 reason = form.cleaned_data.get("rejection_reason")
@@ -329,6 +400,8 @@ def review_submission(request, submission_id):
                     messages.error(request, "Rejection reason is required.")
                 else:
                     with transaction.atomic():
+                        submission = Submission.objects.select_for_update().get(id=submission_id)
+                        
                         submission.status = "rejected"
                         submission.rejection_reason = reason
                         submission.reviewed_at = timezone.now()
@@ -336,6 +409,8 @@ def review_submission(request, submission_id):
                         submission.save(update_fields=[
                             "status", "rejection_reason", "reviewed_at", "reviewed_by"
                         ])
+                    
+                    logger.info(f"[REJECTION] Submission {submission_id} rejected: {reason}")
                     messages.success(request, "Submission rejected.")
                     
             return redirect("tasks:review_submissions", task_id=submission.task.id)
@@ -347,7 +422,6 @@ def review_submission(request, submission_id):
         "tasks/review_submission.html", 
         {"submission": submission, "form": form}
     )
-
 
 @login_required
 @subscription_required
@@ -404,45 +478,109 @@ def admin_disputes(request):
     )
     return render(request, "tasks/admin_disputes.html", {"disputes": disputes})
 
-
 @staff_member_required
 def resolve_dispute(request, dispute_id):
-    dispute = get_object_or_404(Dispute.objects.select_related("submission", "submission__task"), id=dispute_id)
+    """
+    ✅ FIXED: Proper escrow handling for dispute resolution
+    """
+    dispute = get_object_or_404(
+        Dispute.objects.select_related("submission", "submission__task"), 
+        id=dispute_id
+    )
 
     if request.method == "POST":
         resolution = request.POST.get("resolution")
         admin_notes = request.POST.get("admin_notes", "")
-        escrow = EscrowTransaction.objects.filter(task=dispute.submission.task, status="locked").first()
+        
+        try:
+            with transaction.atomic():
+                # ✅ CORRECT: Get escrow using the task
+                escrow = EscrowTransaction.objects.filter(
+                    task=dispute.submission.task, 
+                    status="locked"
+                ).select_for_update().first()
 
-        if not escrow:
-            dispute.status = "resolved"
-            dispute.resolution = resolution
-            dispute.admin_notes = admin_notes
-            dispute.save()
-            messages.warning(request, "No escrow found for this dispute. Resolved without payout/refund.")
-            return redirect("tasks:my_disputes")
+                if not escrow:
+                    logger.warning(
+                        f"[DISPUTE] No locked escrow for dispute {dispute_id}, "
+                        f"task {dispute.submission.task.id}"
+                    )
+                    dispute.status = "resolved_no_escrow"
+                    dispute.resolution = resolution
+                    dispute.admin_notes = admin_notes
+                    dispute.resolved_by = request.user
+                    dispute.resolved_at = timezone.now()
+                    dispute.save()
+                    
+                    messages.warning(
+                        request, 
+                        "No locked escrow found for this dispute. Resolved without payout/refund."
+                    )
+                    return redirect("tasks:admin_disputes")
 
-        with transaction.atomic():
-            if resolution == "favor_member":
-                dispute.status = "resolved_favor_member"
-                dispute.submission.status = "approved"
-                dispute.submission.save()
-                TaskWalletService.release_task_escrow(escrow, dispute.submission.member)
-            elif resolution == "favor_advertiser":
-                dispute.status = "resolved_favor_advertiser"
-                TaskWalletService.refund_task_escrow(escrow)
+                if resolution == "favor_member":
+                    logger.info(
+                        f"[DISPUTE] Resolving in favor of member - "
+                        f"Dispute: {dispute_id}, Escrow: {escrow.id}"
+                    )
+                    
+                    dispute.status = "resolved_favor_member"
+                    dispute.submission.status = "approved"
+                    dispute.submission.save(update_fields=["status"])
+                    
+                    # ✅ CORRECT: Pass task object
+                    TaskWalletService.release_task_escrow(
+                        escrow_or_task=dispute.submission.task,  # ← Pass task
+                        member=dispute.submission.member,
+                        submission=dispute.submission
+                    )
+                    
+                    messages.success(
+                        request, 
+                        f"Dispute resolved in favor of member. "
+                        f"Payment released to {dispute.submission.member.username}."
+                    )
+                    
+                elif resolution == "favor_advertiser":
+                    logger.info(
+                        f"[DISPUTE] Resolving in favor of advertiser - "
+                        f"Dispute: {dispute_id}, Escrow: {escrow.id}"
+                    )
+                    
+                    dispute.status = "resolved_favor_advertiser"
+                    
+                    # ✅ Refund escrow to advertiser
+                    TaskWalletService.refund_task_escrow(escrow)
+                    
+                    messages.success(
+                        request, 
+                        "Dispute resolved in favor of advertiser. Escrow refunded."
+                    )
+                
+                else:
+                    messages.error(request, "Invalid resolution type.")
+                    return redirect("tasks:resolve_dispute", dispute_id=dispute_id)
 
-            dispute.admin_notes = admin_notes
-            dispute.resolved_by = request.user
-            dispute.resolved_at = timezone.now()
-            dispute.save()
+                dispute.admin_notes = admin_notes
+                dispute.resolution = resolution
+                dispute.resolved_by = request.user
+                dispute.resolved_at = timezone.now()
+                dispute.save()
+                
+                logger.info(
+                    f"[DISPUTE] Successfully resolved dispute {dispute_id} - {resolution}"
+                )
 
-        messages.success(request, "Dispute resolved successfully!")
+        except ValueError as e:
+            messages.error(request, f"Resolution error: {str(e)}")
+            logger.error(f"[DISPUTE] ValueError resolving {dispute_id}: {e}", exc_info=True)
+        except Exception as e:
+            messages.error(request, "An unexpected error occurred. Please contact support.")
+            logger.error(f"[DISPUTE] Error resolving {dispute_id}: {e}", exc_info=True)
+            
         return redirect("tasks:admin_disputes")
 
     return render(request, "tasks/resolve_dispute.html", {"dispute": dispute})
-
-
 
 @login_required
 @subscription_required

@@ -65,7 +65,7 @@ class PaymentTransaction(models.Model):
     category = models.CharField(max_length=30, choices=Category.choices, default=Category.USER_FUNDING)
 
     amount_usd = models.DecimalField(max_digits=12, decimal_places=2)
-    currency = models.CharField(max_length=3, default="USD")
+    currency = models.CharField(max_length=3, default="NGN")
 
     balance_before = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     balance_after = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -251,7 +251,7 @@ class MonnifyTransaction(models.Model):
 
 
 class CurrencyRate(models.Model):
-    base_currency = models.CharField(max_length=3, default='USD')
+    base_currency = models.CharField(max_length=3, default='NGN')
     target_currency = models.CharField(max_length=3)
     rate = models.DecimalField(max_digits=10, decimal_places=4)
     updated_at = models.DateTimeField(auto_now=True)

@@ -75,6 +75,7 @@ class EscrowTransaction(models.Model):
                 name='unique_locked_escrow_per_task'
             )
         ]
+
 class WithdrawalRequest(models.Model):
     WITHDRAWAL_STATUS = [
         ('pending', 'Pending'),

@@ -226,11 +226,6 @@ class AdminEscrowListView(ListView):
         return qs
 
 
-from django.db.models import Q
-from django.utils.decorators import method_decorator
-from django.contrib.admin.views.decorators import staff_member_required
-from django.views.generic import ListView
-from .models import PaymentTransaction
 
 @method_decorator(staff_member_required, name='dispatch')
 class AdminTransactionListView(ListView):

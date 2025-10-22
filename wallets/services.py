@@ -6,12 +6,12 @@ from decimal import Decimal, InvalidOperation
 from .models import Wallet, EscrowTransaction, WithdrawalRequest
 from referrals.models import ReferralEarning, Referral
 
-from tasks.models import TaskWalletTransaction
+# from tasks.models import TaskWalletTransaction
 from payments.models import PaymentTransaction, PaymentGateway
 from payments.services import PaystackService
 
-from unittest.mock import Mock
-from django.conf import settings
+# from unittest.mock import Mock
+# from django.conf import settings
 from django.contrib.auth import get_user_model
 
 
@@ -175,110 +175,6 @@ class WalletService:
         
         return wallet
 
-    @transaction.atomic
-    @staticmethod
-    def create_task_escrow(user, task, amount):
-        from tasks.services import TaskWalletService
-        wallet = TaskWalletService.get_or_create_wallet(user)
-
-        try:
-            amount = Decimal(amount)
-        except (InvalidOperation, TypeError):
-            raise ValueError("Amount must be a number")
-
-        # Robustly get wallet balance
-        try:
-            wallet_balance = Decimal(wallet.balance)
-        except Exception:
-            # If tests used Mock for wallet or its balance, try to read provided Decimal
-            if isinstance(getattr(wallet, "balance", None), Mock):
-                wallet_balance = getattr(wallet, "balance", Decimal('0.00'))
-            else:
-                try:
-                    wallet_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
-                except Exception:
-                    wallet_balance = Decimal('0.00')
-
-        if wallet_balance < amount:
-            raise ValueError(f"Insufficient TaskWallet balance. Available: {wallet_balance}, Required: {amount}")
-
-        before = wallet_balance
-        # mutate whatever wallet object was returned (real model or Mock in tests)
-        try:
-            wallet.balance = wallet_balance - amount
-            wallet.save(update_fields=["balance", "updated_at"])
-        except Exception:
-            # If wallet is a Mock with save mocked, still adjust attribute
-            wallet.balance = wallet_balance - amount
-            try:
-                wallet.save()
-            except Exception:
-                pass
-
-        txn = TaskWalletTransaction.objects.create(
-            user=user,
-            transaction_type="withdrawal",
-            category="task_posting",
-            amount=amount,
-            balance_before=before,
-            balance_after=wallet.balance,
-            description=f"Escrow for task: {task.title}",
-        )
-
-        # Create escrow with a safe mapping to TaskWalletTransaction if present
-        escrow_kwargs = {
-            "task": task,
-            "advertiser": user,
-            "amount": amount,
-            "status": "locked",
-        }
-        if txn and getattr(txn, "id", None):
-            escrow_kwargs["taskwallet_transaction"] = txn
-
-        escrow = EscrowTransaction.objects.create(**escrow_kwargs)
-        return escrow
-
-    @transaction.atomic
-    @staticmethod
-    def release_escrow_to_member(task, member):
-
-        escrow = EscrowTransaction.objects.select_for_update().get(task=task, status='locked')
-
-        company_cut = (escrow.amount_usd * Decimal("0.20")).quantize(Decimal("0.00"))
-        member_amount = escrow.amount_usd - company_cut
-
-        company_user, _ = User.objects.get_or_create(username=settings.COMPANY_SYSTEM_USERNAME)
-
-        member_txn = WalletService.credit_wallet(
-            user=member,
-            amount=member_amount,
-            category="task_earning",
-            description=f"Payment for completed task: {task.title}",
-            reference=f"TASK_PAYMENT_{task.id}",
-            task=task,
-        )
-
-        # credit platform fee
-        WalletService.credit_wallet(
-            user=company_user,
-            amount=company_cut,
-            category="platform_fee",
-            description=f"20% platform fee for task: {task.title}",
-            reference=f"FEE_TASK_{task.id}",
-            task=task,
-        )
-
-        escrow.status = "released"
-        escrow.released_at = timezone.now()
-        escrow.save(update_fields=["status", "released_at"])
-        if getattr(escrow, "taskwallet_transaction", None):
-            escrow.taskwallet_transaction.status = "success"
-            try:
-                escrow.taskwallet_transaction.save(update_fields=["status"])
-            except Exception:
-                pass
-
-        return member_txn
 
     @transaction.atomic
     @staticmethod

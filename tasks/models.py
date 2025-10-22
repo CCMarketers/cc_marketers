@@ -100,6 +100,7 @@ class Task(models.Model):
     def filled_slots(self):
         return self.total_slots - self.remaining_slots
 
+
 class Submission(models.Model):
     SUBMISSION_STATUS_CHOICES = [
         ('pending', 'Pending Review'),

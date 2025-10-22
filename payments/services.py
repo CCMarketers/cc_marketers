@@ -100,7 +100,7 @@ class PaystackService:
                     amount_local=amount_local,      # ✅ Add this field if missing
                     gateway_reference=f"PS_{timezone.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
                     status=PaymentTransaction.Status.PENDING,
-                    description=f"Wallet funding via Paystack {amount_usd} USD"
+                    description=f"Wallet funding via Paystack {amount_usd} NGN"
                     
                 )
 
@@ -143,7 +143,7 @@ class PaystackService:
                     )
 
                     payment_transaction.gateway_response = resp_data
-                    payment_transaction.description=f"Wallet funding via Paystack {payment_transaction.amount_usd} USD"
+                    payment_transaction.description=f"Wallet funding via Paystack {payment_transaction.amount_usd} NGN"
                     payment_transaction.save(update_fields=["gateway_response", "updated_at","description"])
 
                     return {
@@ -233,7 +233,7 @@ class PaystackService:
     def initiate_transfer(self, user, amount_usd, recipient_code: str, reason: str = "Wallet withdrawal") -> Dict[str, Any]:
         """
         Initiate a transfer to a recipient (withdrawal).
-        amount_usd → wallet amount (always USD).
+        amount_usd → wallet amount (always NGN).
         Creates a PENDING PaymentTransaction and PaystackTransaction on acknowledgement.
         """
         try:
@@ -246,7 +246,7 @@ class PaystackService:
             except (InvalidOperation, TypeError):
                 return {"success": False, "data": {}, "error": "Invalid amount"}
 
-            # Convert USD → NGN for Paystack
+            # Convert NGN → NGN for Paystack
             amount_ngn = CurrencyService.convert_usd_to_local(amount_usd, "NGN").quantize(Decimal("0.01"))
 
             with transaction.atomic():
@@ -254,7 +254,7 @@ class PaystackService:
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
-                    amount_usd=amount_usd,      # ✅ USD amount
+                    amount_usd=amount_usd,      # ✅ NGN amount
                     amount_local=amount_ngn,    # ✅ NGN amount      # store local amount for gateway
                     currency="NGN",
                     gateway_reference=f"WD_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
@@ -262,12 +262,12 @@ class PaystackService:
                 )
                 from wallets.services import WalletService
 
-                # Debit wallet in USD
+                # Debit wallet in NGN
                 WalletService.debit_wallet(
                     user=user,
                     amount=amount_usd,
                     category="withdrawal",
-                    description=f"Withdrawal {amount_usd} USD → {amount_ngn} NGN",
+                    description=f"Withdrawal {amount_usd} NGN → {amount_ngn} NGN",
                     reference=payment_transaction.internal_reference,
                     payment_transaction=payment_transaction,
                     extra_data={
@@ -454,7 +454,7 @@ class WebhookService:
                 user=payment_txn.user,
                 amount=payment_txn.amount_usd,
                 category="funding",
-                description=f"Wallet funding via Paystack {payment_txn.amount_usd} USD",
+                description=f"Wallet funding via Paystack {payment_txn.amount_usd} NGN",
                 payment_transaction=payment_txn,  # ✅ Pass existing transaction
                 extra_data={
                     "gateway_reference": payment_txn.gateway_reference,
@@ -468,7 +468,7 @@ class WebhookService:
             payment_txn.status = PaymentTransaction.Status.SUCCESS
             payment_txn.completed_at = timezone.now()
             payment_txn.gateway_response = data
-            payment_txn.description = f"Wallet funding via Paystack {payment_txn.amount_usd} USD"
+            payment_txn.description = f"Wallet funding via Paystack {payment_txn.amount_usd} NGN"
             payment_txn.save(update_fields=[
                 "status", "completed_at", "gateway_response",
                 "balance_before", "balance_after", "description"
@@ -703,7 +703,7 @@ class WebhookService:
         payment_txn.gateway_response = data
         
 
-        payment_txn.description=f"Wallet funding via Flutterwave {payment_txn.amount_usd} USD",
+        payment_txn.description=f"Wallet funding via Flutterwave {payment_txn.amount_usd} NGN",
 
         payment_txn.save(update_fields=["status", "completed_at", "gateway_response", "description"])
 
@@ -719,7 +719,7 @@ class WebhookService:
             user=payment_txn.user,
             amount=amount_usd,
             category="funding",
-            description=f"Wallet funding via Flutterwave {amount_usd} USD → {payment_txn.amount_local} {payment_txn.currency} (Ref: {tx_ref})",
+            description=f"Wallet funding via Flutterwave {amount_usd} NGN → {payment_txn.amount_local} {payment_txn.currency} (Ref: {tx_ref})",
             reference=wallet_credit_ref,  # ✅ Different from gateway_reference
             extra_data={
                 "gateway_reference": payment_txn.gateway_reference,
@@ -735,7 +735,7 @@ class WebhookService:
         webhook_event.payload = data
         webhook_event.save(update_fields=["processed", "processed_at", "payload"])
 
-        logger.info("Wallet credited successfully for user %s, amount %s USD, ref %s", 
+        logger.info("Wallet credited successfully for user %s, amount %s NGN, ref %s", 
                     payment_txn.user.id, amount_usd, tx_ref)
 
         return {"success": True, "message": "Wallet funded successfully", "data": {"reference": tx_ref}}
@@ -755,7 +755,7 @@ class WebhookService:
                     payment_txn.status = PaymentTransaction.Status.SUCCESS
                     payment_txn.completed_at = timezone.now()
                     payment_txn.gateway_response = data
-                    payment_txn.description = f"Wallet funding via Flutterwave {payment_txn.amount_usd} USD"
+                    payment_txn.description = f"Wallet funding via Flutterwave {payment_txn.amount_usd} NGN"
                     payment_txn.save(update_fields=[
                         "status", "completed_at", "gateway_response",
                         "balance_before", "balance_after", "description"
@@ -921,7 +921,7 @@ class WebhookService:
                 user=payment_txn.user,
                 amount=payment_txn.amount_usd,
                 category="funding",
-                description=f"Wallet funding via Monnify {payment_txn.amount_usd} USD",
+                description=f"Wallet funding via Monnify {payment_txn.amount_usd} NGN",
                 payment_transaction=payment_txn,
                 extra_data={
                     "gateway_reference": payment_txn.gateway_reference,
@@ -1067,12 +1067,12 @@ class FlutterwaveService:
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.FUNDING,
-                    amount_usd=amount_usd,          # ✅ Store original USD
+                    amount_usd=amount_usd,          # ✅ Store original NGN
                     amount_local=amount_local,      # ✅ Add this field if missing
                     currency=currency,
                     gateway_reference=f"FLW_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
-                    description=f"Wallet funding via Flutterwave {amount_usd} USD ",
+                    description=f"Wallet funding via Flutterwave {amount_usd} NGN ",
                 )
 
                 url = f"{self.base_url}/payments"
@@ -1140,7 +1140,7 @@ class FlutterwaveService:
                 # Failure path: mark txn failed
                 payment_transaction.status = PaymentTransaction.Status.FAILED
                 payment_transaction.gateway_response = resp_data
-                payment_transaction.description=f"Wallet funding via Flutterwave {payment_transaction.amount_usd} USD ",
+                payment_transaction.description=f"Wallet funding via Flutterwave {payment_transaction.amount_usd} NGN ",
                 payment_transaction.save(update_fields=["status", "gateway_response", "updated_at"])
 
                 err_msg = resp_data.get("message") or "Payment initialization failed"
@@ -1244,7 +1244,7 @@ class FlutterwaveService:
             currency = user.currency   # e.g. "NGN"
             # amount_local = amount             # NGN from gateway
             # amount_usd = CurrencyService.convert_local_to_usd(amount_local, currency).quantize(Decimal("0.01")) 
-            # Convert USD → NGN for Flutterwave
+            # Convert NGN → NGN for Flutterwave
             amount_ngn = CurrencyService.convert_usd_to_local(amount_usd, currency).quantize(Decimal("0.01"))
             import uuid
             with transaction.atomic():
@@ -1252,7 +1252,7 @@ class FlutterwaveService:
                     user=user,
                     gateway=gateway,
                     transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
-                    amount_usd=amount_usd,      # ✅ USD amount
+                    amount_usd=amount_usd,      # ✅ NGN amount
                     amount_local=amount_ngn,    # ✅ NGN amount                    
                     currency=currency,
                     gateway_reference=f"FW_{timezone.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
@@ -1260,12 +1260,12 @@ class FlutterwaveService:
                 )
                 from wallets.services import WalletService
 
-                # Debit wallet in USD
+                # Debit wallet in NGN
                 WalletService.debit_wallet(
                     user=user,
                     amount=amount_usd,
                     category="withdrawal",
-                    description=f"Withdrawal {amount_usd} USD → {amount_ngn} NGN",
+                    description=f"Withdrawal {amount_usd} NGN → {amount_ngn} NGN",
                     reference=payment_transaction.internal_reference,
                     payment_transaction=payment_transaction,
                     extra_data={
@@ -1444,7 +1444,7 @@ class MonnifyService:
                     currency=currency,
                     gateway_reference=f"MON_{timezone.now().strftime('%Y%m%d%H%M%S')}_{str(user.id)[:8]}",
                     status=PaymentTransaction.Status.PENDING,
-                    description=f"Wallet funding via Monnify {amount_usd} USD",
+                    description=f"Wallet funding via Monnify {amount_usd} NGN",
                 )
 
                 url = f"{self.base_url}/api/v1/merchant/transactions/init-transaction"
@@ -1576,12 +1576,12 @@ class MonnifyService:
 
                 from wallets.services import WalletService
 
-                # Debit wallet in USD
+                # Debit wallet in NGN
                 WalletService.debit_wallet(
                     user=user,
                     amount=amount_usd,
                     category="withdrawal",
-                    description=f"Withdrawal {amount_usd} USD → {amount_local} {currency}",
+                    description=f"Withdrawal {amount_usd} NGN → {amount_local} {currency}",
                     reference=payment_transaction.internal_reference,
                     payment_transaction=payment_transaction,
                 )
@@ -1666,9 +1666,9 @@ class CurrencyService:
     """Handles currency conversion and rate management — now fixed to Naira"""
 
     @classmethod
-    def get_exchange_rate(cls, from_currency="USD", to_currency="NGN"):
+    def get_exchange_rate(cls, from_currency="NGN", to_currency="NGN"):
         """
-        Always return 1 so that USD and NGN are treated as equivalent.
+        Always return 1 so that NGN and NGN are treated as equivalent.
         This effectively disables conversion logic.
         """
         return Decimal("1.00")
@@ -1681,13 +1681,13 @@ class CurrencyService:
     @classmethod
     def convert_usd_to_local(cls, amount_usd, target_currency):
         """
-        Treat 'USD' amounts as already in Naira.
+        Treat 'NGN' amounts as already in Naira.
         """
         return Decimal(amount_usd).quantize(Decimal("0.01"))
 
     @classmethod
     def convert_local_to_usd(cls, amount_local, from_currency):
         """
-        Treat local (₦) amounts as 'USD' internally for backward compatibility.
+        Treat local (₦) amounts as 'NGN' internally for backward compatibility.
         """
         return Decimal(amount_local).quantize(Decimal("0.01"))
