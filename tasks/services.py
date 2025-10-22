@@ -380,7 +380,7 @@ class TaskWalletService:
             logger.error(f"[ESCROW_RELEASE] FAILED - Escrow {escrow_id} not found")
             raise ValueError(f"Escrow {escrow_id} does not exist")
 
-        # ✅ NEW CHECK: Ensure all task slots are filled before releasing escrow
+        # ✅ INFO-ONLY CHECK: Log slot status but don't block release
         task = escrow.task
         filled_slots = Submission.objects.filter(task=task, status="approved").count()
         total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
@@ -394,12 +394,10 @@ class TaskWalletService:
                 f"[ESCROW_RELEASE] Slot check - Approved: {filled_slots}/{total_slots}"
             )
             if filled_slots < total_slots:
-                logger.warning(
-                    f"[ESCROW_RELEASE] BLOCKED - Task slots not filled yet - "
+                logger.info(
+                    f"[ESCROW_RELEASE] Partial release allowed - "
+                    f"Escrow stays locked until all slots filled. "
                     f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
-                )
-                raise ValueError(
-                    f"Cannot release escrow yet. Only {filled_slots} of {total_slots} slots are approved."
                 )
 
         # ✅ FIRST CHECK: Escrow status
@@ -474,7 +472,6 @@ class TaskWalletService:
                 category="task_payment",
                 description=f"Task: {escrow.task.title})",
                 reference=release_ref,
-               
             )
             
             logger.info(
@@ -487,7 +484,6 @@ class TaskWalletService:
                 f"[ESCROW_RELEASE] FAILED to credit member - "
                 f"Member: {member_id}, Error: {str(e)}, Escrow: {escrow_id}"
             )
-            # Transaction will rollback automatically
             raise ValueError(f"Failed to credit member wallet: {str(e)}")
         
         # ✅ Credit company cut
@@ -521,15 +517,12 @@ class TaskWalletService:
                 f"[ESCROW_RELEASE] WARNING - Failed to credit company wallet - "
                 f"Error: {str(e)}, Escrow: {escrow_id}"
             )
-            # ⚠️ Don't rollback - member already paid
-            # Log for manual reconciliation
             logger.critical(
                 f"[ESCROW_RELEASE] MANUAL_ACTION_REQUIRED - "
                 f"Member paid but company cut failed - "
                 f"Escrow: {escrow_id}, Company amount: {company_cut}"
             )
         
-        # ✅ Update escrow status ATOMICALLY
         # ✅ Update escrow status conditionally (only mark as released when all slots are filled)
         try:
             task = escrow.task
@@ -537,7 +530,6 @@ class TaskWalletService:
             total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
 
             if total_slots and filled_slots >= total_slots:
-                # All slots filled — release escrow
                 escrow.status = "released"
                 escrow.released_at = timezone.now()
                 logger.info(
@@ -545,7 +537,6 @@ class TaskWalletService:
                     f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
                 )
             else:
-                # Keep escrow locked until all slots are approved
                 logger.info(
                     f"[ESCROW_RELEASE] Partial release - Escrow stays locked. "
                     f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
@@ -556,7 +547,6 @@ class TaskWalletService:
 
             escrow.save(update_fields=['status', 'released_at', 'submission'])
 
-            
         except Exception as e:
             logger.error(
                 f"[ESCROW_RELEASE] FAILED to update escrow status - "
