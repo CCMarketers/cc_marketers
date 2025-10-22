@@ -307,276 +307,87 @@ class TaskWalletService:
     @transaction.atomic
     def release_task_escrow(escrow_or_task, member, submission=None):
         """
-        Release escrow for ONE submission only.
-        Prevents duplicate releases via multiple safeguards:
-        - Row-level locking
-        - Status checks
-        - Unique reference checks
-        - Database constraints
-        
-        Args:
-            escrow_or_task: Can be either an EscrowTransaction object or a Task object
-            member: User receiving the payment
-            submission: TaskSubmission object (optional)
+        Safe multi-payout escrow release.
+        - Each approved submission triggers a separate partial release.
+        - Escrow only fully releases when all slots are approved.
+        - No new model or schema changes required.
+        - Race-condition proof with select_for_update.
         """
+        from payments.models import PaymentTransaction as Transaction
+
         member_id = member.id
         submission_id = submission.id if submission else None
-        
-        # ✅ Handle both escrow object and task object
-        if isinstance(escrow_or_task, EscrowTransaction):
-            escrow_id = escrow_or_task.id
-            task_id = escrow_or_task.task.id if hasattr(escrow_or_task, 'task') else None
-        else:
-            # Assume it's a Task object, fetch the escrow
-            task_id = escrow_or_task.id
-            logger.info(
-                f"[ESCROW_RELEASE] Fetching escrow for task - "
-                f"Task: {task_id}, Submission: {submission_id}"
-            )
-            try:
-                escrow_lookup = EscrowTransaction.objects.get(
-                    task_id=task_id,
-                    status="locked"
-                )
-                escrow_id = escrow_lookup.id
-                logger.info(
-                    f"[ESCROW_RELEASE] Found escrow - "
-                    f"Escrow: {escrow_id} for Task: {task_id}"
-                )
-            except EscrowTransaction.DoesNotExist:
-                logger.error(
-                    f"[ESCROW_RELEASE] FAILED - No locked escrow found for task {task_id}"
-                )
-                raise ValueError(
-                    f"No locked escrow found for task {task_id}. "
-                    f"Either escrow doesn't exist or already released."
-                )
-            except EscrowTransaction.MultipleObjectsReturned:
-                logger.error(
-                    f"[ESCROW_RELEASE] FAILED - Multiple locked escrows for task {task_id}"
-                )
-                raise ValueError(
-                    f"Multiple locked escrows found for task {task_id}. "
-                    f"Please contact support."
-                )
-        
-        logger.info(
-            f"[ESCROW_RELEASE] Starting release - "
-            f"Escrow: {escrow_id}, Task: {task_id}, Member: {member_id}, Submission: {submission_id}"
-        )
-        
-        # ✅ Lock the escrow row for update (CRITICAL for race condition prevention)
-        try:
-            escrow = (
-                EscrowTransaction.objects
-                .select_for_update(nowait=False)  # Wait for lock
-                .get(id=escrow_id)
-            )
-            logger.info(
-                f"[ESCROW_RELEASE] Escrow locked - "
-                f"ID: {escrow_id}, Status: {escrow.status}, Amount: {escrow.amount_usd}"
-            )
-        except EscrowTransaction.DoesNotExist:
-            logger.error(f"[ESCROW_RELEASE] FAILED - Escrow {escrow_id} not found")
-            raise ValueError(f"Escrow {escrow_id} does not exist")
 
-        # ✅ INFO-ONLY CHECK: Log slot status but don't block release
+        # Resolve escrow
+        if isinstance(escrow_or_task, EscrowTransaction):
+            escrow = escrow_or_task
+        else:
+            escrow = EscrowTransaction.objects.filter(task=escrow_or_task, status="locked").first()
+            if not escrow:
+                raise ValueError(f"No locked escrow found for task {escrow_or_task.id}")
+
+        # Lock the escrow row for update (ensures race safety)
+        escrow = EscrowTransaction.objects.select_for_update().get(id=escrow.id)
+
+        # Safety check
+        if escrow.status != "locked":
+            raise ValueError(f"Escrow already {escrow.status}, cannot release again")
+
         task = escrow.task
+
+        # ✅ Prevent duplicate release for the same submission
+        if submission:
+            duplicate_ref_prefix = f"ESCROW_RELEASE_{escrow.id}_{submission.id}"
+            if Transaction.objects.filter(reference__startswith=duplicate_ref_prefix).exists():
+                return f"Skipped: Submission {submission.id} already paid"
+
+        # ✅ Check slot fill status
         filled_slots = Submission.objects.filter(task=task, status="approved").count()
         total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
 
         if total_slots is None:
-            logger.warning(
-                f"[ESCROW_RELEASE] Task {task.id} has no 'slots' or 'total_slots' defined."
-            )
+            raise ValueError(f"Task {task.id} missing slot count field")
+
+        # ✅ If not all slots are filled, release only this submission’s payout
+        if filled_slots < total_slots:
+            release_type = "partial"
         else:
-            logger.info(
-                f"[ESCROW_RELEASE] Slot check - Approved: {filled_slots}/{total_slots}"
-            )
-            if filled_slots < total_slots:
-                logger.info(
-                    f"[ESCROW_RELEASE] Partial release allowed - "
-                    f"Escrow stays locked until all slots filled. "
-                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
-                )
+            release_type = "full"
 
-        # ✅ FIRST CHECK: Escrow status
-        if escrow.status != "locked":
-            logger.warning(
-                f"[ESCROW_RELEASE] BLOCKED - Invalid status - "
-                f"Escrow: {escrow_id}, Status: {escrow.status}, Expected: locked"
-            )
-            raise ValueError(
-                f"Escrow already {escrow.status}. Cannot release. "
-                f"Escrow ID: {escrow_id}"
-            )
-        
-        # ✅ SECOND CHECK: Submission already linked to escrow
-        if submission and hasattr(submission, 'escrow_release') and submission.escrow_release:
-            logger.warning(
-                f"[ESCROW_RELEASE] BLOCKED - Duplicate release - "
-                f"Submission: {submission_id} already linked to escrow: {submission.escrow_release.id}"
-            )
-            raise ValueError(
-                f"This submission already has an escrow release: {submission.escrow_release.id}"
-            )
-        
-        # ✅ THIRD CHECK: Escrow already linked to another submission
-        if escrow.submission and escrow.submission.id != submission_id:
-            logger.warning(
-                f"[ESCROW_RELEASE] BLOCKED - Escrow already released - "
-                f"Escrow: {escrow_id} linked to submission: {escrow.submission.id}"
-            )
-            raise ValueError(
-                f"Escrow {escrow_id} already released to submission {escrow.submission.id}"
-            )
-        
-        # ✅ Calculate payment split
-        member_amount, company_cut = TaskWalletService.split_payment(escrow.task.payout_per_slot)
-        
-        logger.info(
-            f"[ESCROW_RELEASE] Payment split - "
-            f"Total: {escrow.task.payout_per_slot}, Member: {member_amount}, Company: {company_cut}"
+        # ✅ Split payment
+        member_amount, company_cut = TaskWalletService.split_payment(task.payout_per_slot)
+
+        # ✅ Credit member
+        release_ref = f"ESCROW_RELEASE_{escrow.id}_{submission_id}_{timezone.now().timestamp()}"
+        TaskWalletService.credit_wallet(
+            user=member,
+            amount=member_amount,
+            category="task_payment",
+            description=f"Task: {task.title}",
+            reference=release_ref,
         )
-        
-        # ✅ Create unique reference
-        release_ref = f"ESCROW_RELEASE_{escrow_id}_{submission_id or 'MANUAL'}_{timezone.now().timestamp()}"
-        
-        # ✅ FOURTH CHECK: Duplicate credit prevention
-        from payments.models import PaymentTransaction as Transaction
-        existing_credit = Transaction.objects.filter(
-            reference__startswith=f"ESCROW_RELEASE_{escrow_id}_{submission_id or 'MANUAL'}"
-        ).exists()
-        
-        if existing_credit:
-            logger.error(
-                f"[ESCROW_RELEASE] BLOCKED - Duplicate credit detected - "
-                f"Reference pattern: ESCROW_RELEASE_{escrow_id}_{submission_id}"
-            )
-            raise ValueError(
-                f"This escrow has already been credited. Escrow ID: {escrow_id}"
-            )
-        
-        from wallets.services import WalletService
-        
-        # ✅ Credit member's MAIN WALLET
-        try:
-            logger.info(
-                f"[ESCROW_RELEASE] Crediting member wallet - "
-                f"Member: {member_id}, Amount: {member_amount}"
-            )
-            
-            TaskWalletService.credit_wallet(
-                user=member,
-                amount=member_amount,
-                category="task_payment",
-                description=f"Task: {escrow.task.title})",
-                reference=release_ref,
-            )
-            
-            logger.info(
-                f"[ESCROW_RELEASE] Member credited successfully - "
-                f"Member: {member_id}, Amount: {member_amount}"
-            )
-            
-        except Exception as e:
-            logger.error(
-                f"[ESCROW_RELEASE] FAILED to credit member - "
-                f"Member: {member_id}, Error: {str(e)}, Escrow: {escrow_id}"
-            )
-            raise ValueError(f"Failed to credit member wallet: {str(e)}")
-        
-        # ✅ Credit company cut
-        try:
-            company_ref = f"COMPANY_CUT_{escrow_id}_{submission_id or 'MANUAL'}_{timezone.now().timestamp()}"
-            
-            logger.info(
-                f"[ESCROW_RELEASE] Crediting company wallet - Amount: {company_cut}"
-            )
-            
-            WalletService.credit_wallet(
-                user=get_company_user(),
-                amount=company_cut,
-                category="company_cut",
-                description=f"Platform fee: {escrow.task.title}",
-                reference=company_ref,
-                extra_data={
-                    "task_id": escrow.task.id,
-                    "escrow_id": escrow_id,
-                    "submission_id": submission_id,
-                    "member_payment": str(member_amount),
-                }
-            )
-            
-            logger.info(
-                f"[ESCROW_RELEASE] Company credited successfully - Amount: {company_cut}"
-            )
-            
-        except Exception as e:
-            logger.error(
-                f"[ESCROW_RELEASE] WARNING - Failed to credit company wallet - "
-                f"Error: {str(e)}, Escrow: {escrow_id}"
-            )
-            logger.critical(
-                f"[ESCROW_RELEASE] MANUAL_ACTION_REQUIRED - "
-                f"Member paid but company cut failed - "
-                f"Escrow: {escrow_id}, Company amount: {company_cut}"
-            )
-        
-        # ✅ Update escrow status conditionally (only mark as released when all slots are filled)
-        try:
-            task = escrow.task
-            filled_slots = Submission.objects.filter(task=task, status="approved").count()
-            total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
 
-            if total_slots and filled_slots >= total_slots:
-                escrow.status = "released"
-                escrow.released_at = timezone.now()
-                logger.info(
-                    f"[ESCROW_RELEASE] All slots filled - Escrow released. "
-                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
-                )
-            else:
-                logger.info(
-                    f"[ESCROW_RELEASE] Partial release - Escrow stays locked. "
-                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
-                )
-
-            if submission:
-                escrow.submission = submission
-
-            escrow.save(update_fields=['status', 'released_at', 'submission'])
-
-        except Exception as e:
-            logger.error(
-                f"[ESCROW_RELEASE] FAILED to update escrow status - "
-                f"Escrow: {escrow_id}, Error: {str(e)}"
-            )
-            raise
-        
-        # ✅ Update linked transaction if exists
-        if hasattr(escrow, "taskwallet_transaction") and escrow.taskwallet_transaction:
-            try:
-                escrow.taskwallet_transaction.status = "released"
-                escrow.taskwallet_transaction.save(update_fields=['status'])
-                
-                logger.info(
-                    f"[ESCROW_RELEASE] Transaction updated - "
-                    f"ID: {escrow.taskwallet_transaction.id}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"[ESCROW_RELEASE] Failed to update transaction status - "
-                    f"Transaction: {escrow.taskwallet_transaction.id}, Error: {str(e)}"
-                )
-        
-        logger.info(
-            f"[ESCROW_RELEASE] SUCCESS - "
-            f"Escrow: {escrow_id}, Member: {member.username} (₦{member_amount}), "
-            f"Company: ₦{company_cut}, Submission: {submission_id}"
+        # ✅ Credit company
+        company_ref = f"COMPANY_CUT_{escrow.id}_{submission_id}_{timezone.now().timestamp()}"
+        WalletService.credit_wallet(
+            user=get_company_user(),
+            amount=company_cut,
+            category="company_cut",
+            description=f"Platform fee: {task.title}",
+            reference=company_ref,
         )
-        
-        return escrow
+
+        # ✅ Update escrow only when fully filled
+        if release_type == "full":
+            escrow.status = "released"
+            escrow.released_at = timezone.now()
+            escrow.save(update_fields=["status", "released_at"])
+        else:
+            # leave it locked until all slots filled
+            escrow.save(update_fields=["updated_at"])  # just to trigger row write
+
+        return f"Escrow {escrow.id} {release_type} release successful for submission {submission_id}"
+
 
     @staticmethod
     def get_task_escrow(task):
