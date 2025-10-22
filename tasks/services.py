@@ -530,17 +530,32 @@ class TaskWalletService:
             )
         
         # ✅ Update escrow status ATOMICALLY
+        # ✅ Update escrow status conditionally (only mark as released when all slots are filled)
         try:
-            escrow.status = "released"
-            escrow.released_at = timezone.now()
+            task = escrow.task
+            filled_slots = Submission.objects.filter(task=task, status="approved").count()
+            total_slots = getattr(task, "slots", None) or getattr(task, "total_slots", None)
+
+            if total_slots and filled_slots >= total_slots:
+                # All slots filled — release escrow
+                escrow.status = "released"
+                escrow.released_at = timezone.now()
+                logger.info(
+                    f"[ESCROW_RELEASE] All slots filled - Escrow released. "
+                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
+                )
+            else:
+                # Keep escrow locked until all slots are approved
+                logger.info(
+                    f"[ESCROW_RELEASE] Partial release - Escrow stays locked. "
+                    f"Approved: {filled_slots}/{total_slots}, Task: {task.id}"
+                )
+
             if submission:
                 escrow.submission = submission
+
             escrow.save(update_fields=['status', 'released_at', 'submission'])
-            
-            logger.info(
-                f"[ESCROW_RELEASE] Escrow status updated - "
-                f"ID: {escrow_id}, Status: released"
-            )
+
             
         except Exception as e:
             logger.error(
