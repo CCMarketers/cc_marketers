@@ -676,31 +676,6 @@ class TaskWalletTransactionListView(LoginRequiredMixin, ListView):
         return TaskWalletTransaction.objects.filter(user=self.request.user).order_by("-created_at")
 
 
-# class TaskWalletTopupView(LoginRequiredMixin, FormView):
-#     """Move funds from main wallet into task wallet."""
-#     form_class = TaskWalletTopupForm
-#     template_name = "tasks/topup.html"
-#     success_url = reverse_lazy("tasks:task_wallet_dashboard")
-
-#     def form_valid(self, form):
-#         try:
-#             TaskWalletService.transfer_from_main_wallet(
-#                 user=self.request.user, amount=form.cleaned_data["amount"]
-#             )
-#             messages.success(self.request, f"Task Wallet topped up with ₦{form.cleaned_data['amount']}")
-#             return redirect(self.success_url)
-#         except ValueError as e:
-#             messages.error(self.request, str(e))
-#             return self.form_invalid(form)
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         user = self.request.user
-#         wallet = WalletService.get_or_create_wallet(user)
-#         context["available_balance"] = wallet.get_available_balance()
-#         return context
-
-
 def render_transaction_page(request, form, context_data):
     """Helper function to render transaction pages with common context"""
     context = {

@@ -39,21 +39,42 @@ class WalletAdmin(admin.ModelAdmin):
 
 
 
+from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
+from wallets.models import EscrowTransaction
+
+
 @admin.register(EscrowTransaction)
 class EscrowTransactionAdmin(admin.ModelAdmin):
-    list_display = ['task_link', 'advertiser', 'amount_usd', 'status', 'created_at', 'released_at']
+    list_display = [
+        'id', 'task_link', 'advertiser', 'amount_usd', 'status', 'created_at', 'released_at'
+    ]
     list_filter = ['status', 'created_at']
     search_fields = ['task__title', 'advertiser__username']
-    readonly_fields = ['created_at']
+    readonly_fields = ['created_at', 'task_link']
     
+    # ✅ Allow editing of 'task' and all other fields
+    fields = [
+        'task', 'task_link', 'advertiser', 'amount_usd', 'status', 'released_at', 'created_at'
+    ]
+
     def task_link(self, obj):
+        """Clickable link to related Task in admin."""
         if getattr(obj, "task_id", None):
             url = reverse("admin:tasks_task_change", args=[obj.task.id])
             return format_html('<a href="{}" target="_blank">{}</a>', url, obj.task.title)
         return "-"
+    task_link.short_description = 'Task (view)'
 
-
-    task_link.short_description = 'Task'
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Make 'task' editable when adding new escrow,
+        but read-only when editing an existing one.
+        """
+        if obj:
+            return self.readonly_fields + ['task']
+        return self.readonly_fields
 
 
 

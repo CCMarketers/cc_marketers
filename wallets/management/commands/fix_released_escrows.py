@@ -1,311 +1,219 @@
 """
-Django Management Command: Fix Released Escrows
-python manage.py fix_released_escrows --dry-run  # Preview changes
-python manage.py fix_released_escrows             # Execute fix
+Complete Script: Fix Released Escrows
+File: wallets/management/commands/fix_released_escrows.py
+
+Updates existing released escrows to locked with correct amounts
 """
 
 from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.utils import timezone
-from tasks.models import  Submission, TaskWallet, TaskWalletTransaction
+from tasks.models import Submission, TaskWallet, TaskWalletTransaction
 from wallets.models import EscrowTransaction
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Fix escrows that were released early and recreate locked escrows for unfilled slots"
+    help = "Fix escrow amounts and status for tasks with unfilled slots"
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--dry-run',
             action='store_true',
-            help='Preview changes without executing',
+            help='Preview changes without executing'
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Attempt to fix all tasks (even with insufficient balance)'
         )
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
+        force = options.get('force', False)
         
         if dry_run:
-            self.stdout.write(self.style.WARNING("=== DRY RUN MODE - No changes will be made ===\n"))
+            self.stdout.write(self.style.WARNING("=== DRY RUN MODE ===\n"))
         
-        # Find all tasks with released escrows but unfilled slots
-        problematic_tasks = self.find_problematic_tasks()
-        
-        if not problematic_tasks:
-            self.stdout.write(self.style.SUCCESS("✓ No problematic tasks found. All escrows are correct!"))
-            return
-        
-        self.stdout.write(self.style.WARNING(f"\nFound {len(problematic_tasks)} tasks with issues:\n"))
-        
-        total_to_lock = Decimal('0')
-        fixes = []
-        
-        for task_data in problematic_tasks:
-            task = task_data['task']
-            unfilled_slots = task_data['unfilled_slots']
-            amount_needed = task_data['amount_needed']
-            approved_count = task_data['approved_count']
-            
-            self.stdout.write(
-                f"\n{'─' * 80}\n"
-                f"Task ID: {task.id} - {task.title}\n"
-                f"Advertiser: {task.advertiser.username} ({task.advertiser.id})\n"
-                f"Total Slots: {task.total_slots} | Approved: {approved_count} | Unfilled: {unfilled_slots}\n"
-                f"Payout per slot: ₦{task.payout_per_slot}\n"
-                f"Amount needed for unfilled: ₦{amount_needed}\n"
-                f"Released escrow: {task_data['released_escrow_id']}\n"
-            )
-            
-            total_to_lock += amount_needed
-            fixes.append(task_data)
-        
-        self.stdout.write(
-            f"\n{'=' * 80}\n"
-            f"SUMMARY:\n"
-            f"Tasks to fix: {len(fixes)}\n"
-            f"Total amount to lock: ₦{total_to_lock}\n"
-            f"{'=' * 80}\n"
-        )
-        
-        if dry_run:
-            self.stdout.write(self.style.WARNING("\n✓ Dry run complete. Use without --dry-run to execute fixes."))
-            return
-        
-        # Ask for confirmation
-        confirm = input("\nProceed with fixing these tasks? (yes/no): ")
-        if confirm.lower() != 'yes':
-            self.stdout.write(self.style.WARNING("Aborted by user."))
-            return
-        
-        # Execute fixes
-        success_count = 0
-        error_count = 0
-        
-        for task_data in fixes:
-            try:
-                self.fix_task_escrow(task_data)
-                success_count += 1
-                self.stdout.write(self.style.SUCCESS(f"✓ Fixed task {task_data['task'].id}"))
-            except Exception as e:
-                error_count += 1
-                self.stdout.write(self.style.ERROR(f"✗ Failed task {task_data['task'].id}: {e}"))
-                logger.error(f"Failed to fix task {task_data['task'].id}: {e}", exc_info=True)
-        
-        self.stdout.write(
-            f"\n{'=' * 80}\n"
-            f"RESULTS:\n"
-            f"✓ Successfully fixed: {success_count}\n"
-            f"✗ Failed: {error_count}\n"
-            f"{'=' * 80}\n"
-        )
-
-    def find_problematic_tasks(self):
-        """Find tasks with released escrows but unfilled slots"""
-        problematic = []
-        
-        # Get all tasks with released escrows
+        # Find all released escrows with unfilled slots
         released_escrows = EscrowTransaction.objects.filter(
             status="released"
         ).select_related('task', 'task__advertiser')
+        
+        to_fix = []
+        total_top_up = Decimal('0')
+        
+        self.stdout.write("Analyzing tasks...\n")
         
         for escrow in released_escrows:
             task = escrow.task
             
             # Count approved submissions
-            approved_count = Submission.objects.filter(
-                task=task,
+            approved = Submission.objects.filter(
+                task=task, 
                 status="approved"
             ).count()
             
             # Calculate unfilled slots
-            unfilled_slots = task.total_slots - approved_count
+            unfilled = task.total_slots - approved
             
-            # If there are unfilled slots, this is problematic
-            if unfilled_slots > 0:
-                amount_needed = task.payout_per_slot * unfilled_slots
+            if unfilled > 0:
+                # What escrow SHOULD have for remaining slots
+                should_have = task.payout_per_slot * unfilled
                 
-                problematic.append({
+                # What it currently has
+                current_amount = escrow.amount_usd
+                
+                # How much to add
+                top_up = should_have - current_amount
+                
+                # Check wallet balance
+                try:
+                    wallet = TaskWallet.objects.get(user=task.advertiser)
+                    wallet_balance = wallet.balance
+                except TaskWallet.DoesNotExist:
+                    wallet_balance = Decimal('0')
+                
+                can_afford = wallet_balance >= top_up if top_up > 0 else True
+                
+                to_fix.append({
+                    'escrow': escrow,
                     'task': task,
-                    'released_escrow_id': escrow.id,
-                    'unfilled_slots': unfilled_slots,
-                    'approved_count': approved_count,
-                    'amount_needed': amount_needed,
+                    'unfilled': unfilled,
+                    'current_amount': current_amount,
+                    'should_have': should_have,
+                    'top_up': top_up,
+                    'wallet_balance': wallet_balance,
+                    'can_afford': can_afford,
                 })
+                
+                if top_up > 0:
+                    total_top_up += top_up
+                
+                status = "OK" if can_afford or top_up <= 0 else "INSUFFICIENT"
+                
+                self.stdout.write(
+                    f"\n{'-' * 80}\n"
+                    f"Task {task.id}: {task.title}\n"
+                    f"  Advertiser: {task.advertiser.username}\n"
+                    f"  Unfilled slots: {unfilled} x N{task.payout_per_slot} = N{should_have}\n"
+                    f"  Current escrow: N{current_amount}\n"
+                    f"  Top-up needed: N{top_up}\n"
+                    f"  Wallet balance: N{wallet_balance}\n"
+                    f"  Status: {status}\n"
+                )
         
-        return problematic
+        if not to_fix:
+            self.stdout.write(self.style.SUCCESS("\n✓ No tasks need fixing!"))
+            return
+        
+        # Separate fixable and unfixable
+        can_fix = [x for x in to_fix if x['can_afford'] or x['top_up'] <= 0]
+        cannot_fix = [x for x in to_fix if not x['can_afford'] and x['top_up'] > 0]
+        
+        self.stdout.write(f"\n{'=' * 80}")
+        self.stdout.write(f"\n✓ Can fix: {len(can_fix)} tasks")
+        self.stdout.write(f"\n✗ Cannot fix: {len(cannot_fix)} tasks (insufficient balance)")
+        self.stdout.write(f"\nTotal top-up needed: N{total_top_up}")
+        self.stdout.write(f"\n{'=' * 80}\n")
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING("\n✓ Dry run complete. Use without --dry-run to execute."))
+            return
+        
+        if not can_fix and not force:
+            self.stdout.write(
+                self.style.WARNING(
+                    "\nNo tasks can be fixed (insufficient balance).\n"
+                    "Top up advertiser wallets or use --force to attempt all."
+                )
+            )
+            return
+        
+        # Confirm before proceeding
+        tasks_to_process = to_fix if force else can_fix
+        confirm = input(f"\nProceed with fixing {len(tasks_to_process)} tasks? (yes/no): ")
+        
+        if confirm.lower() != 'yes':
+            self.stdout.write(self.style.WARNING("Aborted by user."))
+            return
+        
+        # Execute fixes
+        success = 0
+        failed = 0
+        
+        for item in tasks_to_process:
+            try:
+                self.fix_task_escrow(item)
+                success += 1
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"✓ Task {item['task'].id}: "
+                        f"Top-up N{item['top_up'] if item['top_up'] > 0 else 0}, "
+                        f"Escrow now N{item['should_have']} (locked)"
+                    )
+                )
+            except Exception as e:
+                failed += 1
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"✗ Task {item['task'].id}: {str(e)}"
+                    )
+                )
+        
+        self.stdout.write(f"\n{'=' * 80}")
+        self.stdout.write(f"\n✓ Successfully fixed: {success}")
+        self.stdout.write(f"\n✗ Failed: {failed}")
+        self.stdout.write(f"\n{'=' * 80}\n")
 
     @transaction.atomic
-    def fix_task_escrow(self, task_data):
+    def fix_task_escrow(self, item):
         """
         Fix a single task by:
-        1. Deducting from advertiser's task wallet
-        2. Creating new locked escrow for unfilled slots
+        1. Locking the EXISTING released escrow
+        2. Topping up the amount if needed
+        3. Changing status to 'locked'
         """
-        task = task_data['task']
-        amount_needed = task_data['amount_needed']
-        unfilled_slots = task_data['unfilled_slots']
+        task = item['task']
+        top_up = item['top_up']
         
-        logger.info(
-            f"[FIX_ESCROW] Fixing task {task.id} - "
-            f"Need ₦{amount_needed} for {unfilled_slots} slots"
-        )
-        
-        # Get or create advertiser's task wallet
-        wallet, created = TaskWallet.objects.get_or_create(
-            user=task.advertiser,
-            defaults={'balance': Decimal('0')}
+        # ✅ Lock EXISTING escrow (don't create new)
+        escrow = EscrowTransaction.objects.select_for_update().get(
+            id=item['escrow'].id
         )
         
         # Lock wallet
-        wallet = TaskWallet.objects.select_for_update().get(id=wallet.id)
+        wallet = TaskWallet.objects.select_for_update().get(
+            user=task.advertiser
+        )
         
-        # Check if advertiser has enough balance
-        if wallet.balance < amount_needed:
-            raise ValueError(
-                f"Insufficient balance. Has: ₦{wallet.balance}, Needs: ₦{amount_needed}"
+        # Deduct top-up amount if needed
+        if top_up > 0:
+            if wallet.balance < top_up:
+                raise ValueError(
+                    f"Insufficient balance. Has: N{wallet.balance}, Needs: N{top_up}"
+                )
+            
+            balance_before = wallet.balance
+            wallet.balance -= top_up
+            wallet.save(update_fields=['balance'])
+            
+            # Create transaction record
+            TaskWalletTransaction.objects.create(
+                user=task.advertiser,
+                transaction_type="debit",
+                category="escrow_correction",
+                amount=top_up,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                description=f"Escrow top-up: {task.title} ({item['unfilled']} slots)",
+                status="success"
             )
         
-        # Deduct from wallet
-        balance_before = wallet.balance
-        wallet.balance -= amount_needed
-        wallet.save(update_fields=['balance'])
+        # ✅ UPDATE existing escrow (don't create new)
+        escrow.amount_usd = item['should_have']  # Set to correct amount
+        escrow.status = "locked"
+        escrow.released_at = None
+        escrow.submission = None
+        escrow.save(update_fields=['amount_usd', 'status', 'released_at', 'submission'])
         
-        logger.info(
-            f"[FIX_ESCROW] Deducted ₦{amount_needed} from wallet - "
-            f"Before: {balance_before}, After: {wallet.balance}"
-        )
-        
-        # Create transaction record
-        txn = TaskWalletTransaction.objects.create(
-            user=task.advertiser,
-            transaction_type="debit",
-            category="escrow_correction",
-            amount=amount_needed,
-            balance_before=balance_before,
-            balance_after=wallet.balance,
-            description=f"Escrow correction for task: {task.title} ({unfilled_slots} unfilled slots)",
-            status="success"
-        )
-        
-        # Create new locked escrow
-        new_escrow = EscrowTransaction.objects.create(
-            task=task,
-            advertiser=task.advertiser,
-            amount_usd=amount_needed,
-            taskwallet_transaction=txn,
-            status="locked",
-        )
-        
-        logger.info(
-            f"[FIX_ESCROW] Created new escrow {new_escrow.id} - "
-            f"Amount: ₦{amount_needed}, Slots: {unfilled_slots}"
-        )
-        
-        return new_escrow
-
-
-# Alternative: Script version (if not using management command)
-def fix_released_escrows_script(dry_run=True):
-    """
-    Standalone script version - can be run from Django shell
-    Usage:
-        python manage.py shell
-        >>> from tasks.scripts import fix_released_escrows_script
-        >>> fix_released_escrows_script(dry_run=True)  # Preview
-        >>> fix_released_escrows_script(dry_run=False) # Execute
-    """
-    from tasks.models import Task, Submission
-    from wallets.models import EscrowTransaction, TaskWallet, TaskWalletTransaction
-    from decimal import Decimal
-    from django.db import transaction
-    from django.utils import timezone
-    
-    print("=" * 80)
-    print("ESCROW FIX SCRIPT")
-    print("=" * 80)
-    
-    if dry_run:
-        print("\n⚠️  DRY RUN MODE - No changes will be made\n")
-    
-    # Find problematic tasks
-    released_escrows = EscrowTransaction.objects.filter(status="released")
-    problematic = []
-    
-    for escrow in released_escrows:
-        task = escrow.task
-        approved_count = Submission.objects.filter(task=task, status="approved").count()
-        unfilled_slots = task.total_slots - approved_count
-        
-        if unfilled_slots > 0:
-            amount_needed = task.payout_per_slot * unfilled_slots
-            problematic.append({
-                'task': task,
-                'escrow_id': escrow.id,
-                'unfilled_slots': unfilled_slots,
-                'approved_count': approved_count,
-                'amount_needed': amount_needed,
-            })
-            
-            print(f"\nTask {task.id}: {task.title}")
-            print(f"  Advertiser: {task.advertiser.username}")
-            print(f"  Total slots: {task.total_slots} | Approved: {approved_count} | Unfilled: {unfilled_slots}")
-            print(f"  Amount needed: ₦{amount_needed}")
-    
-    print(f"\n{'=' * 80}")
-    print(f"Found {len(problematic)} tasks needing fixes")
-    print(f"{'=' * 80}\n")
-    
-    if not problematic:
-        print("✓ No issues found!")
-        return
-    
-    if dry_run:
-        print("Run with dry_run=False to execute fixes")
-        return
-    
-    # Execute fixes
-    for item in problematic:
-        task = item['task']
-        amount_needed = item['amount_needed']
-        
-        try:
-            with transaction.atomic():
-                wallet = TaskWallet.objects.select_for_update().get(user=task.advertiser)
-                
-                if wallet.balance < amount_needed:
-                    print(f"✗ Task {task.id}: Insufficient balance (has: {wallet.balance}, needs: {amount_needed})")
-                    continue
-                
-                # Deduct and create escrow
-                balance_before = wallet.balance
-                wallet.balance -= amount_needed
-                wallet.save()
-                
-                txn = TaskWalletTransaction.objects.create(
-                    user=task.advertiser,
-                    transaction_type="debit",
-                    category="escrow_correction",
-                    amount=amount_needed,
-                    balance_before=balance_before,
-                    balance_after=wallet.balance,
-                    description=f"Escrow correction: {task.title}",
-                    status="success"
-                )
-                
-                EscrowTransaction.objects.create(
-                    task=task,
-                    advertiser=task.advertiser,
-                    amount_usd=amount_needed,
-                    taskwallet_transaction=txn,
-                    status="locked",
-                )
-                
-                print(f"✓ Fixed task {task.id} - Locked ₦{amount_needed}")
-                
-        except Exception as e:
-            print(f"✗ Task {task.id}: {e}")
-    
-    print("\n✓ Done!")
+        return escrow
