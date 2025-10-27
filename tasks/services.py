@@ -56,7 +56,7 @@ class TaskWalletService:
         Split payment: 90% to member, 10% to company.
         """
         amount = Decimal(amount)
-        member_amount = (amount * Decimal('0.90')).quantize(Decimal('0.01'))
+        member_amount = (amount * Decimal('0.80')).quantize(Decimal('0.01'))
         company_cut = amount - member_amount  # Ensures exact total
         return member_amount, company_cut
 
@@ -716,7 +716,7 @@ class TaskWalletService:
         escrow.save(update_fields=['status', 'refunded_at'])
         
         logger.info(
-            f"[ESCROW_REFUND] Escrow status updated to refunded"
+            f"[ESCROW_REFUND] Escrow status updated to refunded"  # noqa: F541
         )
         
         # ✅ Update linked original transaction if exists
@@ -739,3 +739,6 @@ class TaskWalletService:
         )
         
         return escrow
+
+
+

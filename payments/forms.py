@@ -75,22 +75,36 @@ class WithdrawalForm(forms.Form):
             'id': 'account-number'
         })
     )
-    # gateway = forms.ChoiceField(
-    #     choices=GATEWAY_CHOICES,
-    #     initial='paystack',
-    #     widget=forms.Select(attrs={'class': 'form-control'})
-    # )
-    gateway = forms.ChoiceField(choices=[
-        (g.name.lower(), g.name) for g in PaymentGateway.objects.filter(is_active=True)
-    ], initial='paystack',
-        widget=forms.Select(attrs={'class': 'form-control'}))
+    
+    # Initialize with empty choices - will be populated in __init__
+    gateway = forms.ChoiceField(
+        choices=[],
+        initial='paystack',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Query the database HERE when form is instantiated, not at class definition
+        try:
+            active_gateways = PaymentGateway.objects.filter(is_active=True)
+            self.fields['gateway'].choices = [
+                (g.name.lower(), g.name) for g in active_gateways
+            ]
+            
+            # If no active gateways, fallback to default choices
+            if not self.fields['gateway'].choices:
+                self.fields['gateway'].choices = GATEWAY_CHOICES
+        except Exception:
+            # Fallback to static choices if database query fails
+            self.fields['gateway'].choices = GATEWAY_CHOICES
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
         if amount and amount < Decimal('500'):
             raise forms.ValidationError("Minimum withdrawal amount is ₦500")
         return amount
-
 
     def clean(self):
         cleaned = super().clean()

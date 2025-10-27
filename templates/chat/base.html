@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat System{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #fee;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #dc2626;
+        }
+
+        /* Navbar helper styles */
+        .nav-link {
+            color: #dc2626;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 2px;
+            transition: all .2s;
+        }
+        .nav-link:hover { color: #991b1b; border-color: #dc2626; }
+        .dropdown-link {
+            display: block; padding: .5rem 1rem;
+            color: #dc2626;
+        }
+        .dropdown-link:hover { background-color: #fef2f2; color: #991b1b; }
+        .btn-outline-red {
+            border: 1px solid #dc2626;
+            padding: .5rem 1rem; border-radius: .5rem;
+            color: #dc2626;
+            transition: all .2s;
+        }
+        .btn-outline-red:hover { background: #fef2f2; color: #991b1b; }
+        .btn-solid-red {
+            background: #dc2626; color: #fff;
+            border-radius: .5rem; padding: .5rem 1rem;
+            transition: background .2s;
+        }
+        .btn-solid-red:hover { background: #b91c1c; }
+        .mobile-link {
+            display: block; padding: .5rem 1rem;
+            color: #dc2626; border-radius: .375rem;
+            transition: all .2s;
+        }
+        .mobile-link:hover { background: #fef2f2; color: #991b1b; }
+    </style>
+</head>
+
+<body class="bg-white text-gray-800">
+
+    <!-- Modern, Responsive Navbar -->
+    {% include 'components/navbar.html' %}
+
+    <!-- Main Layout -->
+    <main class="flex h-screen">
+        <!-- Desktop Sidebar -->
+        <aside class="hidden md:block w-64 bg-red-50 border-r border-red-200 overflow-y-auto custom-scrollbar">
+            {% block sidebar %}
+            <!-- Sidebar content will be extended by child templates -->
+            {% endblock %}
+        </aside>
+
+        <!-- Mobile Sidebar -->
+        <div id="mobileSidebar" class="fixed inset-0 z-50 hidden md:hidden">
+            <div class="absolute inset-0 bg-black bg-opacity-50" id="closeSidebar"></div>
+            <div class="absolute left-0 top-0 bottom-0 w-64 bg-red-50 shadow-lg overflow-y-auto">
+                <div class="p-4 flex justify-between items-center border-b border-red-200">
+                    <h2 class="text-lg font-bold text-red-800">My Chat</h2>
+                    <button id="closeSidebarBtn" class="p-2 rounded-lg hover:bg-red-200 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                {% block mobile_sidebar %}
+                <!-- Mobile sidebar content will be extended by child templates -->
+                {% endblock %}
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col">
+            {% block content %}
+            <!-- Main content will be extended by child templates -->
+            {% endblock %}
+        </div>
+    </main>
+
+    {% block extra_js %}
+    <!-- Additional JavaScript from child templates -->
+    {% endblock %}
+
+    <!-- Base JavaScript -->
+    <script>
+        // Mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mobileSidebar = document.getElementById('mobileSidebar');
+        const closeSidebar = document.getElementById('closeSidebar');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                mobileSidebar.classList.remove('hidden');
+            });
+        }
+        
+        if (closeSidebar) {
+            closeSidebar.addEventListener('click', function() {
+                mobileSidebar.classList.add('hidden');
+            });
+        }
+        
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', function() {
+                mobileSidebar.classList.add('hidden');
+            });
+        }
+        
+        if (mobileSidebar) {
+            mobileSidebar.addEventListener('click', function(e) {
+                if (e.target === mobileSidebar) {
+                    mobileSidebar.classList.add('hidden');
+                }
+            });
+        }
+
+        // Mobile navbar dropdown toggle (from navbar.html)
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuButton = document.querySelector('[data-mobile-menu]');
+            const menuContent = document.querySelector('[data-mobile-menu-content]');
+            const openIcon = menuButton?.querySelector('.menu-open');
+            const closeIcon = menuButton?.querySelector('.menu-close');
+          
+            if (menuButton && menuContent) {
+                menuButton.addEventListener('click', () => {
+                    const isOpen = !menuContent.classList.contains('hidden');
+                    menuContent.classList.toggle('hidden');
+                    openIcon?.classList.toggle('hidden', isOpen);
+                    closeIcon?.classList.toggle('hidden', !isOpen);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

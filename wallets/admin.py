@@ -39,11 +39,6 @@ class WalletAdmin(admin.ModelAdmin):
 
 
 
-from django.contrib import admin
-from django.urls import reverse
-from django.utils.html import format_html
-from wallets.models import EscrowTransaction
-
 
 @admin.register(EscrowTransaction)
 class EscrowTransactionAdmin(admin.ModelAdmin):

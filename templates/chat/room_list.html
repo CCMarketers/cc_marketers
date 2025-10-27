@@ -1,0 +1,168 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}My Chats{% endblock %}
+
+{% block sidebar %}
+<!-- Desktop Sidebar Content -->
+<div class="p-4">
+    <h3 class="font-bold text-lg mb-4 text-red-800">Active Chats</h3>
+    <div class="space-y-2">
+        {% for room in rooms|slice:":10" %}
+        <a href="{% url 'chat:room' room.id %}" 
+           class="block p-3 rounded-lg hover:bg-red-100 transition {% if request.resolver_match.url_name == 'room' and request.resolver_match.kwargs.room_id == room.id|stringformat:'i' %}bg-red-200 border-l-4 border-red-600{% endif %}">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        {% if user == room.advertiser %}
+                            {{ room.worker.username|first|upper }}
+                        {% else %}
+                            {{ room.advertiser.username|first|upper }}
+                        {% endif %}
+                    </div>
+                    <span class="text-sm font-medium text-gray-800 truncate max-w-24">
+                        {% if user == room.advertiser %}
+                            {{ room.worker.username }}
+                        {% else %}
+                            {{ room.advertiser.username }}
+                        {% endif %}
+                    </span>
+                </div>
+                {% if room.unread_count > 0 %}
+                <span class="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {{ room.unread_count }}
+                </span>
+                {% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <p class="text-sm text-gray-500 text-center py-4">No active chats</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block mobile_sidebar %}
+<!-- Mobile Sidebar Content -->
+<div class="p-4">
+    <h3 class="font-bold text-lg mb-4 text-red-800">Active Chats</h3>
+    <div class="space-y-2">
+        {% for room in rooms %}
+        <a href="{% url 'chat:room' room.id %}" 
+           class="block p-3 rounded-lg hover:bg-red-100 transition {% if request.resolver_match.url_name == 'room' and request.resolver_match.kwargs.room_id == room.id|stringformat:'i' %}bg-red-200 border-l-4 border-red-600{% endif %}">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        {% if user == room.advertiser %}
+                            {{ room.worker.username|first|upper }}
+                        {% else %}
+                            {{ room.advertiser.username|first|upper }}
+                        {% endif %}
+                    </div>
+                    <span class="text-sm font-medium text-gray-800">
+                        {% if user == room.advertiser %}
+                            {{ room.worker.username }}
+                        {% else %}
+                            {{ room.advertiser.username }}
+                        {% endif %}
+                    </span>
+                </div>
+                {% if room.unread_count > 0 %}
+                <span class="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {{ room.unread_count }}
+                </span>
+                {% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <p class="text-sm text-gray-500 text-center py-4">No active chats</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-red-600">My Conversations</h1>
+        <p class="text-gray-600 mt-2">All your active chats in one place</p>
+    </div>
+    
+    {% if rooms %}
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {% for room in rooms %}
+            <a href="{% url 'chat:room' room.id %}" 
+               class="block bg-white border-2 border-red-200 rounded-lg p-5 hover:border-red-500 hover:shadow-lg transition duration-200 transform hover:-translate-y-1">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <!-- User Avatar -->
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                {% if user == room.advertiser %}
+                                    {{ room.worker.username|first|upper }}
+                                {% else %}
+                                    {{ room.advertiser.username|first|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="font-semibold text-lg text-gray-800 truncate">
+                                    {% if user == room.advertiser %}
+                                        {{ room.worker.username }}
+                                    {% else %}
+                                        {{ room.advertiser.username }}
+                                    {% endif %}
+                                </h3>
+                                    <p class="text-sm text-gray-500">
+                                        {{ room.task_count }} task(s) together
+                                    </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Last Message Preview -->
+                        {% if room.last_message %}
+                        <div class="mb-2">
+                            <p class="text-sm text-gray-600 truncate">
+                                {{ room.last_message.message }}
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Last Message Time -->
+                        <p class="text-xs text-gray-400">
+                            {% if room.last_message_at %}
+                                Last message: {{ room.last_message_at|timesince }} ago
+                            {% else %}
+                                No messages yet
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Unread Badge -->
+                    {% if room.unread_count > 0 %}
+                    <span class="bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center ml-2 flex-shrink-0">
+                        {{ room.unread_count }}
+                    </span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16">
+            <svg class="mx-auto h-24 w-24 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No conversations yet</h3>
+            <p class="mt-2 text-gray-500">Complete a task to start chatting with other users!</p>
+            <div class="mt-6">
+                <a href="{% url 'tasks:task_list' %}" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Browse Tasks
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -13,24 +13,117 @@
         </div>
 
         <!-- Wallet Balance -->
-        <div class="bg-red-500 text-white rounded-2xl p-6 mb-8 shadow-lg">
-            <p class="text-sm opacity-90">Your Current Balance</p>
-            <p class="text-3xl font-bold" id="wallet-balance">
-                {{ request.user.task_wallet.balance|default:"0" }} pts
-            </p>
+        <div class="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl p-6 mb-8 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-sm opacity-90">Your Current Wallet Balance</p>
+                    <p class="text-3xl font-bold" id="wallet-balance">
+                        {% if request.user.taskwallet %}
+                            {{ request.user.taskwallet.balance|floatformat:2 }}
+                        {% else %}
+                            0.00
+                        {% endif %}
+                        ₦
+                    </p>
+                </div>
+                <button 
+                    onclick="refreshWalletBalance()" 
+                    class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors duration-200"
+                    title="Refresh Balance">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Offerwall iFrame -->
-        <div class="rounded-2xl overflow-hidden border border-red-200 shadow-lg">
+        <!-- Info Banner -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        <strong>How it works:</strong> Browse offers below, complete the requirements, and earn points instantly! 
+                        Points are automatically added to your wallet.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open in New Tab Button -->
+        <div class="mb-4 flex justify-end">
+            <a 
+                href="https://timewall.io/users/offerwall/1741497395046984/{{ request.user.id }}" 
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors duration-200">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+                Open TimeWall in New Tab
+            </a>
+        </div>
+
+        <!-- Offerwall iFrame Container -->
+        <div class="relative rounded-2xl overflow-hidden border-2 border-red-200 shadow-xl bg-gray-50">
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="absolute inset-0 bg-white flex items-center justify-center z-10">
+                <div class="text-center">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-red-500 border-t-transparent"></div>
+                    <p class="text-gray-600 mt-4 font-medium">Loading offers...</p>
+                </div>
+            </div>
+
+            <!-- TimeWall iFrame -->
             <iframe
                 id="timewall-frame"
-                src="https://timewall.io/offerwall/1741497395046984?uid={{ request.user.id }}"
+                src="https://timewall.io/users/offerwall/1741497395046984/{{ request.user.id }}" 
                 width="100%"
                 height="750"
                 frameborder="0"
                 scrolling="yes"
-                class="rounded-2xl">
+                allow="clipboard-write"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-popups-to-escape-sandbox"
+                class="bg-white">
             </iframe>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-8 grid md:grid-cols-3 gap-4 text-sm">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path>
+                        <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path>
+                    </svg>
+                    Need Help?
+                </h3>
+                <p class="text-gray-600">Contact support if you don't see your points after completing an offer.</p>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                    </svg>
+                    Processing Time
+                </h3>
+                <p class="text-gray-600">Most offers credit instantly. Some may take up to 24 hours.</p>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 class="font-semibold text-gray-800 mb-2 flex items-center">
+                    <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Quality Offers
+                </h3>
+                <p class="text-gray-600">All offers are verified safe and legitimate by TimeWall.</p>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -41,16 +134,89 @@
 </div>
 
 <script>
-    // Auto-refresh wallet balance every 10s
+    // Force iframe reload when page loads (prevents cached iframe with wrong user)
+    window.addEventListener('load', function() {
+        const iframe = document.getElementById('timewall-frame');
+        const currentSrc = iframe.src;
+        
+        // Add timestamp to force fresh load
+        const separator = currentSrc.includes('?') ? '&' : '?';
+        iframe.src = currentSrc + separator + '_reload=' + Date.now();
+    });
+
+    // Hide loading overlay when iframe loads
+    const iframe = document.getElementById('timewall-frame');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    
+    iframe.addEventListener('load', function() {
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+        }, 500);
+    });
+
+    // Refresh wallet balance function
     function refreshWalletBalance() {
-        fetch('{% url "tasks:task_wallet_dashboard" %}')
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('wallet-balance').textContent = 
-                    Math.floor(data.balance) + ' pts';
+        const balanceElement = document.getElementById('wallet-balance');
+        const originalText = balanceElement.textContent;
+        
+        // Show loading state
+        balanceElement.innerHTML = '<span class="animate-pulse">Updating...</span>';
+        
+        fetch('{% url "tasks:task_wallet_balance" %}')
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch balance');
+                return res.json();
             })
-            .catch(err => console.error('Error fetching balance:', err));
+            .then(data => {
+                const formattedBalance = parseFloat(data.balance).toFixed(2);
+                balanceElement.textContent = formattedBalance + ' ₦';
+                
+                // Brief flash effect to show update
+                balanceElement.classList.add('animate-pulse');
+                setTimeout(() => {
+                    balanceElement.classList.remove('animate-pulse');
+                }, 1000);
+            })
+            .catch(err => {
+                console.error('Error fetching balance:', err);
+                balanceElement.textContent = originalText;
+                
+                // Show error briefly
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'text-xs text-red-300 mt-1';
+                errorMsg.textContent = 'Failed to update';
+                balanceElement.parentElement.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            });
     }
-    setInterval(refreshWalletBalance, 10000);
+
+    // Auto-refresh wallet balance every 30 seconds
+    setInterval(refreshWalletBalance, 30000);
+
+    // Listen for postMessage from TimeWall iframe (if they support it)
+    window.addEventListener('message', function(event) {
+        // Only accept messages from TimeWall
+        if (event.origin !== 'https://timewall.io') return;
+        
+        // If conversion completed, refresh balance
+        if (event.data && (event.data.type === 'conversion' || event.data.status === 'completed')) {
+            console.log('Conversion detected, refreshing balance...');
+            setTimeout(refreshWalletBalance, 2000); // Wait 2s then refresh
+        }
+    });
 </script>
+
+<style>
+    /* Responsive iframe */
+    @media (max-width: 768px) {
+        #timewall-frame {
+            height: 600px;
+        }
+    }
+    
+    /* Smooth transitions */
+    #wallet-balance {
+        transition: all 0.3s ease;
+    }
+</style>
 {% endblock %}

@@ -1,0 +1,389 @@
+
+{% extends 'chat/base.html' %}
+
+{% block title %}Chat with {{ other_user.username }}{% endblock %}
+
+{% block sidebar %}
+<!-- Desktop Sidebar - Task History -->
+<div class="p-4">
+    <h3 class="font-bold text-lg mb-4 text-red-800">Task History</h3>
+    <div class="space-y-3">
+        {% for task in tasks %}
+        <div class="bg-white rounded-lg p-3 border border-red-200 hover:border-red-400 transition cursor-pointer">
+            <h4 class="font-semibold text-gray-800 text-sm">{{ task.title }}</h4>
+            <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ task.description|truncatewords:10 }}</p>
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs text-red-600">{{ task.created_at|date:"M d, Y" }}</span>
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">✓ Completed</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4">
+            <p class="text-sm text-gray-500">No tasks yet</p>
+            <p class="text-xs text-gray-400 mt-1">Tasks will appear here</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block mobile_sidebar %}
+<!-- Mobile Sidebar - Task History -->
+<div class="p-4">
+    <h3 class="font-bold text-lg mb-4 text-red-800">Task History</h3>
+    <div class="space-y-3">
+        {% for task in tasks %}
+        <div class="bg-white rounded-lg p-3 border border-red-200 hover:border-red-400 transition cursor-pointer">
+            <h4 class="font-semibold text-gray-800 text-sm">{{ task.title }}</h4>
+            <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ task.description|truncatewords:10 }}</p>
+            <div class="flex justify-between items-center mt-2">
+                <span class="text-xs text-red-600">{{ task.created_at|date:"M d, Y" }}</span>
+                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">✓ Completed</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4">
+            <p class="text-sm text-gray-500">No tasks yet</p>
+            <p class="text-xs text-gray-400 mt-1">Tasks will appear here</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-[calc(100vh-64px)]">
+    <!-- ========== MAIN CHAT AREA ========== -->
+    <div class="flex-1 flex flex-col">
+        <!-- ========== CHAT HEADER ========== -->
+        <div class="bg-white border-b-2 border-red-200 p-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">
+                    {{ other_user.username|first|upper }}
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">{{ other_user.username }}</h2>
+                    <p id="typingIndicator" class="text-xs text-red-600 h-4 transition-opacity duration-300"></p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <!-- Mobile Task History Toggle -->
+                <button id="mobileTaskToggle" class="lg:hidden text-red-600 hover:text-red-800 transition p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12l4-4h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </button>
+                <a href="{% url 'chat:room_list' %}" class="text-red-600 hover:text-red-800 transition p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+            </div>
+        </div>
+        
+        <!-- ========== MESSAGES AREA ========== -->
+        <div id="messageArea" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-gradient-to-b from-white to-red-50">
+            {% for message in messages %}
+            <div class="flex {% if message.sender == user %}justify-end{% else %}justify-start{% endif %} animate-fade-in">
+                <div class="max-w-xs lg:max-w-md">
+                    {% if message.sender != user %}
+                    <!-- OTHER USER'S MESSAGE -->
+                    <div class="flex items-end space-x-2">
+                        <div class="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {{ message.sender.username|first|upper }}
+                        </div>
+                        <div class="bg-white border-2 border-red-200 rounded-lg rounded-bl-none p-3 shadow">
+                            <p class="text-gray-800">{{ message.content }}</p>
+                            <p class="text-xs text-gray-400 mt-1">{{ message.timestamp|date:"g:i A" }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- CURRENT USER'S MESSAGE -->
+                    <div class="flex items-end space-x-2 justify-end">
+                        <div class="bg-red-600 text-white rounded-lg rounded-br-none p-3 shadow">
+                            <p>{{ message.content }}</p>
+                            <p class="text-xs text-red-200 mt-1 text-right">{{ message.timestamp|date:"g:i A" }}</p>
+                        </div>
+                        <div class="w-8 h-8 bg-red-800 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {{ message.sender.username|first|upper }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- ========== MESSAGE INPUT AREA ========== -->
+        <div class="bg-white border-t-2 border-red-200 p-4 shadow-lg">
+            <form id="messageForm" class="flex space-x-2">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    class="flex-1 border-2 border-red-200 rounded-lg px-4 py-2 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200 transition"
+                    autocomplete="off"
+                    maxlength="1000"
+                >
+                <button 
+                    type="submit" 
+                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 active:bg-red-800 transition font-semibold shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ========== CONFIGURATION ==========
+    const roomId = {{ room.id }};
+    const currentUserId = "{{ user.id }}";
+    const currentUsername = "{{ user.username }}";
+    const otherUsername = "{{ other_user.username }}";
+
+    // ========== WEBSOCKET SETUP ==========
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const chatSocket = new WebSocket(
+        `${wsProtocol}://${window.location.host}/ws/chat/${roomId}/`
+    );
+
+
+    // ========== DOM ELEMENTS ==========
+    const messageArea = document.getElementById('messageArea');
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const mobileTaskToggle = document.getElementById('mobileTaskToggle');
+
+    // ========== STATE MANAGEMENT ==========
+    let typingTimer;
+    let isTyping = false;
+
+    // ========== UTILITY FUNCTIONS ==========
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function scrollToBottom() {
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+
+    // ========== WEBSOCKET EVENT HANDLERS ==========
+    chatSocket.onopen = function(e) {
+        console.log('✅ WebSocket connection established');
+    };
+
+    chatSocket.onmessage = function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            console.log('WebSocket message received:', data);
+            
+            if (data.type === 'message') {
+                appendMessage(data);
+                scrollToBottom();
+            } else if (data.type === 'typing') {
+                // FIX: Updated to match consumer format
+                showTypingIndicator(data.user, data.is_typing);
+            } else if (data.type === 'user_join') {
+                showSystemMessage(`${data.username} joined the chat`);
+            } else if (data.type === 'user_leave') {
+                showSystemMessage(`${data.username} left the chat`);
+            }
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('❌ WebSocket connection closed:', e);
+        showSystemMessage('Connection lost. Please refresh the page.');
+    };
+
+    chatSocket.onerror = function(e) {
+        console.error('⚠️ WebSocket error:', e);
+    };
+
+    // ========== MESSAGE SENDING ==========
+    messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent any form submission
+        
+        
+        const message = messageInput.value.trim();
+        if (message === '') return;
+
+        // Check if WebSocket is open
+        if (chatSocket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket is not open. State:', chatSocket.readyState);
+            showSystemMessage('Connection not ready. Please wait...');
+            return;
+        }
+
+        console.log('Sending message:', message);
+        
+        // Disable form while sending
+        const submitBtn = messageForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        
+        try {
+            chatSocket.send(JSON.stringify({
+                'type': 'message',
+                'message': message
+            }));
+            
+            messageInput.value = '';
+            sendTypingIndicator(false);
+            
+        } catch (error) {
+            console.error('Error sending message:', error);
+            showSystemMessage('Failed to send message. Please try again.');
+        } finally {
+            // Re-enable button
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }, 500);
+        }
+    });
+
+    // ========== TYPING INDICATOR ==========
+    function sendTypingIndicator(typing) {
+        if (chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'type': 'typing',
+                'is_typing': typing
+            }));
+        }
+    }
+
+    function showTypingIndicator(user, typing) {
+        // Only show if the other user is typing
+        if (typing && user !== currentUsername) {
+            typingIndicator.textContent = user + ' is typing...';
+            typingIndicator.classList.remove('opacity-0');
+        } else {
+            typingIndicator.classList.add('opacity-0');
+        }
+    }
+
+    // ========== MESSAGE RENDERING ==========
+    function appendMessage(data) {
+        const isOwnMessage = data.sender_id === currentUserId;
+        const timestamp = new Date(data.timestamp).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${isOwnMessage ? 'justify-end' : 'justify-start'} animate-fade-in`;
+        
+        if (isOwnMessage) {
+            // Current user's message
+            messageDiv.innerHTML = `
+                <div class="max-w-xs lg:max-w-md">
+                    <div class="flex items-end space-x-2 justify-end">
+                        <div class="bg-red-600 text-white rounded-lg rounded-br-none p-3 shadow">
+                            <p>${escapeHtml(data.message)}</p>
+                            <p class="text-xs text-red-200 mt-1 text-right">${timestamp}</p>
+                        </div>
+                        <div class="w-8 h-8 bg-red-800 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            ${currentUsername.charAt(0).toUpperCase()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Other user's message
+            messageDiv.innerHTML = `
+                <div class="max-w-xs lg:max-w-md">
+                    <div class="flex items-end space-x-2">
+                        <div class="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            ${data.sender.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="bg-white border-2 border-red-200 rounded-lg rounded-bl-none p-3 shadow">
+                            <p class="text-gray-800">${escapeHtml(data.message)}</p>
+                            <p class="text-xs text-gray-400 mt-1">${timestamp}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        messageArea.appendChild(messageDiv);
+    }
+
+    function showSystemMessage(text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex justify-center animate-fade-in';
+        messageDiv.innerHTML = `
+            <div class="bg-gray-100 text-gray-600 text-xs px-4 py-2 rounded-full">
+                ${escapeHtml(text)}
+            </div>
+        `;
+        messageArea.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // ========== MOBILE CONTROLS ==========
+    if (mobileTaskToggle) {
+        mobileTaskToggle.addEventListener('click', function() {
+            // Toggle mobile sidebar visibility
+            const mobileSidebar = document.getElementById('mobileSidebar');
+            if (mobileSidebar) {
+                mobileSidebar.classList.toggle('hidden');
+            }
+        });
+    }
+
+    // ========== KEYBOARD SHORTCUTS ==========
+    messageInput.addEventListener('keydown', function(e) {
+        // Send message on Ctrl+Enter or Cmd+Enter
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+        
+        // Focus management
+        if (e.key === 'Escape') {
+            messageInput.blur();
+        }
+    });
+
+    // ========== INITIALIZATION ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        scrollToBottom();
+        messageInput.focus();
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.3s ease-out;
+            }
+        `;
+        document.head.appendChild(style);
+    });
+
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            messageInput.focus();
+        }
+    });
+</script>
+{% endblock %}

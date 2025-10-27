@@ -4,6 +4,7 @@
 {% block title %}Review Submission{% endblock %}
 
 {% block content %}
+
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
   <!-- Left: Submission & Task -->
   <div class="md:col-span-2 space-y-6">
@@ -56,6 +57,21 @@
     </div>
   </div>
 
+<!-- ✅ For advertiser viewing submissions -->
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="font-semibold text-green-800 mb-1">
+                    <i class="fas fa-comments mr-2"></i>
+                    Chat with Workers
+                </h3>
+                <p class="text-green-700 text-sm">
+                    View all conversations: 
+                    <a href="{% url 'chat:room_list' %}" class="underline">My Chats</a>
+                </p>
+            </div>
+        </div>
+    </div>
   <!-- Right: Decision Form -->
   <div>
     <div class="bg-white rounded-xl shadow card-hover p-6 fade-in-up">

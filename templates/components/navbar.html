@@ -26,6 +26,7 @@
           {% if request.user.role == 'advertiser' or request.user.is_staff %}
             <li><a href="{% url 'tasks:create_task' %}" class="nav-link" itemprop="url">Post Task</a></li>
           {% endif %}
+          <li><a href="{% url 'chat:room_list' %}" class="nav-link" itemprop="url">My Chats</a></li>
           <li><a href="{% url 'wallets:dashboard' %}" class="nav-link" itemprop="url">Wallet</a></li>
           <li><a href="{% url 'referrals:dashboard' %}" class="nav-link" itemprop="url">Connections</a></li>
           {% if request.user.role == 'admin' or request.user.is_staff %}
@@ -92,6 +93,7 @@
         {% if request.user.role == 'advertiser' or request.user.is_staff %}
           <li><a href="{% url 'tasks:create_task' %}" class="mobile-link">Post Task</a></li>
         {% endif %}
+        <li><a href="{% url 'chat:room_list' %}" class="mobile-link">My Chats</a></li>
         <li><a href="{% url 'wallets:dashboard' %}" class="mobile-link">Wallet</a></li>
         <li><a href="{% url 'referrals:dashboard' %}" class="mobile-link">Connections</a></li>
         {% if request.user.role == 'admin' or request.user.is_staff %}

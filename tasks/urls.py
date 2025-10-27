@@ -18,7 +18,13 @@ urlpatterns = [
     # TimeWall postback endpoint (webhook)
     path('timewall/postback/', views.timewall_postback, name='timewall_postback'),
     path('timewall', views.offerwall_view, name='timewall'),
+    path('wallet/balance/', views.task_wallet_balance, name='task_wallet_balance'),
 
+    #Chats 
+    # path('task/<int:task_id>/chat/', views.task_chat, name='task_chat'),
+    path('chat-with-advertiser/<int:task_id>/', views.chat_with_advertiser, name='chat_with_advertiser'),
+    path('chat-with-advertiser/<int:task_id>/', views.chat_with_advertiser, name='chat_with_advertiser'),
+    # path('my-chats/', views.my_worker_chats, name='my_worker_chats'),
     
     # Review URLs
     path('<int:task_id>/review/', views.review_submissions, name='review_submissions'),

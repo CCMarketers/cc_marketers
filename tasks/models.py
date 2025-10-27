@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 import uuid
+from chat.models import ChatRoom
 
 class Task(models.Model):
     TASK_STATUS_CHOICES = [
@@ -25,6 +26,13 @@ class Task(models.Model):
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    chat_room = models.ForeignKey(
+        ChatRoom,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tasks'
     )
 
     category = models.ForeignKey(
