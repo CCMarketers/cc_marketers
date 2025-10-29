@@ -2,9 +2,10 @@ from pathlib import Path
 from decouple import config
 import os
 
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -15,7 +16,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', '').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DEBUG')
 ALLOWED_HOSTS = ['*']
 
 BACKEND_URL = config('BACKEND_URL')
@@ -23,6 +24,7 @@ BACKEND_URL = config('BACKEND_URL')
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,6 +46,8 @@ INSTALLED_APPS = [
     'offerwalls',
     'subscriptions',
     'payments',
+    'chat',
+    'channels'
 
     "wallets.apps.WalletsConfig",
 
@@ -81,17 +85,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'cc_marketers.wsgi.application'
+ASGI_APPLICATION = 'cc_marketers.asgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("REDIS_URL")],
+        },
+    },
+}
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -231,21 +241,16 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 
 
+# TimeWall Configuration
+TIMEWALL_SECRET_KEY = os.getenv('TIMEWALL_SECRET_KEY')
+TIMEWALL_PLACEMENT_ID = os.getenv('TIMEWALL_PLACEMENT_ID')
 
 # Paystack Configuration
-PAYSTACK_PUBLIC_KEY = 'pk_test_98d1f58ea371bbbfe691ec17b30268cc31ebf7d7'  # Replace with your actual keys
-PAYSTACK_SECRET_KEY = 'sk_test_9c232d742d7dddb0b9e808f5427bbc07f76ce702'  # Replace with your actual keys
-PAYSTACK_BASE_URL = "https://api.paystack.co"
+PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY')
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY')   
+PAYSTACK_BASE_URL = os.getenv('PAYSTACK_BASE_URL')
 
 
-# Flutterwave Configuration
-FLUTTERWAVE_PUBLIC_KEY = os.getenv('FLUTTERWAVE_PUBLIC_KEY', 'FLWPUBK_TEST-d0f214e8bd6b2b5d1b65e8033316f090-X')
-FLUTTERWAVE_SECRET_KEY = os.getenv('FLUTTERWAVE_SECRET_KEY', 'FLWSECK_TEST-c278f8c5ef8557f31908b8be58e74679-X')
-FLUTTERWAVE_SECRET_HASH = os.getenv('FLUTTERWAVE_SECRET_HASH', 'TEST0397597f0c4f')  # For webhook verification
-
-# For production, use:
-# PAYSTACK_PUBLIC_KEY = 'pk_live_your_live_public_key'
-# PAYSTACK_SECRET_KEY = 'sk_live_your_live_secret_key'
 
 CACHES = {
     'default': {
@@ -253,4 +258,5 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
 
