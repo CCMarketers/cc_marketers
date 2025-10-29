@@ -79,17 +79,19 @@
             </div>
 
             <!-- TimeWall iFrame -->
-            <iframe
+            <iframe 
                 id="timewall-frame"
-                src="https://timewall.io/users/offerwall/1741497395046984/{{ request.user.id }}" 
-                width="100%"
-                height="750"
+                title="TimeWall"
+                src="https://timewall.io/users/login?oid=1741497395046984&uid={{ request.user.id }}"
                 frameborder="0"
-                scrolling="yes"
+                width="100%"
+                height="1000"
+                scrolling="auto"
                 allow="clipboard-write"
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-popups-to-escape-sandbox"
                 class="bg-white">
             </iframe>
+
         </div>
 
         <!-- Help Section -->
