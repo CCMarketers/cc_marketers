@@ -374,6 +374,12 @@ def review_submission(request, submission_id):
         Submission.objects.select_related("task", "member"), 
         id=submission_id
     )
+    # Inside your review_submission view
+    room = ChatRoom.objects.filter(
+        advertiser=submission.task.advertiser,
+        worker=submission.member
+    ).first()  # returns one room or None
+
 
     if submission.task.advertiser != request.user and not request.user.is_staff:
         messages.error(request, "Permission denied.")
@@ -473,7 +479,7 @@ def review_submission(request, submission_id):
     return render(
         request, 
         "tasks/review_submission.html", 
-        {"submission": submission, "form": form}
+        {"submission": submission, "form": form, "room": room}
     )
 
 @login_required
