@@ -48,6 +48,6 @@ urlpatterns = [
 
 
     path("transfer-to-task-wallet/", views.transfer_to_task_wallet_view, name="transfer_to_task_wallet"),
-    path("transfer-to-main/", views.transfer_to_main_wallet_view, name="transfer_to_main_wallet"),
+    # path("transfer-to-main/", views.transfer_to_main_wallet_view, name="transfer_to_main_wallet"),
 
 ]
