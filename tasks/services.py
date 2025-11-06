@@ -39,16 +39,6 @@ class TaskWalletService:
     # -------------------------------
     # Utility helpers
     # -------------------------------
-    # @staticmethod
-    # def split_payment(amount, company_rate=Decimal("0.10")):
-    #     """
-    #     Split escrow amount between worker and company.
-    #     Returns (member_amount, company_cut)
-    #     """
-    #     amount = Decimal(amount)
-    #     company_cut = (amount * company_rate).quantize(Decimal("0.01"))
-    #     member_amount = amount - company_cut
-    #     return member_amount, company_cut
 
     @staticmethod
     def split_payment(amount):
@@ -457,7 +447,7 @@ class TaskWalletService:
                 f"Member: {member_id}, Amount: {member_amount}"
             )
             
-            TaskWalletService.credit_wallet(
+            WalletService.credit_wallet(
                 user=member,
                 amount=member_amount,
                 category="task_payment",
