@@ -12,9 +12,13 @@ from .models import SubscriptionPlan, UserSubscription
 from .services import SubscriptionService
 from wallets.models import Wallet
 # from wallets.services import WalletService
-from referrals.services import credit_signup_bonus_on_subscription
+from referrals.services import ReferralEarningService
 from tasks.services import TaskWalletService
+from referrals.services import ReferralSubscriptionHandler
 
+
+import logging
+logger = logging.getLogger(__name__)
 
 def subscription_plans(request):
     """
@@ -59,7 +63,7 @@ def subscribe(request, plan_id):
 
     result = SubscriptionService.subscribe_user(request.user, plan_id)
     if result.get("success"):
-        credit_signup_bonus_on_subscription(request.user)
+        ReferralEarningService.credit_signup_bonus(request.user)
         messages.success(request, "Successfully subscribed to the plan!")
         return redirect("subscriptions:my_subscription")
 
@@ -120,11 +124,13 @@ def toggle_auto_renewal(request):
 
     return redirect("subscriptions:my_subscription")
 
+
+
 @login_required
 def cancel_subscription(request):
     """
     Cancel user's active subscription.
-    If Business Plan → ensure ₦5000 Task Wallet allocation is reversed if unused.
+    ✅ NOW: Only disables referrals, allows reactivation on resubscribe
     """
     if request.method != "POST":
         return redirect("subscriptions:my_subscription")
@@ -133,14 +139,21 @@ def cancel_subscription(request):
     if not active_subscription:
         messages.error(request, "No active subscription found!")
         return redirect("subscriptions:my_subscription")
+    
+    logger.info(
+        f"[CANCEL_SUB] User {request.user.username} cancelling "
+        f"{active_subscription.plan.name} subscription"
+    )
 
     # Mark subscription as cancelled
     active_subscription.status = "cancelled"
     active_subscription.save(update_fields=["status"])
+    
+    logger.info(f"[CANCEL_SUB] Subscription cancelled for {request.user.username}")
 
-    # Handle Business Member Account allocation reversal if balance still intact
+    # Handle Business Member Account allocation reversal
     if active_subscription.plan.name == "Business Member Account":
-        allocation_amount = Decimal("5000.00")
+        allocation_amount = Decimal("10000.00")
         task_wallet = TaskWalletService.get_or_create_wallet(user=request.user)
 
         if task_wallet.balance >= allocation_amount:
@@ -154,15 +167,30 @@ def cancel_subscription(request):
                     f"{active_subscription.plan.name}"
                 ),
             )
-            messages.info(
-                request,
-                "Business plan allocation reversed successfully."
+            logger.info(
+                f"[CANCEL_SUB] Reversed ₦{allocation_amount} task wallet "
+                f"allocation for {request.user.username}"
             )
+            messages.info(request, "Business plan allocation reversed successfully.")
         else:
+            logger.warning(
+                f"[CANCEL_SUB] Cannot reverse allocation for {request.user.username}: "
+                f"insufficient balance (₦{task_wallet.balance} < ₦{allocation_amount})"
+            )
             messages.warning(
                 request,
                 "Your subscription was cancelled, but the Task Wallet allocation was already used."
             )
+    
+    # ✅ FIX: Temporarily disable referrals (can be reactivated on resubscribe)
+    logger.info(f"[CANCEL_SUB] Disabling referral privileges for {request.user.username}")
+    ReferralSubscriptionHandler.handle_subscription_cancellation(request.user)
 
-    messages.success(request, "Subscription cancelled successfully.")
+    messages.success(
+        request, 
+        "Subscription cancelled successfully. "
+        "You can resubscribe anytime to reactivate your referral code."
+    )
+    logger.info(f"[CANCEL_SUB] ✅ Cancellation complete for {request.user.username}")
+    
     return redirect("subscriptions:my_subscription")

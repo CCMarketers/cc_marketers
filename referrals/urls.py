@@ -1,4 +1,8 @@
-# apps/referrals/urls.py
+
+# ============================================================================
+# FILE 5: referrals/urls.py
+# ============================================================================
+
 from django.urls import path
 from . import views
 
@@ -11,7 +15,11 @@ urlpatterns = [
     path('earnings/', views.EarningsListView.as_view(), name='earnings_list'),
     path('commission-tiers/', views.CommissionTiersView.as_view(), name='commission_tiers'),
     
+    # API endpoint for frontend validation
+    path('api/check-eligibility/', views.CheckReferralEligibilityView.as_view(), name='check_eligibility'),
+    
     # Admin views
     path('admin/dashboard/', views.AdminReferralDashboardView.as_view(), name='admin_dashboard'),
     path('admin/earnings/', views.AdminEarningsManagementView.as_view(), name='admin_earnings'),
 ]
+

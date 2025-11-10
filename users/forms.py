@@ -8,6 +8,16 @@ from referrals.models import ReferralCode  # adjust import path
 class CustomUserCreationForm(UserCreationForm):
     phone = forms.CharField(required=False, max_length=15)
     referral_code = forms.CharField(required=False, max_length=50)
+        # ⚠️ ADD THIS FIELD
+    subscription_type = forms.ChoiceField(
+        choices=[
+            ('Demo Account', 'Demo Account - Free Trial'),
+            ('Business Member Account', 'Business Member - Full Access'),
+        ],
+        initial='Demo Account',
+        required=True,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
@@ -54,7 +64,7 @@ class CustomUserCreationForm(UserCreationForm):
     )
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'account_type')
+        fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'account_type', 'subscription_type')
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,7 +76,24 @@ class CustomUserCreationForm(UserCreationForm):
             'class': 'form-input',
             'placeholder': 'Confirm password'
         })
-    
+    def clean(self):
+        cleaned_data = super().clean()
+        ref_code = cleaned_data.get('referral_code')
+        subscription_type = cleaned_data.get('subscription_type')
+        
+        # Only validate if both are provided
+        if ref_code and subscription_type:
+            from referrals.services import ReferralValidator
+            
+            eligibility = ReferralValidator.check_referral_eligibility(
+                ref_code,
+                subscription_type
+            )
+            
+            if not eligibility['eligible']:
+                raise forms.ValidationError(eligibility['reason'])
+        
+        return cleaned_data
     def clean_email(self):
         email = self.cleaned_data.get("email")
         if User.objects.filter(email=email).exists():

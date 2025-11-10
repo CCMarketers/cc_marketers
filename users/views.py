@@ -36,7 +36,8 @@ from .forms import (
     ExtendedProfileForm,
 )
 from .models import User, UserProfile, EmailVerificationToken, PhoneVerificationToken
-
+from django.db import transaction
+from referrals.services import ReferralValidator, ReferralEarningService
 from tasks.models import Task, Submission
 from referrals.models import ReferralCode, Referral
 from core.services import send_verification_email
@@ -70,11 +71,56 @@ def safe_send_verification_email(user: User) -> bool:
         return False
 
 
-# -------------------------
-# Registration & Auth
-# -------------------------
+# # -------------------------
+# # Registration & Auth
+# # -------------------------
+# class UserRegistrationView(CreateView):
+#     """User registration with referral tracking"""
+#     model = User
+#     form_class = CustomUserCreationForm
+#     template_name = "users/register.html"
+#     success_url = reverse_lazy("users:profile_setup")
+
+#     def get_initial(self):
+#         initial = super().get_initial()
+#         if ref := self.request.GET.get("ref"):
+#             initial["referral_code"] = ref
+#         return initial
+
+#     def form_valid(self, form):
+#         response = super().form_valid(form)
+#         user: User = self.object
+
+#         # --- Referral handling (use select_related to avoid extra hits later) ---
+#         ref_code = self.request.GET.get("ref") or form.cleaned_data.get("referral_code")
+#         if ref_code:
+#             try:
+#                 ref_obj = ReferralCode.objects.select_related("user").get(code=ref_code)
+#                 referrer = ref_obj.user
+#                 Referral.objects.get_or_create(
+#                     referrer=referrer,
+#                     referred=user,
+#                     defaults={"level": 1, "referral_code": ref_obj},
+#                 )
+#             except ReferralCode.DoesNotExist:
+#                 logger.debug("Registration used unknown referral code: %s", ref_code)
+
+#         # --- Login user and send verification email ---
+#         login(self.request, user)
+#         # success = safe_send_verification_email(user)
+#         # if success:
+#         #     messages.success(self.request, "Welcome! Please verify your email.")
+#         # else:
+#         #     messages.warning(self.request, "Welcome! We couldn't send a verification email — please try resending it.")
+
+#         return response
+# users/views.py
+
+
+
+
 class UserRegistrationView(CreateView):
-    """User registration with referral tracking"""
+    """User registration with referral tracking and validation"""
     model = User
     form_class = CustomUserCreationForm
     template_name = "users/register.html"
@@ -87,33 +133,94 @@ class UserRegistrationView(CreateView):
         return initial
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        user: User = self.object
-
-        # --- Referral handling (use select_related to avoid extra hits later) ---
+        """
+        CRITICAL: Validate referral BEFORE creating user.
+        Block registration if referral rules are violated.
+        """
+        # Get referral code and subscription type from form
         ref_code = self.request.GET.get("ref") or form.cleaned_data.get("referral_code")
-        if ref_code:
-            try:
-                ref_obj = ReferralCode.objects.select_related("user").get(code=ref_code)
-                referrer = ref_obj.user
-                Referral.objects.get_or_create(
-                    referrer=referrer,
-                    referred=user,
-                    defaults={"level": 1, "referral_code": ref_obj},
+        subscription_type = form.cleaned_data.get("subscription_type")  # ⚠️ ADD THIS FIELD TO YOUR FORM
+        
+        email = form.cleaned_data.get('email', 'unknown')
+        
+        logger.info(
+            f"[REGISTRATION] New registration: {email}, "
+            f"subscription: {subscription_type}, referral: {ref_code or 'None'}"
+        )
+        
+        # ✅ STEP 1: VALIDATE REFERRAL BEFORE USER CREATION (if referral code provided)
+        if ref_code and subscription_type:
+            logger.debug(f"[REGISTRATION] Validating referral code: {ref_code}")
+            
+            eligibility = ReferralValidator.check_referral_eligibility(
+                ref_code,
+                subscription_type
+            )
+            
+            if not eligibility['eligible']:
+                # 🚫 BLOCK REGISTRATION - This is the key change
+                logger.warning(
+                    f"[REGISTRATION] ❌ Registration blocked for {email}: "
+                    f"{eligibility['reason']}"
                 )
-            except ReferralCode.DoesNotExist:
-                logger.debug("Registration used unknown referral code: %s", ref_code)
-
-        # --- Login user and send verification email ---
-        login(self.request, user)
-        # success = safe_send_verification_email(user)
-        # if success:
-        #     messages.success(self.request, "Welcome! Please verify your email.")
-        # else:
-        #     messages.warning(self.request, "Welcome! We couldn't send a verification email — please try resending it.")
-
-        return response
-
+                messages.error(self.request, eligibility['reason'])
+                return self.form_invalid(form)
+            
+            logger.info(
+                f"[REGISTRATION] ✅ Referral validation passed for {email} "
+                f"(referrer: {eligibility['referrer_info']['username']})"
+            )
+        
+        # ✅ STEP 2: Create user (wrapped in transaction)
+        try:
+            with transaction.atomic():
+                response = super().form_valid(form)
+                user = self.object
+                
+                logger.info(f"[REGISTRATION] ✅ User created: {user.username} ({user.email})")
+                
+                # ✅ STEP 3: Create referral relationship (if code was provided and validated)
+                if ref_code and subscription_type:
+                    logger.debug(f"[REGISTRATION] Creating referral relationship for {user.username}")
+                    
+                    success, referral, error = ReferralValidator.validate_and_create_referral(
+                        new_user=user,
+                        referral_code=ref_code,
+                        new_user_subscription_type=subscription_type
+                    )
+                    
+                    if not success:
+                        # This shouldn't happen after eligibility check, but handle gracefully
+                        logger.error(
+                            f"[REGISTRATION] ⚠️ Referral creation failed for {user.username}: {error}"
+                        )
+                        messages.warning(
+                            self.request,
+                            f"Registration successful, but referral could not be processed: {error}"
+                        )
+                    else:
+                        logger.info(f"[REGISTRATION] ✅ Referral created for {user.username}")
+                        messages.success(
+                            self.request,
+                            f"You were successfully referred by {eligibility['referrer_info']['display_name']}!"
+                        )
+                
+                # ✅ STEP 4: Login user
+                login(self.request, user)
+                
+                # Note: Subscription activation and bonus crediting should happen
+                # when user actually subscribes (in your subscribe_user view)
+                
+                logger.info(f"[REGISTRATION] 🎉 Registration complete for {user.username}")
+                return response
+                
+        except Exception as e:
+            logger.error(
+                f"[REGISTRATION] ❌ Registration failed for {email}: {str(e)}",
+                exc_info=True
+            )
+            messages.error(self.request, "Registration failed. Please try again.")
+            return self.form_invalid(form)
 
 class CustomLoginView(LoginView):
     """Custom login supporting email/phone authentication"""
