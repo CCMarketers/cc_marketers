@@ -23,7 +23,7 @@ class SubscriptionService:
     def subscribe_user(user, plan_id):
         """
         Subscribe a user to a plan by deducting from wallet balance & allocate TaskWallet funds.
-        ✅ NOW TRIGGERS REFERRAL BONUSES AND HANDLES SUBSCRIPTION CHANGES
+        ✅ NOW HANDLES: Demo → Cancel → Business scenario
         """
         logger.info(f"[SUBSCRIPTION] User {user.username} attempting to subscribe to plan {plan_id}")
         
@@ -49,13 +49,25 @@ class SubscriptionService:
                 )
                 return {"success": False, "error": "Insufficient wallet balance"}
 
-            # ✅ NEW: Get OLD subscription for tracking changes
-            old_subscription = SubscriptionService.get_user_active_subscription(user)
+            # ✅ FIX: Get OLD subscription (including cancelled ones for tracking)
+            old_subscription = UserSubscription.objects.filter(
+                user=user,
+                status__in=["active", "cancelled", "expired"]  # ← Include cancelled!
+            ).order_by("-created_at").first()
+            
             old_plan_name = old_subscription.plan.name if old_subscription else None
+            
+            # ✅ FIX: Check if user ever had a Business subscription before
+            had_business_before = UserSubscription.objects.filter(
+                user=user,
+                plan__name="Business Member Account",
+                status__in=["active", "cancelled", "expired"]
+            ).exists()
             
             logger.info(
                 f"[SUBSCRIPTION] {user.username} changing from "
-                f"'{old_plan_name or 'None'}' to '{plan.name}'"
+                f"'{old_plan_name or 'None'}' to '{plan.name}' "
+                f"(had_business_before: {had_business_before})"
             )
 
             # Cancel existing active subscriptions
@@ -85,49 +97,61 @@ class SubscriptionService:
             if subscription.plan.name.strip().lower() == "business member account":
                 TaskWalletService.credit_wallet(
                     user=user,
-                    amount=Decimal("10000.00"),  # Changed from 5000 to 10000 per your code
+                    amount=Decimal("10000.00"),
                     category="subscription_allocation",
                     description=f"Monthly allocation from subscription plan {plan.name}",
                 )
                 logger.info(f"[SUBSCRIPTION] Credited ₦10,000 task wallet for {user.username}")
 
-            # ✅ NEW: Handle referral implications based on subscription change
+            # ✅ NEW: Handle all subscription state changes
             new_plan_name = plan.name
             
-            if old_plan_name and new_plan_name != old_plan_name:
-                # Subscription change (upgrade or downgrade)
-                logger.info(f"[SUBSCRIPTION] Handling subscription change for {user.username}")
-                
-                if old_plan_name == "Demo Account" and new_plan_name == "Business Member Account":
-                    # UPGRADE: Demo → Business
-                    logger.info(f"[SUBSCRIPTION] Processing UPGRADE for {user.username}")
-                    ReferralSubscriptionHandler.handle_subscription_upgrade(
-                        user, old_plan_name, new_plan_name
-                    )
-                    
-                elif old_plan_name == "Business Member Account" and new_plan_name == "Demo Account":
-                    # DOWNGRADE: Business → Demo
-                    logger.warning(f"[SUBSCRIPTION] Processing DOWNGRADE for {user.username}")
-                    ReferralSubscriptionHandler.handle_subscription_downgrade(
-                        user, old_plan_name, new_plan_name
-                    )
+            # Case 1: Demo → Business (upgrade)
+            if old_plan_name == "Demo Account" and new_plan_name == "Business Member Account":
+                logger.info(f"[SUBSCRIPTION] Processing UPGRADE: Demo → Business")
+                ReferralSubscriptionHandler.handle_subscription_upgrade(
+                    user, old_plan_name, new_plan_name
+                )
+                # Credit signup bonuses
+                ReferralEarningService.credit_signup_bonus(user)
             
-            # ✅ NEW: Credit referral signup bonuses (ONLY for Business Member signups)
-            if new_plan_name == "Business Member Account":
-                if not old_plan_name:
-                    # First-time Business subscription (new signup)
-                    logger.info(f"[SUBSCRIPTION] First-time Business signup, crediting referral bonuses")
-                    ReferralEarningService.credit_signup_bonus(user)
-                elif old_plan_name == "Demo Account":
-                    # Upgraded from Demo to Business
-                    logger.info(f"[SUBSCRIPTION] Upgrade to Business, crediting referral bonuses")
-                    ReferralEarningService.credit_signup_bonus(user)
-                else:
-                    logger.debug(f"[SUBSCRIPTION] Renewal/resubscription, no new referral bonuses")
+            # Case 2: Business → Demo (downgrade)
+            elif old_plan_name == "Business Member Account" and new_plan_name == "Demo Account":
+                logger.warning(f"[SUBSCRIPTION] Processing DOWNGRADE: Business → Demo")
+                ReferralSubscriptionHandler.handle_subscription_downgrade(
+                    user, old_plan_name, new_plan_name
+                )
+            
+            # ✅ Case 3: No previous subscription OR resubscribing after cancellation
+            elif not old_plan_name or old_subscription.status in ["cancelled", "expired"]:
+                if new_plan_name == "Business Member Account":
+                    logger.info(
+                        f"[SUBSCRIPTION] New or resubscribed Business Member - "
+                        f"enabling referral privileges"
+                    )
+                    # Re-enable referral privileges
+                    ReferralSubscriptionHandler.reactivate_referral_code(user)
+                    
+                    # Credit signup bonuses ONLY if never had Business before
+                    if not had_business_before:
+                        logger.info(f"[SUBSCRIPTION] First-time Business signup, crediting bonuses")
+                        ReferralEarningService.credit_signup_bonus(user)
+                    else:
+                        logger.info(f"[SUBSCRIPTION] Returning Business member, no new bonuses")
+                
+                elif new_plan_name == "Demo Account":
+                    logger.info(f"[SUBSCRIPTION] Demo subscription - limited referral privileges")
+                    # Enable referral code but with Demo restrictions
+                    ReferralSubscriptionHandler.reactivate_referral_code(user)
+            
+            # Case 4: Business → Business (renewal/resubscribe)
+            elif old_plan_name == "Business Member Account" and new_plan_name == "Business Member Account":
+                logger.info(f"[SUBSCRIPTION] Business renewal, no bonus crediting")
             
             logger.info(f"[SUBSCRIPTION] 🎉 Subscription complete for {user.username}")
 
         return {"success": True, "subscription": subscription}
+
 
     @staticmethod
     def check_and_renew_subscriptions():
