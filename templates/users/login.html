@@ -37,9 +37,9 @@
                         <input type="checkbox" name="remember_me" class="text-red-600 focus:ring-red-500 border-red-300 rounded">
                         <span class="ml-2 text-gray-600">Remember me</span>
                     </label>
-                    <a href="{% url '#' %}" class="text-red-600 hover:text-red-800 text-sm font-medium">Forgot password?</a>
+                    <a href="#" class="text-red-600 hover:text-red-800 text-sm font-medium">Forgot password?</a>
                 </div>
-                {% comment %} users:password_reset {% endcomment %}
+                {% comment %} {% url 'users:password_reset' %} {% endcomment %}
                 <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg">
                     Sign In
                 </button>
