@@ -260,3 +260,6 @@ CACHES = {
 }
 
 
+
+DEMO_REFERRER_EMAIL = "ccmarketers1@gmail.com"
+
