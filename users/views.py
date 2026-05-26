@@ -45,6 +45,9 @@ from wallets.services import WalletService
 from payments.models import PaymentTransaction
 
 
+from django.conf import settings
+DEMO_REFERRER_EMAIL = settings.DEMO_REFERRER_EMAIL
+
 logger = logging.getLogger(__name__)
 
 # -------------------------
@@ -118,9 +121,7 @@ def safe_send_verification_email(user: User) -> bool:
 
 
 
-
 class UserRegistrationView(CreateView):
-    """User registration with referral tracking and validation"""
     model = User
     form_class = CustomUserCreationForm
     template_name = "users/register.html"
@@ -132,95 +133,82 @@ class UserRegistrationView(CreateView):
             initial["referral_code"] = ref
         return initial
 
+    def _resolve_subscription_type(self, ref_code: str) -> str:
+        """
+        Determine subscription type from referral code owner.
+        Only ccmarketers1@gmail.com's code produces a Demo Account.
+        Everyone else (including no referral) becomes Business Member.
+        """
+        if not ref_code:
+            return "Business Member Account"
+        try:
+            ref_obj = ReferralCode.objects.select_related('user').get(
+                code=ref_code, is_active=True
+            )
+            if ref_obj.user.email == DEMO_REFERRER_EMAIL:
+                return "Demo Account"
+        except ReferralCode.DoesNotExist:
+            pass  # clean_referral_code already validated this won't happen
+        return "Business Member Account"
+
     def form_valid(self, form):
-        """
-        CRITICAL: Validate referral BEFORE creating user.
-        Block registration if referral rules are violated.
-        """
-        # Get referral code and subscription type from form
         ref_code = self.request.GET.get("ref") or form.cleaned_data.get("referral_code")
-        subscription_type = form.cleaned_data.get("subscription_type")  # ⚠️ ADD THIS FIELD TO YOUR FORM
-        
         email = form.cleaned_data.get('email', 'unknown')
-        
+
+        # Determine subscription type — no longer from form, derived from referral code owner
+        subscription_type = self._resolve_subscription_type(ref_code)
+
         logger.info(
             f"[REGISTRATION] New registration: {email}, "
             f"subscription: {subscription_type}, referral: {ref_code or 'None'}"
         )
-        
-        # ✅ STEP 1: VALIDATE REFERRAL BEFORE USER CREATION (if referral code provided)
-        if ref_code and subscription_type:
-            logger.debug(f"[REGISTRATION] Validating referral code: {ref_code}")
-            
-            eligibility = ReferralValidator.check_referral_eligibility(
-                ref_code,
-                subscription_type
-            )
-            
+
+        # Validate referral eligibility if a code was provided
+        if ref_code:
+            eligibility = ReferralValidator.check_referral_eligibility(ref_code, subscription_type)
             if not eligibility['eligible']:
-                # 🚫 BLOCK REGISTRATION - This is the key change
-                logger.warning(
-                    f"[REGISTRATION] ❌ Registration blocked for {email}: "
-                    f"{eligibility['reason']}"
-                )
+                logger.warning(f"[REGISTRATION] ❌ Blocked {email}: {eligibility['reason']}")
                 messages.error(self.request, eligibility['reason'])
                 return self.form_invalid(form)
-            
-            logger.info(
-                f"[REGISTRATION] ✅ Referral validation passed for {email} "
-                f"(referrer: {eligibility['referrer_info']['username']})"
-            )
-        
-        # ✅ STEP 2: Create user (wrapped in transaction)
+            logger.info(f"[REGISTRATION] ✅ Referral valid for {email}")
+
         try:
             with transaction.atomic():
                 response = super().form_valid(form)
                 user = self.object
-                
+
+                # Set account_type on user model to match subscription
+                if subscription_type == "Demo Account":
+                    user.account_type = User.DEMO
+                    user.save(update_fields=['account_type'])
+
                 logger.info(f"[REGISTRATION] ✅ User created: {user.username} ({user.email})")
-                
-                # ✅ STEP 3: Create referral relationship (if code was provided and validated)
-                if ref_code and subscription_type:
-                    logger.debug(f"[REGISTRATION] Creating referral relationship for {user.username}")
-                    
+
+                # Create referral relationship if code provided
+                if ref_code:
                     success, referral, error = ReferralValidator.validate_and_create_referral(
                         new_user=user,
                         referral_code=ref_code,
                         new_user_subscription_type=subscription_type
                     )
-                    
                     if not success:
-                        # This shouldn't happen after eligibility check, but handle gracefully
-                        logger.error(
-                            f"[REGISTRATION] ⚠️ Referral creation failed for {user.username}: {error}"
-                        )
-                        messages.warning(
-                            self.request,
-                            f"Registration successful, but referral could not be processed: {error}"
-                        )
+                        logger.error(f"[REGISTRATION] ⚠️ Referral creation failed: {error}")
+                        messages.warning(self.request,
+                            f"Registration successful, but referral could not be processed: {error}")
                     else:
                         logger.info(f"[REGISTRATION] ✅ Referral created for {user.username}")
-                        messages.success(
-                            self.request,
-                            f"You were successfully referred by {eligibility['referrer_info']['display_name']}!"
-                        )
-                
-                # ✅ STEP 4: Login user
+                        messages.success(self.request,
+                            f"You were successfully referred by {eligibility['referrer_info']['display_name']}!")
+
                 login(self.request, user)
-                
-                # Note: Subscription activation and bonus crediting should happen
-                # when user actually subscribes (in your subscribe_user view)
-                
                 logger.info(f"[REGISTRATION] 🎉 Registration complete for {user.username}")
                 return response
-                
+
         except Exception as e:
-            logger.error(
-                f"[REGISTRATION] ❌ Registration failed for {email}: {str(e)}",
-                exc_info=True
-            )
+            logger.error(f"[REGISTRATION] ❌ Registration failed for {email}: {str(e)}", exc_info=True)
             messages.error(self.request, "Registration failed. Please try again.")
             return self.form_invalid(form)
+        
 
 class CustomLoginView(LoginView):
     """Custom login supporting email/phone authentication"""

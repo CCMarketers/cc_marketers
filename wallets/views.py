@@ -107,13 +107,27 @@ class TransactionListView(LoginRequiredMixin, ListView):
 
 
 @method_decorator(subscription_required, name='dispatch')
-@method_decorator(plan_required("Business Member Account"), name="dispatch")
 class WithdrawalRequestView(LoginRequiredMixin, CreateView):
-    """Create withdrawal request."""
     model = WithdrawalRequest
     form_class = WithdrawalRequestForm
     template_name = 'wallets/withdrawal_request.html'
     success_url = reverse_lazy('wallets:withdrawal_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        # Block Demo users who've already used their one withdrawal
+        if getattr(request.user, 'account_type', None) == 'Demo':
+            already_withdrawn = WithdrawalRequest.objects.filter(
+                user=request.user,
+                status__in=['approved', 'completed', 'pending']
+            ).exists()
+            if already_withdrawn:
+                messages.error(
+                    request,
+                    "You have already used your one Demo withdrawal. "
+                    "Upgrade to a Business Member account to withdraw again."
+                )
+                return redirect('wallets:dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         try:
@@ -123,17 +137,14 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
                 'bank_name': form.cleaned_data['bank_name'],
                 'bank_code': form.cleaned_data['bank_code'],
             }
-
             WalletService.create_withdrawal_request(
                 user=self.request.user,
                 amount=form.cleaned_data['amount_usd'],
                 withdrawal_method=form.cleaned_data['withdrawal_method'],
                 account_details=account_details
             )
-
             messages.success(self.request, 'Withdrawal request submitted successfully!')
             return redirect(self.success_url)
-
         except ValueError as e:
             messages.error(self.request, str(e))
             return self.form_invalid(form)
@@ -144,9 +155,10 @@ class WithdrawalRequestView(LoginRequiredMixin, CreateView):
         context['wallet'] = wallet
         context['available_balance'] = wallet.get_available_balance()
         context['pending_withdrawals'] = wallet.get_pending_withdrawals
+        context['is_demo_user'] = getattr(self.request.user, 'account_type', None) == 'Demo'
         return context
-
-
+    
+    
 @method_decorator(subscription_required, name='dispatch')
 @method_decorator(plan_required("Business Member Account"), name="dispatch")
 class WithdrawalListView(LoginRequiredMixin, ListView):

@@ -6,18 +6,8 @@ from .models import User, UserProfile
 from referrals.models import ReferralCode  # adjust import path
 
 class CustomUserCreationForm(UserCreationForm):
-    phone = forms.CharField(required=False, max_length=15)
-    referral_code = forms.CharField(required=False, max_length=50)
-        # ⚠️ ADD THIS FIELD
-    subscription_type = forms.ChoiceField(
-        choices=[
-            ('Demo Account', 'Demo Account - Free Trial'),
-            ('Business Member Account', 'Business Member - Full Access'),
-        ],
-        initial='Demo Account',
-        required=True,
-        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
-    )
+    # Remove subscription_type field - no longer on form
+    
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
@@ -31,75 +21,57 @@ class CustomUserCreationForm(UserCreationForm):
         widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '+234XXXXXXXXXX'})
     )
     referral_code = forms.CharField(
-        required=True,
+        required=False,
         max_length=10,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Referral code'})
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Referral code (optional)'})
     )
     first_name = forms.CharField(
         required=True,
         max_length=30,
-        widget=forms.TextInput(attrs={
-            'class': 'form-input',
-            'placeholder': 'First name'
-        })
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'First name'})
     )
     last_name = forms.CharField(
         required=True,
         max_length=30,
-        widget=forms.TextInput(attrs={
-            'class': 'form-input',
-            'placeholder': 'Last name'
-        })
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Last name'})
     )
-   
-    account_type = forms.ChoiceField(
-        choices=User.ROLE_CHOICES,
-        initial=User.MEMBERS,
-        widget=forms.Select(attrs={'class': 'form-input'})
-    )
+    # account_type = forms.ChoiceField(
+    #     choices=User.ROLE_CHOICES,
+    #     initial=User.MEMBERS,
+    #     widget=forms.Select(attrs={'class': 'form-input'})
+    # )
     preferred_currency = forms.ChoiceField(
         choices=User.CURRENCY_CHOICES,
-        # initial=User.NGN,
         widget=forms.Select(attrs={'class': 'form-input'})
     )
+
     class Meta:
         model = User
-        fields = ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'referral_code', 'account_type', 'subscription_type')
-    
+        # subscription_type removed from fields
+        fields = ('email', 'first_name', 'last_name', 'phone',
+                  'password1', 'password2', 'referral_code')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['password1'].widget.attrs.update({
-            'class': 'form-input',
-            'placeholder': 'Create a password'
+            'class': 'form-input', 'placeholder': 'Create a password'
         })
         self.fields['password2'].widget.attrs.update({
-            'class': 'form-input',
-            'placeholder': 'Confirm password'
+            'class': 'form-input', 'placeholder': 'Confirm password'
         })
+
     def clean(self):
-        cleaned_data = super().clean()
-        ref_code = cleaned_data.get('referral_code')
-        subscription_type = cleaned_data.get('subscription_type')
-        
-        # Only validate if both are provided
-        if ref_code and subscription_type:
-            from referrals.services import ReferralValidator
-            
-            eligibility = ReferralValidator.check_referral_eligibility(
-                ref_code,
-                subscription_type
-            )
-            
-            if not eligibility['eligible']:
-                raise forms.ValidationError(eligibility['reason'])
-        
-        return cleaned_data
+        # Remove all subscription_type + referral eligibility checking here.
+        # That logic now lives entirely in the view, where we know the email
+        # of the referral code owner.
+        return super().clean()
+
     def clean_email(self):
         email = self.cleaned_data.get("email")
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("A user with this email already exists.")
         return email
-    
+
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
         if phone:
@@ -109,10 +81,9 @@ class CustomUserCreationForm(UserCreationForm):
 
     def clean_referral_code(self):
         code = self.cleaned_data.get("referral_code")
-        if code and not ReferralCode.objects.filter(code=code).exists():
+        if code and not ReferralCode.objects.filter(code=code, is_active=True).exists():
             raise forms.ValidationError("Invalid referral code.")
         return code
-
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -120,14 +91,12 @@ class CustomUserCreationForm(UserCreationForm):
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         user.phone = self.cleaned_data['phone']
-        user.account_type = self.cleaned_data['account_type']
+        # user.account_type = self.cleaned_data['account_type']
         user.preferred_currency = self.cleaned_data['preferred_currency']
-        
         if commit:
             user.save()
         return user
-
-
+    
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(attrs={

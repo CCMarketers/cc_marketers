@@ -21,10 +21,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 def subscription_plans(request):
-    """
-    Display available subscription plans + current wallet balance + active sub.
-    """
     plans = SubscriptionPlan.objects.filter(is_active=True)
+    
+    # Filter plans based on account type
+    if request.user.is_authenticated:
+        if request.user.account_type == "Demo":
+            plans = plans.filter(plan_type="trial")
+        else:  # Members and any other type
+            plans = plans.filter(plan_type="business")
+
     user_wallet_balance = Decimal("0.00")
     active_subscription = None
 
@@ -43,16 +48,27 @@ def subscription_plans(request):
         },
     )
 
-
 @login_required
 def subscribe(request, plan_id):
-    """
-    Subscribe user to a plan (only one active at a time).
-    """
     if request.method != "POST":
         return redirect("subscriptions:plans")
 
-    active_subscription = SubscriptionService.get_user_active_subscription(request.user)
+    # Guard: prevent wrong account type subscribing to wrong plan
+    plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
+    if not plan:
+        messages.error(request, "Plan not found.")
+        return redirect("subscriptions:plans")
+
+    user = request.user
+    if user.account_type == "Demo" and plan.plan_type != "trial":
+        messages.error(request, "Demo accounts can only subscribe to the Demo plan.")
+        return redirect("subscriptions:plans")
+
+    if user.account_type == "Members" and plan.plan_type != "business":
+        messages.error(request, "Member accounts can only subscribe to the Business Member plan.")
+        return redirect("subscriptions:plans")
+
+    active_subscription = SubscriptionService.get_user_active_subscription(user)
     if active_subscription:
         messages.error(
             request,
@@ -61,15 +77,14 @@ def subscribe(request, plan_id):
         )
         return redirect("subscriptions:my_subscription")
 
-    result = SubscriptionService.subscribe_user(request.user, plan_id)
+    result = SubscriptionService.subscribe_user(user, plan_id)
     if result.get("success"):
-        ReferralEarningService.credit_signup_bonus(request.user)
+        # ReferralEarningService.credit_signup_bonus(user)
         messages.success(request, "Successfully subscribed to the plan!")
         return redirect("subscriptions:my_subscription")
 
     messages.error(request, result.get("error", "Subscription failed."))
     return redirect("subscriptions:plans")
-
 
 @login_required
 def my_subscription(request):

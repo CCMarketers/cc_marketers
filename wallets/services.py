@@ -244,8 +244,26 @@ class WalletService:
         except (InvalidOperation, TypeError):
             raise ValueError("Amount must be a number")
 
-        if amount < Decimal("2000.00"):
-            raise ValueError("Minimum withdrawal amount is ₦2000.00")
+        # --- Demo Account restrictions ---
+        if getattr(user, 'account_type', None) == 'Demo':
+            if amount < Decimal("1000.00") or amount > Decimal("3000.00"):
+                raise ValueError("Demo account withdrawals must be between ₦1,000 and ₦3,000.")
+
+            # Lifetime single withdrawal check
+            already_withdrawn = WithdrawalRequest.objects.filter(
+                user=user,
+                status__in=['approved', 'completed', 'pending']
+            ).exists()
+            if already_withdrawn:
+                raise ValueError(
+                    "Demo accounts can only withdraw once. "
+                    "Please upgrade to a Business Member account to withdraw again."
+                )
+        else:
+            # Business Member minimum
+            if amount < Decimal("2000.00"):
+                raise ValueError("Minimum withdrawal amount is ₦2,000.")
+        # --- end Demo restrictions ---
 
         try:
             wallet_balance = Decimal(wallet.balance)
