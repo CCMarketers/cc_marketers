@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'subscriptions',
     'payments',
     'chat',
-    'channels'
+    'channels',
+    
 
     "wallets.apps.WalletsConfig",
 
