@@ -60,6 +60,8 @@ class EscrowTransaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     released_at = models.DateTimeField(blank=True, null=True)
+    refunded_at = models.DateTimeField(null=True, blank=True)   # when advertiser got money back
+
     taskwallet_transaction = models.ForeignKey(
         'tasks.TaskWalletTransaction',
         on_delete=models.CASCADE,
