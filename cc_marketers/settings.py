@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'payments',
     'chat',
     'channels',
+    "anymail",
     
 
     "wallets.apps.WalletsConfig",
@@ -190,7 +191,11 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "considerateclub@gmail.com")
 
+ANYMAIL = {
+    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY"),
+}
 
+DEFAULT_FROM_EMAIL = "you@yourdomain.com"
 
 
 # Logging configuration

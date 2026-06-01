@@ -73,7 +73,7 @@ class ReferralDashboardView(LoginRequiredMixin, TemplateView):
         # Get referral breakdown
         total_referrals = Referral.objects.filter(referrer=user, is_active=True)
         direct_referrals = total_referrals.filter(level=1)
-        indirect_referrals = total_referrals.filter(level=2)
+        # indirect_referrals = total_referrals.filter(level=2)
         
         total_earnings = approved_qs.aggregate(total=Sum("amount"))["total"] or 0
         pending_earnings = pending_qs.aggregate(total=Sum("amount"))["total"] or 0
@@ -97,7 +97,7 @@ class ReferralDashboardView(LoginRequiredMixin, TemplateView):
             "demo_referral_limit": demo_referral_limit,
             "total_referrals": total_referrals.count(),
             "direct_referrals_count": direct_referrals.count(),
-            "indirect_referrals_count": indirect_referrals.count(),
+            # "indirect_referrals_count": indirect_referrals.count(),
             "total_earnings": total_earnings,
             "pending_earnings": pending_earnings,
             "recent_referrals": Referral.objects.filter(referrer=user)
@@ -193,10 +193,10 @@ class CommissionTiersView(TemplateView):
         # Display flat signup bonuses
         context["referral_rules"] = {
             "level_1_bonus": "₦5,000",
-            "level_2_bonus": "₦3,000",
+            # "level_2_bonus": "₦3,000", 
             "demo_can_refer": "Business Members only",
             "business_can_refer": "Up to 10 Demo users + unlimited Business Members",
-            "max_levels": 2,
+            "max_levels": 1,
         }
         
         # Get active commission tiers for other earning types (if any)
@@ -292,7 +292,7 @@ class AdminReferralDashboardView(LoginRequiredMixin, UserPassesTestMixin, Templa
         context["total_users"] = User.objects.count()
         context["total_referrals"] = Referral.objects.filter(is_active=True).count()
         context["level_1_referrals"] = Referral.objects.filter(level=1, is_active=True).count()
-        context["level_2_referrals"] = Referral.objects.filter(level=2, is_active=True).count()
+        # context["level_2_referrals"] = Referral.objects.filter(level=2, is_active=True).count()
         
         total_earnings_agg = ReferralEarning.objects.aggregate(total=Sum("amount"))
         context["total_earnings"] = total_earnings_agg["total"] or 0

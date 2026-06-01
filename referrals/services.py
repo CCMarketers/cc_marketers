@@ -237,7 +237,7 @@ class ReferralValidator:
             return False, None, f"Failed to create referral: {str(e)}"
         
         # Create Level 2 (indirect) referral if possible
-        cls._create_level_2_referral(new_user, referrer, new_user_subscription_type)
+        # cls._create_level_2_referral(new_user, referrer, new_user_subscription_type)
         
         return True, level_1_referral, None
     
@@ -251,97 +251,97 @@ class ReferralValidator:
             new_user_subscription_type
         )
     
-    @classmethod
-    def _create_level_2_referral(cls, new_user, direct_referrer, new_user_sub_type: str):
-        """
-        Create Level 2 referral if the direct referrer was also referred.
+    # @classmethod
+    # def _create_level_2_referral(cls, new_user, direct_referrer, new_user_sub_type: str):
+    #     """
+    #     Create Level 2 referral if the direct referrer was also referred.
         
-        Chain breaks if:
-        - Direct referrer was referred by a Demo AND new user is Demo (Demo can't refer Demo)
-        - No Level 1 referral exists for direct referrer
-        """
-        logger.info(
-            f"[LEVEL_2_CHECK] Checking Level 2 eligibility for {new_user.username} "
-            f"via {direct_referrer.username}"
-        )
+    #     Chain breaks if:
+    #     - Direct referrer was referred by a Demo AND new user is Demo (Demo can't refer Demo)
+    #     - No Level 1 referral exists for direct referrer
+    #     """
+    #     logger.info(
+    #         f"[LEVEL_2_CHECK] Checking Level 2 eligibility for {new_user.username} "
+    #         f"via {direct_referrer.username}"
+    #     )
         
-        from subscriptions.services import SubscriptionService
+    #     from subscriptions.services import SubscriptionService
         
-        # Find who referred the direct referrer
-        parent_referral = Referral.objects.filter(
-            referred=direct_referrer,
-            level=1,
-            is_active=True
-        ).select_related('referrer', 'referral_code').first()
+    #     # Find who referred the direct referrer
+    #     parent_referral = Referral.objects.filter(
+    #         referred=direct_referrer,
+    #         level=1,
+    #         is_active=True
+    #     ).select_related('referrer', 'referral_code').first()
         
-        if not parent_referral:
-            logger.info(
-                f"[LEVEL_2_CHECK] ❌ No Level 2: {direct_referrer.username} has no referrer"
-            )
-            return
+    #     if not parent_referral:
+    #         logger.info(
+    #             f"[LEVEL_2_CHECK] ❌ No Level 2: {direct_referrer.username} has no referrer"
+    #         )
+    #         return
         
-        parent_referrer = parent_referral.referrer
-        logger.info(f"[LEVEL_2_CHECK] Found parent referrer: {parent_referrer.username}")
+    #     parent_referrer = parent_referral.referrer
+    #     logger.info(f"[LEVEL_2_CHECK] Found parent referrer: {parent_referrer.username}")
         
-        # Get parent's subscription type
-        parent_sub = SubscriptionService.get_user_active_subscription(parent_referrer)
-        if not parent_sub:
-            logger.info(
-                f"[LEVEL_2_CHECK] ❌ No Level 2: {parent_referrer.username} "
-                f"has no active subscription"
-            )
-            return
+    #     # Get parent's subscription type
+    #     parent_sub = SubscriptionService.get_user_active_subscription(parent_referrer)
+    #     if not parent_sub:
+    #         logger.info(
+    #             f"[LEVEL_2_CHECK] ❌ No Level 2: {parent_referrer.username} "
+    #             f"has no active subscription"
+    #         )
+    #         return
         
-        parent_type = parent_sub.plan.name
-        logger.info(f"[LEVEL_2_CHECK] Parent type: {parent_type}, New user type: {new_user_sub_type}")
+    #     parent_type = parent_sub.plan.name
+    #     logger.info(f"[LEVEL_2_CHECK] Parent type: {parent_type}, New user type: {new_user_sub_type}")
         
-        # CHAIN BREAK RULE: Demo cannot refer Demo (even indirectly)
-        if parent_type == cls.DEMO_ACCOUNT and new_user_sub_type == cls.DEMO_ACCOUNT:
-            logger.warning(
-                f"[LEVEL_2_CHECK] ❌ Chain break: {parent_referrer.username} (Demo) cannot "
-                f"indirectly refer {new_user.username} (Demo)"
-            )
-            return
+    #     # CHAIN BREAK RULE: Demo cannot refer Demo (even indirectly)
+    #     if parent_type == cls.DEMO_ACCOUNT and new_user_sub_type == cls.DEMO_ACCOUNT:
+    #         logger.warning(
+    #             f"[LEVEL_2_CHECK] ❌ Chain break: {parent_referrer.username} (Demo) cannot "
+    #             f"indirectly refer {new_user.username} (Demo)"
+    #         )
+    #         return
         
-        # Check parent's referral eligibility
-        if parent_type == cls.BUSINESS_ACCOUNT and new_user_sub_type == cls.DEMO_ACCOUNT:
-            # Check if parent has Demo slots available
-            parent_ref_code = parent_referrer.referral_code
-            current_demo_count = parent_ref_code.get_active_demo_referral_count()
+    #     # Check parent's referral eligibility
+    #     if parent_type == cls.BUSINESS_ACCOUNT and new_user_sub_type == cls.DEMO_ACCOUNT:
+    #         # Check if parent has Demo slots available
+    #         parent_ref_code = parent_referrer.referral_code
+    #         current_demo_count = parent_ref_code.get_active_demo_referral_count()
             
-            logger.info(
-                f"[LEVEL_2_CHECK] Parent Demo count: {current_demo_count}/{cls.MAX_DEMO_REFERRALS}"
-            )
+    #         logger.info(
+    #             f"[LEVEL_2_CHECK] Parent Demo count: {current_demo_count}/{cls.MAX_DEMO_REFERRALS}"
+    #         )
             
-            if current_demo_count >= cls.MAX_DEMO_REFERRALS:
-                logger.warning(
-                    f"[LEVEL_2_CHECK] ❌ Level 2 skipped: {parent_referrer.username} "
-                    f"has reached Demo limit"
-                )
-                return
+    #         if current_demo_count >= cls.MAX_DEMO_REFERRALS:
+    #             logger.warning(
+    #                 f"[LEVEL_2_CHECK] ❌ Level 2 skipped: {parent_referrer.username} "
+    #                 f"has reached Demo limit"
+    #             )
+    #             return
         
-        # Create Level 2 referral
-        try:
-            Referral.objects.create(
-                referrer=parent_referrer,
-                referred=new_user,
-                level=2,
-                referral_code=parent_referral.referral_code,
-                referrer_subscription_type=parent_type,
-                referred_subscription_type=new_user_sub_type,
-                is_within_limits=True
-            )
+    #     # Create Level 2 referral
+    #     try:
+    #         Referral.objects.create(
+    #             referrer=parent_referrer,
+    #             referred=new_user,
+    #             level=2,
+    #             referral_code=parent_referral.referral_code,
+    #             referrer_subscription_type=parent_type,
+    #             referred_subscription_type=new_user_sub_type,
+    #             is_within_limits=True
+    #         )
             
-            logger.info(
-                f"[LEVEL_2_CHECK] ✅ Level 2 referral created: {parent_referrer.username} → "
-                f"{new_user.username} (via {direct_referrer.username})"
-            )
-        except Exception as e:
-            logger.error(
-                f"[LEVEL_2_CHECK] ❌ Failed to create Level 2 referral: {str(e)}",
-                exc_info=True
-            )
-
+    #         logger.info(
+    #             f"[LEVEL_2_CHECK] ✅ Level 2 referral created: {parent_referrer.username} → "
+    #             f"{new_user.username} (via {direct_referrer.username})"
+    #         )
+    #     except Exception as e:
+    #         logger.error(
+    #             f"[LEVEL_2_CHECK] ❌ Failed to create Level 2 referral: {str(e)}",
+    #             exc_info=True
+    #         )
+ 
 
 class ReferralEarningService:
     """Handles creation of referral earnings."""
@@ -461,8 +461,8 @@ class ReferralEarningService:
         # Determine bonus amount based on level
         if referral.level == 1:
             amount = cls.LEVEL_1_SIGNUP_BONUS
-        elif referral.level == 2:
-            amount = cls.LEVEL_2_SIGNUP_BONUS
+        # elif referral.level == 2:
+        #     amount = cls.LEVEL_2_SIGNUP_BONUS
         else:
             logger.error(f"[CREDIT_REFERRER] ❌ Unsupported referral level: {referral.level}")
             return False
