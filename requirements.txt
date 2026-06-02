@@ -1,10 +1,6 @@
 amqp==5.3.1
 annotated-types==0.7.0
-<<<<<<< HEAD
-anyio==4.11.0
-=======
 anyio==4.13.0
->>>>>>> d5ad8d0 (	modified:   requirements.txt)
 asgiref==3.10.0
 asttokens==3.0.0
 async-timeout==5.0.1
