@@ -4,6 +4,15 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.exceptions import ValidationError
 from .models import User, UserProfile
 from referrals.models import ReferralCode  # adjust import path
+from django.contrib.auth.forms import PasswordResetForm
+
+class CustomPasswordResetForm(PasswordResetForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].widget.attrs.update({
+            'class': 'w-full border border-gray-300 rounded-lg px-4 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent',
+            'placeholder': 'Enter your email address',
+        })
 
 class CustomUserCreationForm(UserCreationForm):
     # Remove subscription_type field - no longer on form

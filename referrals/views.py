@@ -80,7 +80,7 @@ class ReferralDashboardView(LoginRequiredMixin, TemplateView):
         
         logger.info(
             f"[DASHBOARD] {user.username} stats - Referrals: {total_referrals.count()} "
-            f"(L1: {direct_referrals.count()}, L2: {indirect_referrals.count()}), "
+            # f"(L1: {direct_referrals.count()}, L2: {indirect_referrals.count()}), "
             f"Earnings: ₦{total_earnings}, Pending: ₦{pending_earnings}"
         )
 

@@ -27,6 +27,7 @@ from django.views.generic import (
 
 
 from .forms import (
+    CustomPasswordResetForm,
     CustomUserCreationForm,
     CustomAuthenticationForm,
     UserProfileForm,
@@ -201,6 +202,15 @@ class UserRegistrationView(CreateView):
                             f"You were successfully referred by {eligibility['referrer_info']['display_name']}!")
 
                 login(self.request, user)
+                # Send verification email
+                success = safe_send_verification_email(user)
+                if success:
+                    messages.success(self.request, "Welcome! Please verify your email.")
+                else:
+                    messages.warning(self.request, "Welcome! We couldn't send a verification email — please try resending it.")
+
+                logger.info(f"[REGISTRATION] 🎉 Registration complete for {user.username}")
+                return response
                 logger.info(f"[REGISTRATION] 🎉 Registration complete for {user.username}")
                 return response
 
@@ -493,13 +503,12 @@ class ResendVerificationView(LoginRequiredMixin, TemplateView):
             messages.info(request, "Your email is already verified.")
             return redirect("users:dashboard")
 
-        # Clean up existing tokens and send again
         EmailVerificationToken.objects.filter(user=user, used=False).delete()
-        # success = safe_send_verification_email(user)
-        # if success:
-        #     messages.success(request, "Verification email sent!")
-        # else:
-        #     messages.error(request, "Failed to send verification email. Please try again later.")
+        success = safe_send_verification_email(user)  # ← uncomment/add this
+        if success:
+            messages.success(request, "Verification email sent!")
+        else:
+            messages.error(request, "Failed to send verification email. Please try again later.")
         return redirect("users:dashboard")
 
 
@@ -577,22 +586,10 @@ class PasswordChangeView(LoginRequiredMixin, FormView):
 class CustomPasswordResetView(PasswordResetView):
     template_name = "users/password_reset.html"
     email_template_name = "users/password_reset_email.html"
+    html_email_template_name = "users/password_reset_email.html"
     subject_template_name = "users/password_reset_subject.txt"
     success_url = reverse_lazy("users:password_reset_done")
-
-    def send_mail(
-        self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None
-    ):
-        subject = render_to_string(subject_template_name, context).strip()
-        body = render_to_string(email_template_name, context)
-        email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
-        if html_email_template_name:
-            html_email = render_to_string(html_email_template_name, context)
-            email_message.attach_alternative(html_email, "text/html")
-        try:
-            email_message.send()
-        except Exception as exc:
-            logger.exception("Password reset email failed to %s: %s", to_email, exc)
+    # DELETE the entire send_mail method
 
 
 # -------------------------
