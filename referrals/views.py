@@ -305,7 +305,7 @@ class AdminReferralDashboardView(LoginRequiredMixin, UserPassesTestMixin, Templa
         logger.info(
             f"[ADMIN_DASHBOARD] Global stats - Users: {context['total_users']}, "
             f"Referrals: {context['total_referrals']} (L1: {context['level_1_referrals']}, "
-            f"L2: {context['level_2_referrals']}), Total Earnings: ₦{context['total_earnings']}"
+            f"Total Earnings: ₦{context['total_earnings']}"
         )
 
         # Top referrers with detailed stats
