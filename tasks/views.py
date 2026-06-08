@@ -69,10 +69,23 @@ def task_list(request):
     page = request.GET.get("page")
     tasks = paginator.get_page(page)
 
-    # annotate per-task state for template
+    # Single bulk query for all user submissions on this page
+    page_task_ids = [t.id for t in tasks]
+    submitted_ids = set(
+        Submission.objects
+        .filter(task_id__in=page_task_ids, member=request.user)
+        .values_list("task_id", flat=True)
+    )
+
+    # Annotate and sort: submitted tasks sink to the bottom
     for task in tasks:
         task.progress = (task.filled_slots / task.total_slots * 100) if task.total_slots else 0
-        task.already_submitted = Submission.objects.filter(task=task, member=request.user).exists()
+        task.already_submitted = task.id in submitted_ids
+
+    tasks.object_list = sorted(
+        tasks.object_list,
+        key=lambda t: t.already_submitted
+    )
 
     return render(request, "tasks/task_list.html", {"tasks": tasks, "form": form})
 
@@ -139,8 +152,8 @@ def task_detail(request, task_id):
                     )
                     # Don't fail the submission if chat creation fails
 
-            messages.success(request, "Your submission has been received!")
-            return redirect("tasks:task_detail", task_id=task.id)
+        messages.success(request, "Your submission has been received!")
+        return redirect("tasks:task_list")  # ← was task_detail
 
     return render(
         request,
@@ -316,17 +329,142 @@ def delete_task(request, task_id):
 def edit_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, advertiser=request.user)
 
-    if task.submissions.exists():
-        messages.error(request, "You cannot edit this task because it already has submissions.")
-        return redirect("tasks:my_tasks")
-
     if request.method == "POST":
-        form = TaskForm(request.POST, request.FILES, instance=task) 
+        form = TaskForm(request.POST, request.FILES, instance=task)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Task updated successfully.")
-            return redirect("tasks:my_tasks")
+            try:
+                with transaction.atomic():
+                    old_payout = task.payout_per_slot
+                    old_total_slots = task.total_slots
+                    old_cost = old_payout * old_total_slots
+
+                    new_payout = form.cleaned_data["payout_per_slot"]
+                    new_total_slots = form.cleaned_data["total_slots"]
+                    new_cost = new_payout * new_total_slots
+
+                    diff = new_cost - old_cost
+
+                    logger.info(
+                        f"[EDIT_TASK] User {request.user.id} editing task {task_id} | "
+                        f"Old: ₦{old_payout}x{old_total_slots}=₦{old_cost} | "
+                        f"New: ₦{new_payout}x{new_total_slots}=₦{new_cost} | "
+                        f"Diff: ₦{diff}"
+                    )
+
+                    if diff != 0:
+                        escrow = EscrowTransaction.objects.filter(
+                            task=task, status="locked"
+                        ).select_for_update().first()
+
+                        if not escrow:
+                            logger.error(
+                                f"[EDIT_TASK] No locked escrow found for task {task_id} "
+                                f"(user {request.user.id})"
+                            )
+                            raise ValueError("No locked escrow found for this task.")
+
+                        logger.debug(
+                            f"[EDIT_TASK] Found escrow {escrow.id} for task {task_id} | "
+                            f"Current escrow amount: ₦{escrow.amount_usd}"
+                        )
+
+                        task_wallet = TaskWallet.objects.select_for_update().get(user=request.user)
+
+                        logger.debug(
+                            f"[EDIT_TASK] Task wallet balance for user {request.user.id}: "
+                            f"₦{task_wallet.balance}"
+                        )
+
+                        if diff > 0:
+                            if task_wallet.balance < diff:
+                                logger.warning(
+                                    f"[EDIT_TASK] Insufficient balance for user {request.user.id} | "
+                                    f"Required: ₦{diff} | Available: ₦{task_wallet.balance}"
+                                )
+                                raise ValueError(
+                                    f"Insufficient task wallet balance. "
+                                    f"You need ₦{diff} more but only have ₦{task_wallet.balance}."
+                                )
+
+                            task_wallet.balance = F("balance") - diff
+                            task_wallet.save(update_fields=["balance"])
+
+                            TaskWalletTransaction.objects.create(
+                                user=request.user,
+                                amount=-diff,
+                                transaction_type="task_escrow_topup",
+                                description=f"Extra escrow for task edit: {task.title}",
+                            )
+
+                            logger.info(
+                                f"[EDIT_TASK] Debited ₦{diff} from task wallet | "
+                                f"User: {request.user.id} | Task: {task_id}"
+                            )
+
+                        else:
+                            refund = abs(diff)
+                            task_wallet.balance = F("balance") + refund
+                            task_wallet.save(update_fields=["balance"])
+
+                            TaskWalletTransaction.objects.create(
+                                user=request.user,
+                                amount=refund,
+                                transaction_type="task_escrow_refund",
+                                description=f"Partial escrow refund for task edit: {task.title}",
+                            )
+
+                            logger.info(
+                                f"[EDIT_TASK] Refunded ₦{refund} to task wallet | "
+                                f"User: {request.user.id} | Task: {task_id}"
+                            )
+
+                        escrow.amount_usd = new_cost
+                        escrow.save(update_fields=["amount_usd"])
+
+                        logger.info(
+                            f"[EDIT_TASK] Escrow {escrow.id} updated | "
+                            f"₦{old_cost} → ₦{new_cost}"
+                        )
+
+                    form.save()
+                    logger.debug(f"[EDIT_TASK] Task {task_id} form saved successfully")
+
+                    task.refresh_from_db()
+                    task.remaining_slots = task.total_slots - task.filled_slots
+                    task.save(update_fields=["remaining_slots"])
+
+                    logger.info(
+                        f"[EDIT_TASK] Remaining slots recalculated for task {task_id} | "
+                        f"Total: {task.total_slots} | Filled: {task.filled_slots} | "
+                        f"Remaining: {task.remaining_slots}"
+                    )
+
+                if diff > 0:
+                    messages.success(request, f"Task updated. ₦{diff} debited from your task wallet.")
+                elif diff < 0:
+                    messages.success(request, f"Task updated. ₦{abs(diff)} refunded to your task wallet.")
+                else:
+                    messages.success(request, "Task updated successfully.")
+
+                logger.info(
+                    f"[EDIT_TASK_SUCCESS] Task {task_id} updated successfully by user {request.user.id}"
+                )
+                return redirect("tasks:my_tasks")
+
+            except ValueError as e:
+                logger.warning(
+                    f"[EDIT_TASK_ERROR] ValueError for task {task_id} "
+                    f"(user {request.user.id}): {e}"
+                )
+                messages.error(request, str(e))
+            except Exception as e:
+                logger.exception(
+                    f"[EDIT_TASK_ERROR] Unexpected error for task {task_id} "
+                    f"(user {request.user.id}): {e}"
+                )
+                messages.error(request, "An unexpected error occurred.")
     else:
+        logger.debug(f"[EDIT_TASK] GET request for task {task_id} by user {request.user.id}")
         form = TaskForm(instance=task)
 
     return render(request, "tasks/edit_task.html", {"form": form, "task": task})
@@ -336,12 +474,20 @@ def edit_task(request, task_id):
 def my_submissions(request):
     submissions = (
         Submission.objects.filter(member=request.user)
-        .select_related("task")
-        .order_by("-reviewed_at")
+        .select_related("task", "task__category", "dispute")
+        .order_by("-submitted_at")
     )
     paginator = Paginator(submissions, 10)
     page = request.GET.get("page")
     submissions = paginator.get_page(page)
+
+    # Sort: pending first, approved second, rejected last
+    status_order = {"pending": 0, "approved": 1, "rejected": 2}
+    submissions.object_list = sorted(
+        submissions.object_list,
+        key=lambda s: status_order.get(s.status, 99)
+    )
+
     return render(request, "tasks/my_submissions.html", {"submissions": submissions})
 
 

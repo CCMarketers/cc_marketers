@@ -3,8 +3,11 @@ from decouple import config
 import os
 
 from dotenv import load_dotenv
+import environ
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env()
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
@@ -17,8 +20,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG')
-ALLOWED_HOSTS = ['*']
-
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 BACKEND_URL = config('BACKEND_URL')
 
 # Application definition

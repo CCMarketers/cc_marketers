@@ -1,148 +1,716 @@
 {% load static %}
 
-<!-- Accessible, SEO-Friendly Navbar -->
-<nav 
-  class="bg-white border-b-2 border-red-600 shadow-sm sticky top-0 z-50" 
-  role="navigation" 
+<nav
+  class="cc-navbar"
+  role="navigation"
   aria-label="Main navigation"
   itemscope itemtype="https://schema.org/SiteNavigationElement"
 >
-  <div class="container mx-auto px-4">
-    <div class="flex justify-between items-center h-16">
+  <div class="cc-nav-inner">
 
-      <!-- Logo (linked to homepage) -->
-      <div class="flex items-center">
-        <a href="/" class="flex items-center space-x-2 hover:opacity-90 transition-opacity duration-200" itemprop="url">
-          <img src="{% static 'images/logos.png' %}" alt="CC Marketers Logo" width="36" height="36" class="w-9 h-9 rounded-lg shadow-md" itemprop="image">
-          <span class="text-red-600 font-bold text-xl tracking-tight" itemprop="name">CC_Marketers</span>
+    <!-- Logo -->
+    <a href="/" class="cc-logo" itemprop="url">
+      <img src="{% static 'images/logos.png' %}" alt="CC Marketers Logo" width="34" height="34" class="cc-logo-img" itemprop="image">
+      <span class="cc-logo-name" itemprop="name">CC_Marketers</span>
+    </a>
+
+    <!-- Desktop nav links (authenticated only) -->
+    {% if user.is_authenticated %}
+    <ul class="cc-nav-links" role="list">
+      <li>
+        <a href="{% url 'tasks:task_list' %}" class="cc-nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Browse
         </a>
-      </div>
+      </li>
+      <li>
+        <a href="{% url 'tasks:my_submissions' %}" class="cc-nav-link {% if request.resolver_match.url_name == 'my_submissions' %}active{% endif %}" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          My Tasks
+        </a>
+      </li>
+      {% if request.user.role == 'advertiser' or request.user.is_staff %}
+      <li>
+        <a href="{% url 'tasks:create_task' %}" class="cc-nav-link cc-nav-post" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Post Task
+        </a>
+      </li>
+      {% endif %}
+      <li>
+        <a href="{% url 'chat:room_list' %}" class="cc-nav-link {% if request.resolver_match.url_name == 'room_list' %}active{% endif %}" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Chats
+          {# Uncomment & wire up if you have unread count in context #}
+          {# {% if unread_count %}<span class="cc-badge">{{ unread_count }}</span>{% endif %} #}
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'referrals:dashboard' %}" class="cc-nav-link {% if request.resolver_match.url_name == 'dashboard' and 'referrals' in request.resolver_match.namespace %}active{% endif %}" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Connections
+        </a>
+      </li>
+      {% if request.user.role == 'admin' or request.user.is_staff %}
+      <li>
+        <a href="{% url 'tasks:admin_disputes' %}" class="cc-nav-link" itemprop="url">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Disputes
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+    {% endif %}
 
-      <!-- Navigation Links (Desktop) -->
-      <ul class="hidden md:flex items-center space-x-6">
-        {% if user.is_authenticated %}
-          <li><a href="{% url 'tasks:task_list' %}" class="nav-link" itemprop="url">Browse Tasks</a></li>
-          <li><a href="{% url 'tasks:my_submissions' %}" class="nav-link" itemprop="url">My Tasks</a></li>
-          {% if request.user.role == 'advertiser' or request.user.is_staff %}
-            <li><a href="{% url 'tasks:create_task' %}" class="nav-link" itemprop="url">Post Task</a></li>
-          {% endif %}
-          <li><a href="{% url 'chat:room_list' %}" class="nav-link" itemprop="url">My Chats</a></li>
-          <li><a href="{% url 'wallets:dashboard' %}" class="nav-link" itemprop="url">Wallet</a></li>
-          <li><a href="{% url 'referrals:dashboard' %}" class="nav-link" itemprop="url">Connections</a></li>
-          {% if request.user.role == 'admin' or request.user.is_staff %}
-            <li><a href="{% url 'tasks:admin_disputes' %}" class="nav-link" itemprop="url">Disputes</a></li>
-          {% endif %}
-        {% endif %}
-      </ul>
+    <!-- Right side -->
+    <div class="cc-nav-right">
+      {% if user.is_authenticated %}
 
-      <!-- User Menu (Desktop) -->
-      <div class="hidden md:flex items-center space-x-4">
-        {% if user.is_authenticated %}
-          <div class="relative group">
-            <button 
-              class="flex items-center space-x-2 text-red-600 hover:text-red-800 font-medium focus:outline-none" 
-              aria-haspopup="true" aria-expanded="false"
-            >
-              <div class="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center shadow-inner" aria-hidden="true">
-                <span class="text-red-600 font-semibold text-sm">{{ user.username|first|upper }}</span>
-              </div>
-              <span class="truncate max-w-[100px]">{{ user.username }}</span>
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293..." clip-rule="evenodd"></path>
-              </svg>
-            </button>
+        <!-- Wallet chip -->
+        <a href="{% url 'wallets:dashboard' %}" class="cc-wallet-chip" aria-label="Wallet">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2v-4"/><path d="M16 12h4v4h-4z"/></svg>
+          <span class="cc-wallet-label">Wallet</span>
+        </a>
 
-            <!-- Dropdown Menu -->
-            <div class="absolute right-0 mt-2 w-52 bg-white border border-red-200 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div class="py-1 divide-y divide-red-100">
-                <a href="{% url 'users:dashboard' %}" class="dropdown-link">Dashboard</a>
-                {% if request.user.role == 'admin' or request.user.is_staff %}
-                  <a href="{% url 'referrals:admin_dashboard' %}" class="dropdown-link">Admin Dashboard</a>
-                {% endif %}
-                <a href="{% url 'users:profile' %}" class="dropdown-link">Profile</a>
-                <a href="{% url 'users:logout' %}" class="dropdown-link">Logout</a>
-              </div>
-            </div>
+        <!-- User dropdown -->
+        <div class="cc-dropdown" id="ccUserDropdown">
+          <button
+            class="cc-avatar-btn"
+            id="ccDropdownTrigger"
+            onclick="ccToggleDropdown()"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="ccDropdownMenu"
+          >
+            <div class="cc-avatar" aria-hidden="true">{{ user.username|first|upper }}</div>
+            <span class="cc-username">{{ user.username }}</span>
+            <svg class="cc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <div class="cc-dropdown-menu" id="ccDropdownMenu" role="menu" aria-labelledby="ccDropdownTrigger">
+            <a href="{% url 'users:dashboard' %}" class="cc-dropdown-item" role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </a>
+            {% if request.user.role == 'advertiser' or request.user.is_staff %}
+            <a href="{% url 'tasks:my_tasks' %}" class="cc-dropdown-item" role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              My Posted Tasks
+            </a>
+            {% endif %}
+            {% if request.user.role == 'admin' or request.user.is_staff %}
+            <a href="{% url 'referrals:admin_dashboard' %}" class="cc-dropdown-item" role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Admin Dashboard
+            </a>
+            {% endif %}
+            <a href="{% url 'users:profile' %}" class="cc-dropdown-item" role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Profile
+            </a>
+            <div class="cc-divider" role="separator"></div>
+            <a href="{% url 'users:logout' %}" class="cc-dropdown-item cc-dropdown-danger" role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Logout
+            </a>
           </div>
-        {% else %}
-          <a href="{% url 'users:login' %}" class="btn-outline-red">Login</a>
-          <a href="{% url 'users:register' %}" class="btn-solid-red">Register</a>
-        {% endif %}
-      </div>
+        </div>
 
-      <!-- Mobile Menu Button -->
-      <div class="md:hidden">
-        <button data-mobile-menu class="text-red-600 hover:text-red-800 focus:outline-none" aria-label="Toggle mobile menu">
-          <svg class="w-6 h-6 menu-open" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-          <svg class="w-6 h-6 menu-close hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-      </div>
+      {% else %}
+        <!-- Guest -->
+        <a href="{% url 'users:login' %}" class="cc-btn-outline">Login</a>
+        <a href="{% url 'users:register' %}" class="cc-btn-solid">Register</a>
+      {% endif %}
+
+      <!-- Mobile hamburger -->
+      {% if user.is_authenticated %}
+      <button
+        class="cc-mob-btn"
+        id="ccMobBtn"
+        onclick="ccToggleMobile()"
+        aria-label="Toggle mobile menu"
+        aria-expanded="false"
+        aria-controls="ccMobileMenu"
+      >
+        <svg class="cc-icon-menu" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        <svg class="cc-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      {% endif %}
     </div>
   </div>
 
-  <!-- Mobile Menu -->
-  <div data-mobile-menu-content class="hidden md:hidden bg-white border-t border-red-200">
-    <ul class="px-4 py-4 space-y-2 text-center">
-      {% if user.is_authenticated %}
-        <li><a href="{% url 'tasks:task_list' %}" class="mobile-link">Browse Tasks</a></li>
-        <li><a href="{% url 'tasks:my_submissions' %}" class="mobile-link">My Tasks</a></li>
+  <!-- Mobile menu -->
+  {% if user.is_authenticated %}
+  <div class="cc-mobile-menu" id="ccMobileMenu" hidden>
+
+    <div class="cc-mob-section">
+      <p class="cc-mob-label">Tasks</p>
+      <div class="cc-mob-grid">
+        <a href="{% url 'tasks:task_list' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Browse
+        </a>
+        <a href="{% url 'tasks:my_submissions' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          My Tasks
+        </a>
         {% if request.user.role == 'advertiser' or request.user.is_staff %}
-          <li><a href="{% url 'tasks:create_task' %}" class="mobile-link">Post Task</a></li>
+        <a href="{% url 'tasks:create_task' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Post Task
+        </a>
+        <a href="{% url 'tasks:my_tasks' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Posted Tasks
+        </a>
         {% endif %}
-        <li><a href="{% url 'chat:room_list' %}" class="mobile-link">My Chats</a></li>
-        <li><a href="{% url 'wallets:dashboard' %}" class="mobile-link">Wallet</a></li>
-        <li><a href="{% url 'referrals:dashboard' %}" class="mobile-link">Connections</a></li>
-        {% if request.user.role == 'admin' or request.user.is_staff %}
-          <li><a href="{% url 'tasks:admin_disputes' %}" class="mobile-link">Disputes</a></li>
-          <li><a href="{% url 'referrals:admin_dashboard' %}" class="mobile-link">Admin Dashboard</a></li>
-        {% endif %}
-        <li><a href="{% url 'users:dashboard' %}" class="mobile-link">Dashboard</a></li>
-        <li><a href="{% url 'users:profile' %}" class="mobile-link">Profile</a></li>
-        <li><a href="{% url 'users:logout' %}" class="mobile-link">Logout</a></li>
-      {% else %}
-        <li><a href="{% url 'users:login' %}" class="mobile-link">Login</a></li>
-        <li><a href="{% url 'users:register' %}" class="mobile-link bg-red-600 text-white hover:bg-red-700">Register</a></li>
-      {% endif %}
-    </ul>
+      </div>
+    </div>
+
+    <div class="cc-mob-section">
+      <p class="cc-mob-label">Account</p>
+      <div class="cc-mob-grid">
+        <a href="{% url 'chat:room_list' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Chats
+        </a>
+        <a href="{% url 'wallets:dashboard' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12V8a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h14a2 2 0 002-2v-4"/><path d="M16 12h4v4h-4z"/></svg>
+          Wallet
+        </a>
+        <a href="{% url 'referrals:dashboard' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Connections
+        </a>
+        <a href="{% url 'users:dashboard' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+      </div>
+    </div>
+
+    {% if request.user.role == 'admin' or request.user.is_staff %}
+    <div class="cc-mob-section">
+      <p class="cc-mob-label">Admin</p>
+      <div class="cc-mob-grid">
+        <a href="{% url 'tasks:admin_disputes' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Disputes
+        </a>
+        <a href="{% url 'referrals:admin_dashboard' %}" class="cc-mob-link">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Admin Panel
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="cc-mob-footer">
+      <a href="{% url 'users:profile' %}" class="cc-mob-footer-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+      <a href="{% url 'users:logout' %}" class="cc-mob-footer-link cc-mob-footer-danger">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
   </div>
+  {% endif %}
 </nav>
 
-<!-- Helper styles -->
+
 <style>
-.nav-link {
+/* ── Reset & base ────────────────────────────────── */
+.cc-navbar *,
+.cc-navbar *::before,
+.cc-navbar *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Navbar shell ────────────────────────────────── */
+.cc-navbar {
+  background: #fff;
+  border-bottom: 2px solid #dc2626;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.cc-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  gap: 1rem;
+}
+
+/* ── Logo ────────────────────────────────────────── */
+.cc-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.cc-logo-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.cc-logo-name {
   color: #dc2626;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.3px;
+}
+
+/* ── Desktop nav links ───────────────────────────── */
+.cc-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+  flex: 1;
+  justify-content: center;
+}
+
+.cc-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 14px;
   font-weight: 500;
-  border-bottom: 2px solid transparent;
-  padding-bottom: 2px;
-  transition: all .2s;
+  text-decoration: none;
+  padding: 6px 11px;
+  border-radius: 7px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
-.nav-link:hover { color: #991b1b; border-color: #dc2626; }
-.dropdown-link {
-  display: block; padding: .5rem 1rem;
+
+.cc-nav-link:hover {
+  background: #fef2f2;
   color: #dc2626;
 }
-.dropdown-link:hover { background-color: #fef2f2; color: #991b1b; }
-.btn-outline-red {
+
+.cc-nav-link.active {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Post Task gets a subtle pill style */
+.cc-nav-link.cc-nav-post {
+  background: #dc2626;
+  color: #fff;
+  padding: 6px 14px;
+}
+
+.cc-nav-link.cc-nav-post:hover {
+  background: #b91c1c;
+  color: #fff;
+}
+
+/* Unread badge */
+.cc-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 20px;
+  line-height: 1;
+}
+
+/* ── Right side ──────────────────────────────────── */
+.cc-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Wallet chip */
+.cc-wallet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.cc-wallet-chip svg {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.cc-wallet-chip:hover {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+/* Avatar dropdown trigger */
+.cc-dropdown {
+  position: relative;
+}
+
+.cc-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.cc-avatar-btn:hover {
+  background: #f9fafb;
+}
+
+.cc-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fef2f2;
+  border: 1.5px solid #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.cc-username {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-chevron {
+  color: #9ca3af;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.cc-dropdown.open .cc-chevron {
+  transform: rotate(180deg);
+}
+
+/* Dropdown menu */
+.cc-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  display: none;
+  z-index: 100;
+}
+
+.cc-dropdown.open .cc-dropdown-menu {
+  display: block;
+}
+
+.cc-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #374151;
+  text-decoration: none;
+  border-radius: 7px;
+  transition: background 0.12s;
+}
+
+.cc-dropdown-item svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.cc-dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.cc-dropdown-danger {
+  color: #dc2626;
+}
+
+.cc-dropdown-danger svg {
+  color: #dc2626;
+}
+
+.cc-dropdown-danger:hover {
+  background: #fef2f2;
+}
+
+.cc-divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 4px 0;
+}
+
+/* Guest buttons */
+.cc-btn-outline {
+  padding: 7px 16px;
   border: 1px solid #dc2626;
-  padding: .5rem 1rem; border-radius: .5rem;
+  border-radius: 8px;
   color: #dc2626;
-  transition: all .2s;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
 }
-.btn-outline-red:hover { background: #fef2f2; color: #991b1b; }
-.btn-solid-red {
-  background: #dc2626; color: #fff;
-  border-radius: .5rem; padding: .5rem 1rem;
-  transition: background .2s;
+
+.cc-btn-outline:hover {
+  background: #fef2f2;
 }
-.btn-solid-red:hover { background: #b91c1c; }
-.mobile-link {
-  display: block; padding: .5rem 1rem;
-  color: #dc2626; border-radius: .375rem;
-  transition: all .2s;
+
+.cc-btn-solid {
+  padding: 7px 16px;
+  background: #dc2626;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
 }
-.mobile-link:hover { background: #fef2f2; color: #991b1b; }
+
+.cc-btn-solid:hover {
+  background: #b91c1c;
+}
+
+/* ── Mobile hamburger ────────────────────────────── */
+.cc-mob-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #dc2626;
+  border-radius: 8px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.cc-mob-btn:hover {
+  background: #fef2f2;
+}
+
+/* ── Mobile menu ─────────────────────────────────── */
+.cc-mobile-menu {
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+  padding: .85rem 1.25rem 1.1rem;
+}
+
+.cc-mob-section {
+  margin-bottom: 1rem;
+}
+
+.cc-mob-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #9ca3af;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.cc-mob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.cc-mob-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.12s;
+}
+
+.cc-mob-link svg {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.cc-mob-link:hover {
+  background: #fef2f2;
+}
+
+.cc-mob-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: .5rem;
+  padding-top: .85rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cc-mob-footer-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  transition: background 0.12s;
+}
+
+.cc-mob-footer-link:hover {
+  background: #f9fafb;
+}
+
+.cc-mob-footer-danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.cc-mob-footer-danger svg {
+  color: #dc2626;
+}
+
+.cc-mob-footer-danger:hover {
+  background: #fef2f2;
+}
+
+/* ── Responsive breakpoints ──────────────────────── */
+@media (max-width: 767px) {
+  .cc-nav-links,
+  .cc-wallet-chip,
+  .cc-wallet-label,
+  .cc-username,
+  .cc-chevron {
+    display: none;
+  }
+
+  .cc-mob-btn {
+    display: flex;
+  }
+}
+
+@media (max-width: 1023px) and (min-width: 768px) {
+  .cc-nav-link {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+
+  .cc-wallet-label {
+    display: none;
+  }
+}
 </style>
+
+
+<script>
+(function () {
+  /* ── Dropdown ── */
+  function ccToggleDropdown() {
+    var d = document.getElementById('ccUserDropdown');
+    var btn = document.getElementById('ccDropdownTrigger');
+    if (!d) return;
+    var isOpen = d.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+
+  /* Close dropdown when clicking outside */
+  document.addEventListener('click', function (e) {
+    var d = document.getElementById('ccUserDropdown');
+    if (d && !d.contains(e.target)) {
+      d.classList.remove('open');
+      var btn = document.getElementById('ccDropdownTrigger');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  /* Close dropdown on Escape */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var d = document.getElementById('ccUserDropdown');
+      if (d) d.classList.remove('open');
+    }
+  });
+
+  /* ── Mobile menu ── */
+  function ccToggleMobile() {
+    var menu = document.getElementById('ccMobileMenu');
+    var btn  = document.getElementById('ccMobBtn');
+    var iconMenu  = btn && btn.querySelector('.cc-icon-menu');
+    var iconClose = btn && btn.querySelector('.cc-icon-close');
+    if (!menu) return;
+
+    var isOpen = menu.hasAttribute('hidden') ? true : false;
+
+    if (isOpen) {
+      menu.removeAttribute('hidden');
+      if (iconMenu)  iconMenu.style.display  = 'none';
+      if (iconClose) iconClose.style.display = 'block';
+      btn.setAttribute('aria-expanded', 'true');
+    } else {
+      menu.setAttribute('hidden', '');
+      if (iconMenu)  iconMenu.style.display  = 'block';
+      if (iconClose) iconClose.style.display = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /* Expose to global scope (called via onclick in template) */
+  window.ccToggleDropdown = ccToggleDropdown;
+  window.ccToggleMobile   = ccToggleMobile;
+})();
+</script>

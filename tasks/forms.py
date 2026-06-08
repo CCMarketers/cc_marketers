@@ -165,6 +165,32 @@ class ReviewSubmissionForm(forms.Form):
 #         label="Amount to Transfer from Main Wallet"
 #     )
 
+class EditTaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ["payout_per_slot", "total_slots", "deadline"]
+        widgets = {
+            "payout_per_slot": forms.NumberInput(attrs={"step": "0.5", "min": "40.00"}),
+            "total_slots": forms.NumberInput(attrs={"min": "1"}),
+            "deadline": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        }
+
+    def clean_deadline(self):
+        deadline = self.cleaned_data.get("deadline")
+        if deadline and deadline <= timezone.now():
+            raise forms.ValidationError("Deadline must be in the future.")
+        return deadline
+
+    def clean_total_slots(self):
+        total_slots = self.cleaned_data.get("total_slots")
+        if self.instance and total_slots < self.instance.filled_slots:
+            raise forms.ValidationError(
+                f"Cannot reduce slots below {self.instance.filled_slots} "
+                f"(already filled by submissions)."
+            )
+        return total_slots
+    
+    
 class TransactionForm(forms.Form):
     amount = forms.DecimalField(
         min_value=0.01,
