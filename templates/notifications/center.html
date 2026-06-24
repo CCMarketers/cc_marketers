@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6">
+
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-lg font-medium text-gray-800">Notifications</h1>
+    {% if unread_count %}
+    <form method="post" action="{% url 'notifications:mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="text-sm text-blue-600 hover:underline">
+        Mark all as read ({{ unread_count }})
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if notifications %}
+    <ul class="space-y-2">
+      {% for notif in notifications %}
+        <li class="flex items-start gap-3 p-4 rounded-xl border transition-colors
+                   {% if not notif.is_read %}bg-blue-50 border-blue-200{% else %}bg-white border-gray-100{% endif %}">
+
+          {# Avatar icon #}
+          <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center mt-0.5
+                      {% if not notif.is_read %}bg-white text-blue-600{% else %}bg-gray-100 text-gray-400{% endif %}">
+            <span class="text-base">{{ notif.icon }}</span>
+          </div>
+
+          {# Content #}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 leading-snug">{{ notif.title }}</p>
+            <p class="text-sm text-gray-500 mt-0.5 truncate">{{ notif.message }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ notif.created_at|timesince }} ago</p>
+          </div>
+
+          {# Actions #}
+          <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0 text-xs">
+            {% if not notif.is_read %}
+              <form method="post" action="{% url 'notifications:mark_read' notif.id %}">
+                {% csrf_token %}
+                <button type="submit" class="text-blue-500 hover:underline whitespace-nowrap">
+                  Mark read
+                </button>
+              </form>
+            {% endif %}
+            {% if notif.link %}
+              <a href="{{ notif.link }}" class="text-gray-400 hover:text-blue-500 whitespace-nowrap">
+                View →
+              </a>
+            {% endif %}
+            <form method="post" action="{% url 'notifications:delete' notif.id %}">
+              {% csrf_token %}
+              <button type="submit" class="text-red-400 hover:text-red-600 hover:underline">
+                Delete
+              </button>
+            </form>
+          </div>
+
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="text-center py-20 text-gray-400">
+      <div class="text-4xl mb-3">🔔</div>
+      <p class="text-sm">You're all caught up!</p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,307 @@
+
+
+<div id="notif-bell-wrapper" class="relative inline-flex items-center">
+
+  {# ── Bell button ── #}
+  <button
+      id="notif-bell-btn"
+      onclick="toggleNotifDropdown()"
+      aria-label="Notifications"
+      style="position:relative;width:36px;height:36px;border-radius:50%;border:0.5px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:background 120ms,color 120ms,border-color 120ms;flex-shrink:0;"
+      onmouseover="this.style.background='#f9fafb';this.style.color='#111827';this.style.borderColor='#d1d5db';"
+      onmouseout="this.style.background='#fff';this.style.color='#6b7280';this.style.borderColor='#e5e7eb';">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+    </svg>
+    <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;font-size:10px;font-weight:500;line-height:1;background:#E24B4A;color:#FCEBEB;border-radius:999px;align-items:center;justify-content:center;border:1.5px solid #fff;">0</span>
+  </button>
+
+  {# ── Dropdown ── #}
+  <div id="notif-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:320px;background:#fff;border:0.5px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.07),0 1px 4px rgba(0,0,0,0.04);flex-direction:column;z-index:9999;">
+
+    {# Header #}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid #e5e7eb;background:#f9fafb;">
+      <span style="font-size:13px;font-weight:500;color:#111827;">Notifications</span>
+      <button onclick="markAllReadApi()" style="font-size:12px;color:#2563eb;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;"
+        onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">Mark all read</button>
+    </div>
+
+    {# List #}
+    <ul id="notif-list" style="list-style:none;overflow-y:auto;max-height:340px;margin:0;padding:0;">
+      <li id="notif-loading" style="padding:32px 16px;text-align:center;font-size:13px;color:#9ca3af;">Loading…</li>
+      <li id="notif-empty"   style="display:none;padding:48px 24px;text-align:center;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <span style="font-size:24px;">🔔</span>
+          <p style="font-size:13px;font-weight:500;color:#374151;margin:0;">No notifications</p>
+          <p style="font-size:12px;color:#9ca3af;margin:0;">You're all caught up.</p>
+        </div>
+      </li>
+    </ul>
+
+    {# Footer #}
+    <a href="{% url 'notifications:center' %}" style="display:block;text-align:center;font-size:12px;color:#2563eb;font-weight:500;padding:11px 16px;border-top:0.5px solid #e5e7eb;text-decoration:none;background:#fff;transition:background 100ms;"
+      onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='#fff';">
+      View all notifications →
+    </a>
+  </div>
+</div>
+
+{# Toast container #}
+<div id="notif-toast-container" style="position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+
+<script>
+(function () {
+  const API_URL      = "{% url 'notifications:list_api' %}";
+  const MARK_ALL_URL = "{% url 'notifications:mark_all_read' %}";
+  const MARK_ONE_BASE = "{% url 'notifications:mark_read' 0 %}";
+  const CSRF         = "{{ csrf_token }}";
+
+  const TYPE_COLORS = {
+    chat_message:        { bg: "#B5D4F4", color: "#0C447C" },
+    submission_approved: { bg: "#C0DD97", color: "#27500A" },
+    submission_rejected: { bg: "#F7C1C1", color: "#791F1F" },
+    new_submission:      { bg: "#B5D4F4", color: "#0C447C" },
+    wallet_credit:       { bg: "#C0DD97", color: "#27500A" },
+    wallet_withdrawal:   { bg: "#FAC775", color: "#633806" },
+    referral_signup:     { bg: "#B5D4F4", color: "#0C447C" },
+  };
+  const DEFAULT_COLOR = { bg: "#e5e7eb", color: "#374151" };
+
+  /* "idle" → "fetching" → "done" — prevents any double render */
+  let listState = "idle";
+  let dropOpen  = false;
+
+  /* ── badge ── */
+  function setBadge(n) {
+    const el = document.getElementById("notif-badge");
+    if (n > 0) { el.textContent = n > 99 ? "99+" : n; el.style.display = "flex"; }
+    else        { el.style.display = "none"; }
+  }
+
+  /* ── toggle ── */
+  window.toggleNotifDropdown = function () {
+    const dd = document.getElementById("notif-dropdown");
+    dropOpen = !dropOpen;
+    dd.style.display = dropOpen ? "flex" : "none";
+    if (dropOpen && listState === "idle") renderList();
+  };
+
+  /* ── outside click ── */
+  document.addEventListener("click", function (e) {
+    if (!dropOpen) return;
+    if (!document.getElementById("notif-bell-wrapper").contains(e.target)) {
+      document.getElementById("notif-dropdown").style.display = "none";
+      dropOpen = false;
+    }
+  });
+
+  /* ── time ── */
+  function relTime(iso) {
+    const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (s < 60)    return "just now";
+    if (s < 3600)  return Math.floor(s / 60)   + "m ago";
+    if (s < 86400) return Math.floor(s / 3600)  + "h ago";
+    if (s < 604800)return Math.floor(s / 86400) + "d ago";
+    return new Date(iso).toLocaleDateString();
+  }
+
+  /* ── build item ── */
+  function buildItem(n) {
+    const col = TYPE_COLORS[n.type] || DEFAULT_COLOR;
+    const li  = document.createElement("li");
+    li.dataset.id   = n.id;
+    li.dataset.read = n.is_read ? "1" : "0";
+    Object.assign(li.style, {
+      display:"flex", gap:"12px", alignItems:"flex-start",
+      padding:"12px 16px", borderBottom:"0.5px solid #e5e7eb",
+      background: n.is_read ? "#fff" : "#EBF4FD",
+      cursor:"pointer", transition:"background 100ms",
+    });
+    li.onmouseover = () => li.style.background = li.dataset.read==="1" ? "#f9fafb" : "#d4e8f9";
+    li.onmouseout  = () => li.style.background = li.dataset.read==="1" ? "#fff"    : "#EBF4FD";
+
+    /* icon circle */
+    const ic = document.createElement("div");
+    Object.assign(ic.style, {
+      width:"32px", height:"32px", borderRadius:"50%",
+      background:col.bg, display:"flex", alignItems:"center",
+      justifyContent:"center", flexShrink:"0", marginTop:"1px",
+      fontSize:"14px", lineHeight:"1",
+    });
+    ic.textContent = n.icon;
+
+    /* body */
+    const body = document.createElement("div");
+    body.style.cssText = "flex:1;min-width:0;";
+
+    const t = document.createElement("p");
+    t.style.cssText = "margin:0;font-size:13px;font-weight:500;color:#111827;line-height:1.4;";
+    t.textContent = n.title;
+
+    const m = document.createElement("p");
+    m.style.cssText = "margin:2px 0 0;font-size:12px;color:#6b7280;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    m.textContent = n.message;
+
+    const tm = document.createElement("p");
+    tm.style.cssText = "margin:4px 0 0;font-size:11px;color:#9ca3af;";
+    tm.textContent = relTime(n.created_at);
+
+    body.append(t, m, tm);
+
+    /* dot */
+    const dot = document.createElement("span");
+    dot.className = "ndot";
+    Object.assign(dot.style, {
+      width:"7px", height:"7px", borderRadius:"50%",
+      background:"#378ADD", flexShrink:"0", marginTop:"6px",
+      display: n.is_read ? "none" : "block",
+    });
+
+    li.append(ic, body, dot);
+
+    li.addEventListener("click", () => {
+      if (li.dataset.read === "0") {
+        fetch(MARK_ONE_BASE + n.id + "/", { method:"POST", headers:{"X-CSRFToken":CSRF} });
+        li.style.background = "#fff";
+        li.dataset.read = "1";
+        dot.style.display = "none";
+        const cur = parseInt(document.getElementById("notif-badge").textContent) || 0;
+        setBadge(Math.max(0, cur - 1));
+      }
+      if (n.link) window.location.href = n.link;
+    });
+    return li;
+  }
+
+  /* ── render list — called ONCE when dropdown first opens ── */
+  function renderList() {
+    if (listState !== "idle") return; // ✅ ADD THIS as the very first line
+    listState = "fetching";    fetch(API_URL)
+      .then(r => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(data => {
+          listState = "done";
+          setBadge(data.unread_count);
+
+          const list    = document.getElementById("notif-list");
+          const loading = document.getElementById("notif-loading");
+          const empty   = document.getElementById("notif-empty");
+
+          loading.style.display = "none";
+
+          // ✅ Clear any previously rendered items before appending
+          document.querySelectorAll("#notif-list li[data-id]").forEach(el => el.remove());
+
+          if (!data.notifications || data.notifications.length === 0) {
+              empty.style.display = "flex";
+              return;
+          }
+
+          empty.style.display = "none"; // ✅ hide empty state if it was previously shown
+          data.notifications.forEach(n => list.appendChild(buildItem(n)));
+      })
+            .catch(err => {
+        listState = "idle";   /* allow retry on next open */
+        const loading = document.getElementById("notif-loading");
+        if (loading) loading.textContent = "Could not load. Tap to retry.";
+        console.error("Notif fetch error:", err);
+      });
+  }
+
+  /* ── mark all read ── */
+  window.markAllReadApi = function () {
+    fetch(MARK_ALL_URL, { method:"POST", headers:{"X-CSRFToken":CSRF} })
+      .then(() => {
+        document.querySelectorAll("#notif-list li[data-id]").forEach(li => {
+          li.style.background = "#fff";
+          li.dataset.read = "1";
+          const d = li.querySelector(".ndot");
+          if (d) d.style.display = "none";
+        });
+        setBadge(0);
+      });
+  };
+
+  /* ── toast ── */
+  window.showNotifToast = function (message) {
+    const c = document.getElementById("notif-toast-container");
+    const toast = document.createElement("div");
+    Object.assign(toast.style, {
+      pointerEvents:"auto", display:"flex", alignItems:"center", gap:"10px",
+      background:"#fff", border:"0.5px solid #d1d5db", borderRadius:"8px",
+      padding:"10px 14px", fontSize:"13px", color:"#111827",
+      maxWidth:"280px", animation:"_nSlide .2s ease",
+      boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+    });
+    const dot = document.createElement("span");
+    Object.assign(dot.style, { width:"6px", height:"6px", borderRadius:"50%", background:"#378ADD", flexShrink:"0" });
+    toast.append(dot, document.createTextNode(message));
+    c.appendChild(toast);
+    setTimeout(() => toast.remove(), 4500);
+  };
+
+  /* keyframe */
+  if (!document.getElementById("_nStyle")) {
+    const s = document.createElement("style");
+    s.id = "_nStyle";
+    s.textContent = "@keyframes _nSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}";
+    document.head.appendChild(s);
+  }
+
+  /* ── badge-only poll every 60 s — never touches the list DOM ── */
+  function pollBadge() {
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(d => setBadge(d.unread_count))
+      .catch(() => {});
+  }
+  pollBadge();
+  setInterval(pollBadge, 60000);
+// Add this inside your IIFE, after the pollBadge() call
+
+const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/notifications/`;
+let ws;
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onmessage = function (e) {
+    const notif = JSON.parse(e.data);
+
+    // 1. Show toast
+    showNotifToast(notif.title);
+
+    // 2. Bump badge
+    const cur = parseInt(document.getElementById("notif-badge").textContent) || 0;
+    setBadge(cur + 1);
+
+    // 3. If dropdown is open and list is rendered, prepend the new item
+    if (dropOpen && listState === "done") {
+      const list = document.getElementById("notif-list");
+      const empty = document.getElementById("notif-empty");
+      empty.style.display = "none";
+      list.insertBefore(buildItem(notif), list.firstChild);
+    } else {
+      // List will be stale next open — force a re-fetch
+      listState = "idle";
+    }
+  };
+
+  ws.onclose = function () {
+    // Reconnect after 5s (handles server restarts, network blips)
+    setTimeout(connectWS, 5000);
+  };
+
+  ws.onerror = function (err) {
+    console.error("WS error:", err);
+    ws.close(); // triggers onclose → reconnect
+  };
+}
+
+connectWS();
+
+})();
+</script>

@@ -285,84 +285,138 @@ class WalletService:
         )
         return withdrawal
 
+    # @staticmethod
+    # @transaction.atomic
+    # def approve_withdrawal(withdrawal_id, admin_user):
+    #     """
+    #     Approve a withdrawal request:
+    #     1. Create Paystack transfer recipient
+    #     2. Initiate Paystack transfer (creates PaymentTransaction + PaystackTransaction)
+    #     3. Debit user's wallet and link to PaymentTransaction
+    #     4. Mark withdrawal as approved (webhook will later confirm success/failure)
+    #     """
+    #     withdrawal = WithdrawalRequest.objects.select_for_update().get(id=withdrawal_id)
+
+    #     if withdrawal.status != "pending":
+    #         raise ValueError("Withdrawal request is not pending")
+
+    #     paystack = PaystackService()
+
+    #     # 1) Create Paystack recipient
+    #     recipient_result = paystack.create_transfer_recipient(
+    #         withdrawal.user, withdrawal.bank_code, withdrawal.account_number
+    #     )
+    #     if not recipient_result.get("success"):
+    #         raise ValueError(recipient_result.get("error", "Failed to create Paystack transfer recipient"))
+
+    #     recipient_code = recipient_result["data"]["recipient_code"]
+
+
+    #     # 2) Initiate transfer
+    #     transfer_result = paystack.initiate_transfer(
+    #         user=withdrawal.user,
+    #         amount_usd=withdrawal.amount_usd,
+    #         recipient_code=recipient_code,
+    #         reason=f"Withdrawal {withdrawal.id}"
+    #     )
+    #     if not transfer_result.get("success"):
+    #         raise ValueError(transfer_result.get("error", "Paystack transfer failed"))
+
+    #     transfer_data = transfer_result["data"]
+    #     txn_id = transfer_data["transaction_id"]
+    #     gateway_reference = transfer_data["reference"]
+    #     transfer_code = transfer_data.get("transfer_code")
+
+    #     # 3) Fetch created PaymentTransaction
+    #     payment_txn = PaymentTransaction.objects.get(id=txn_id)
+
+    #     # 4) Debit wallet (link to payment transaction)
+    #     debit_txn = WalletService.debit_wallet(
+    #         user=withdrawal.user,
+    #         amount=withdrawal.amount_usd,
+    #         category="withdrawal",
+    #         description=f"Withdrawal request #{withdrawal.id}",
+    #         reference=payment_txn.internal_reference,
+    #         payment_transaction=payment_txn,
+    #     )
+
+    #     # 5) Update withdrawal bookkeeping
+    #     withdrawal.status = "approved"  # admin-level approval; webhook still finalizes
+    #     withdrawal.processed_by = admin_user
+    #     withdrawal.processed_at = timezone.now()
+    #     withdrawal.transaction = debit_txn
+    #     withdrawal.gateway_reference = gateway_reference
+    #     withdrawal.gateway_response = transfer_result  # already structured
+    #     withdrawal.save(update_fields=[
+    #         "status", "processed_by", "processed_at",
+    #         "transaction", "gateway_reference", "gateway_response"
+    #     ])
+
+    #     # 6) Update PaystackTransaction details with bank/recipient info
+    #     pst = payment_txn.paystack_details
+    #     pst.bank_code = withdrawal.bank_code
+    #     pst.account_number = withdrawal.account_number
+    #     pst.account_name = withdrawal.account_name
+    #     pst.recipient_code = recipient_code
+    #     pst.transfer_code = transfer_code
+    #     pst.save(update_fields=["bank_code", "account_number", "account_name", "recipient_code", "transfer_code"])
+
+    #     return withdrawal
+
+
     @staticmethod
     @transaction.atomic
     def approve_withdrawal(withdrawal_id, admin_user):
-        """
-        Approve a withdrawal request:
-        1. Create Paystack transfer recipient
-        2. Initiate Paystack transfer (creates PaymentTransaction + PaystackTransaction)
-        3. Debit user's wallet and link to PaymentTransaction
-        4. Mark withdrawal as approved (webhook will later confirm success/failure)
-        """
         withdrawal = WithdrawalRequest.objects.select_for_update().get(id=withdrawal_id)
 
         if withdrawal.status != "pending":
             raise ValueError("Withdrawal request is not pending")
 
-        paystack = PaystackService()
+        # Debit the wallet at approval time
+        wallet = WalletService.get_or_create_wallet(withdrawal.user)
+        
+        try:
+            current_balance = Decimal(wallet.balance)
+        except Exception:
+            current_balance = Decimal(str(getattr(wallet, "balance", "0.00")))
 
-        # 1) Create Paystack recipient
-        recipient_result = paystack.create_transfer_recipient(
-            withdrawal.user, withdrawal.bank_code, withdrawal.account_number
-        )
-        if not recipient_result.get("success"):
-            raise ValueError(recipient_result.get("error", "Failed to create Paystack transfer recipient"))
+        if current_balance < withdrawal.amount_usd:
+            raise ValueError(f"Insufficient balance. Available: ₦{current_balance}, Required: ₦{withdrawal.amount_usd}")
 
-        recipient_code = recipient_result["data"]["recipient_code"]
+        # Create a PaymentTransaction for record keeping
+        from payments.models import PaymentGateway
+        gateway = PaymentGateway.objects.filter(is_active=True).first()  # or a specific one
 
-
-        # 2) Initiate transfer
-        transfer_result = paystack.initiate_transfer(
+        payment_txn = PaymentTransaction.objects.create(
             user=withdrawal.user,
+            gateway=gateway,
+            transaction_type=PaymentTransaction.TransactionType.WITHDRAWAL,
             amount_usd=withdrawal.amount_usd,
-            recipient_code=recipient_code,
-            reason=f"Withdrawal {withdrawal.id}"
+            amount_local=withdrawal.amount_usd,
+            currency="NGN",
+            status=PaymentTransaction.Status.SUCCESS,  # mark success immediately since it's manual
+            description=f"Manual withdrawal approved #{withdrawal.id}",
         )
-        if not transfer_result.get("success"):
-            raise ValueError(transfer_result.get("error", "Paystack transfer failed"))
 
-        transfer_data = transfer_result["data"]
-        txn_id = transfer_data["transaction_id"]
-        gateway_reference = transfer_data["reference"]
-        transfer_code = transfer_data.get("transfer_code")
-
-        # 3) Fetch created PaymentTransaction
-        payment_txn = PaymentTransaction.objects.get(id=txn_id)
-
-        # 4) Debit wallet (link to payment transaction)
-        debit_txn = WalletService.debit_wallet(
+        # Debit wallet
+        WalletService.debit_wallet(
             user=withdrawal.user,
             amount=withdrawal.amount_usd,
             category="withdrawal",
-            description=f"Withdrawal request #{withdrawal.id}",
+            description=f"Withdrawal request #{withdrawal.id} approved",
             reference=payment_txn.internal_reference,
             payment_transaction=payment_txn,
         )
 
-        # 5) Update withdrawal bookkeeping
-        withdrawal.status = "approved"  # admin-level approval; webhook still finalizes
+        withdrawal.status = "approved"
         withdrawal.processed_by = admin_user
         withdrawal.processed_at = timezone.now()
-        withdrawal.transaction = debit_txn
-        withdrawal.gateway_reference = gateway_reference
-        withdrawal.gateway_response = transfer_result  # already structured
+        withdrawal.transaction = payment_txn
         withdrawal.save(update_fields=[
-            "status", "processed_by", "processed_at",
-            "transaction", "gateway_reference", "gateway_response"
+            "status", "processed_by", "processed_at", "transaction"
         ])
 
-        # 6) Update PaystackTransaction details with bank/recipient info
-        pst = payment_txn.paystack_details
-        pst.bank_code = withdrawal.bank_code
-        pst.account_number = withdrawal.account_number
-        pst.account_name = withdrawal.account_name
-        pst.recipient_code = recipient_code
-        pst.transfer_code = transfer_code
-        pst.save(update_fields=["bank_code", "account_number", "account_name", "recipient_code", "transfer_code"])
-
         return withdrawal
-
 
     @transaction.atomic
     @staticmethod

@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'chat',
     'channels',
     "anymail",
-    
+    "notifications",
 
     "wallets.apps.WalletsConfig",
 
@@ -94,8 +94,6 @@ ASGI_APPLICATION = 'cc_marketers.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",

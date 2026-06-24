@@ -21,7 +21,7 @@ class ReferralValidator:
     
     DEMO_ACCOUNT = "Demo Account"
     BUSINESS_ACCOUNT = "Business Member Account"
-    MAX_DEMO_REFERRALS = 10
+    MAX_DEMO_REFERRALS = 100
     
     @classmethod
     def check_referral_eligibility(
